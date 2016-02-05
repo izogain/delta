@@ -11,6 +11,7 @@ package io.flow.delta.v0.models {
   case class Deployment(
     id: String,
     image: io.flow.delta.v0.models.Image,
+    user: io.flow.common.v0.models.User,
     events: Seq[io.flow.delta.v0.models.Event]
   )
 
@@ -209,6 +210,7 @@ package io.flow.delta.v0.models {
       (
         (__ \ "id").read[String] and
         (__ \ "image").read[io.flow.delta.v0.models.Image] and
+        (__ \ "user").read[io.flow.common.v0.models.User] and
         (__ \ "events").read[Seq[io.flow.delta.v0.models.Event]]
       )(Deployment.apply _)
     }
@@ -217,6 +219,7 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "image" -> jsObjectImage(obj.image),
+        "user" -> io.flow.common.v0.models.json.jsObjectUser(obj.user),
         "events" -> play.api.libs.json.Json.toJson(obj.events)
       )
     }
