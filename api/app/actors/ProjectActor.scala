@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import io.flow.delta.api.lib.{DefaultLibraryArtifactProvider, Dependencies, GithubDependencyProviderClient, GithubHelper, GithubUtil}
+import io.flow.delta.api.lib.{DefaultLibraryArtifactProvider, Dependencies, GithubDeltaProviderClient, GithubHelper, GithubUtil}
 import io.flow.delta.v0.models.{Binary, BinaryForm, BinaryType, Library, LibraryForm, Project, ProjectBinary, ProjectLibrary, RecommendationType, VersionForm}
 import io.flow.postgresql.Pager
 import io.flow.play.util.DefaultConfig
@@ -40,7 +40,7 @@ class ProjectActor extends Actor with Util {
 
   implicit val projectExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] val HookBaseUrl = DefaultConfig.requiredString("dependency.api.host") + "/webhooks/github/"
+  private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
   private[this] val HookName = "web"
   private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
 
@@ -147,7 +147,7 @@ class ProjectActor extends Actor with Util {
         UsersDao.findById(project.user.id).map { user =>
           val summary = ProjectsDao.toSummary(project)
 
-          GithubDependencyProviderClient.instance(summary, user).dependencies(project).map { dependencies =>
+          GithubDeltaProviderClient.instance(summary, user).dependencies(project).map { dependencies =>
             println(s" - project[${project.id}] name[${project.name}] dependencies: $dependencies")
 
             dependencies.binaries.map { binaries =>

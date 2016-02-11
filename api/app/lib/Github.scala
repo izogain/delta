@@ -65,7 +65,7 @@ trait Github {
 
   /**
     * Given an auth validation code, pings the github UI to access the
-    * user data, upserts that user with the dependency database, and
+    * user data, upserts that user with the delta database, and
     * returns the user (or a list of errors).
     * 
     * @param code The oauth authorization code from github
@@ -144,8 +144,8 @@ trait Github {
 @javax.inject.Singleton
 class DefaultGithub @javax.inject.Inject() () extends Github {
 
-  private[this] lazy val clientId = DefaultConfig.requiredString("github.dependency.client.id")
-  private[this] lazy val clientSecret = DefaultConfig.requiredString("github.dependency.client.secret")
+  private[this] lazy val clientId = DefaultConfig.requiredString("github.delta.client.id")
+  private[this] lazy val clientSecret = DefaultConfig.requiredString("github.delta.client.secret")
 
   private[this] lazy val oauthClient = new GithubOauthClient(
     apiUrl = "https://github.com",

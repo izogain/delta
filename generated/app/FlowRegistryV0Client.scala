@@ -15,13 +15,13 @@ package io.flow.registry.v0.models {
     id: String,
     service: String,
     port: _root_.scala.Option[Long] = None,
-    dependency: Seq[String] = Nil
+    delta: Seq[String] = Nil
   )
 
   case class ApplicationPutForm(
     service: _root_.scala.Option[String] = None,
     port: _root_.scala.Option[Long] = None,
-    dependency: _root_.scala.Option[Seq[String]] = None
+    delta: _root_.scala.Option[Seq[String]] = None
   )
 
   case class ApplicationVersion(
@@ -129,7 +129,7 @@ package io.flow.registry.v0.models {
         (__ \ "id").read[String] and
         (__ \ "service").read[String] and
         (__ \ "port").readNullable[Long] and
-        (__ \ "dependency").read[Seq[String]]
+        (__ \ "delta").read[Seq[String]]
       )(ApplicationForm.apply _)
     }
 
@@ -137,7 +137,7 @@ package io.flow.registry.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "service" -> play.api.libs.json.JsString(obj.service),
-        "dependency" -> play.api.libs.json.Json.toJson(obj.dependency)
+        "delta" -> play.api.libs.json.Json.toJson(obj.delta)
       ) ++ (obj.port match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("port" -> play.api.libs.json.JsNumber(x))
@@ -156,7 +156,7 @@ package io.flow.registry.v0.models {
       (
         (__ \ "service").readNullable[String] and
         (__ \ "port").readNullable[Long] and
-        (__ \ "dependency").readNullable[Seq[String]]
+        (__ \ "delta").readNullable[Seq[String]]
       )(ApplicationPutForm.apply _)
     }
 
@@ -169,9 +169,9 @@ package io.flow.registry.v0.models {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("port" -> play.api.libs.json.JsNumber(x))
       }) ++
-      (obj.dependency match {
+      (obj.delta match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("dependency" -> play.api.libs.json.Json.toJson(x))
+        case Some(x) => play.api.libs.json.Json.obj("delta" -> play.api.libs.json.Json.toJson(x))
       })
     }
 
