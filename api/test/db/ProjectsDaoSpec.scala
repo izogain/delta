@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.{BinaryVersion, LibraryVersion, Project, Scms, VersionForm, Visibility}
+import io.flow.delta.v0.models.{Project, Scms, Visibility}
 import org.scalatest._
 import play.api.test._
 import play.api.test.Helpers._
@@ -118,73 +118,6 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       )
 
       ProjectsDao.findAll(Authorization.All, id = Some(project1.id), organization = Some(createOrganization().key)) must be(Nil)
-    }
-
-    "with library" must {
-
-      "groupId" in {
-        val (project, version) = createProjectWithLibrary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), groupId = Some(version.library.groupId)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), groupId = Some(UUID.randomUUID.toString)).map(_.id) must be(Nil)
-      }
-
-      "artifactId" in {
-        val (project, version) = createProjectWithLibrary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), artifactId = Some(version.library.artifactId)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), artifactId = Some(UUID.randomUUID.toString)).map(_.id) must be(Nil)
-      }
-
-      "version" in {
-        val (project, version) = createProjectWithLibrary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), version = Some(version.version)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), version = Some(UUID.randomUUID.toString)).map(_.id) must be(Nil)
-      }
-
-      "libraryId" in {
-        val (project, version) = createProjectWithLibrary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), libraryId = Some(version.library.id)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), libraryId = Some(UUID.randomUUID.toString)).map(_.id) must be(Nil)
-      }
-    }
-
-    "with binary" must {
-
-      "binary name" in {
-        val (project, version) = createProjectWithBinary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), binary = Some(version.binary.name.toString)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), binary = Some(UUID.randomUUID.toString)) must be(Nil)
-      }
-
-      "binary id" in {
-        val (project, version) = createProjectWithBinary(org)
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), binaryId = Some(version.binary.id)).map(_.id) must be(
-          Seq(project.id)
-        )
-
-        ProjectsDao.findAll(Authorization.All, id = Some(project.id), binaryId = Some(UUID.randomUUID.toString)) must be(Nil)
-      }
-
     }
 
     "authorization for public projects" in {

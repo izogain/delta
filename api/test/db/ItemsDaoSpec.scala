@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.{BinarySummary, LibrarySummary, OrganizationSummary, ProjectSummary, Visibility}
+import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Visibility}
 import org.scalatest._
 import play.api.test._
 import play.api.test.Helpers._
@@ -32,9 +32,9 @@ class ItemsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "findByObjectId" in {
-    val binary = createBinary(org)()
-    val item = ItemsDao.replaceBinary(systemUser, binary)
-    ItemsDao.findByObjectId(Authorization.All, binary.id).map(_.id) must be(
+    val project = createProject(org)()
+    val item = ItemsDao.replaceProject(systemUser, project)
+    ItemsDao.findByObjectId(Authorization.All, project.id).map(_.id) must be(
       Some(item.id)
     )
 
@@ -52,47 +52,6 @@ class ItemsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     ItemsDao.findAll(Authorization.All, ids = Some(Nil)) must be(Nil)
     ItemsDao.findAll(Authorization.All, ids = Some(Seq(UUID.randomUUID.toString))) must be(Nil)
     ItemsDao.findAll(Authorization.All, ids = Some(Seq(item1.id, UUID.randomUUID.toString))).map(_.id) must be(Seq(item1.id))
-  }
-
-  "supports binaries" in {
-    val binary = createBinary(org)()
-    val itemBinary = ItemsDao.replaceBinary(systemUser, binary)
-
-    val actual = ItemsDao.findByObjectId(Authorization.All, binary.id).getOrElse {
-      sys.error("Failed to create binary")
-    }
-    actual.label must be(binary.name.toString)
-    actual.summary must be(
-      BinarySummary(
-        id = binary.id,
-        organization = OrganizationSummary(org.id, org.key),
-        name = binary.name
-      )
-    )
-
-    ItemsDao.findAll(Authorization.All, q = Some(binary.id.toString)).headOption.map(_.id) must be(Some(actual.id))
-    ItemsDao.findAll(Authorization.All, q = Some(UUID.randomUUID.toString)) must be(Nil)
-  }
-
-  "supports libraries" in {
-    val library = createLibrary(org)()
-
-    val itemLibrary = ItemsDao.replaceLibrary(systemUser, library)
-    val actual = ItemsDao.findByObjectId(Authorization.All, library.id).getOrElse {
-      sys.error("Failed to create library")
-    }
-    actual.label must be(Seq(library.groupId, library.artifactId).mkString("."))
-    actual.summary must be(
-      LibrarySummary(
-        id = library.id,
-        organization = OrganizationSummary(org.id, org.key),
-        groupId = library.groupId,
-        artifactId = library.artifactId
-      )
-    )
-
-    ItemsDao.findAll(Authorization.All, q = Some(library.id.toString)).headOption.map(_.id) must be(Some(actual.id))
-    ItemsDao.findAll(Authorization.All, q = Some(UUID.randomUUID.toString)) must be(Nil)
   }
 
   "supports projects" in {

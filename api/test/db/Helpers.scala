@@ -67,74 +67,6 @@ trait Helpers {
     )
   }
 
-  def createBinary(
-    org: Organization = createOrganization()
-  ) (
-    implicit form: BinaryForm = createBinaryForm(org)
-  ): Binary = {
-    BinariesDao.create(systemUser, form).right.getOrElse {
-      sys.error("Failed to create binary")
-    }
-  }
-
-  def createBinaryForm(
-    org: Organization = createOrganization()
-  ) = BinaryForm(
-    organizationId = org.id,
-    name = BinaryType.UNDEFINED(s"z-test-binary-${UUID.randomUUID.toString}".toLowerCase)
-  )
-
-  def createBinaryVersion(
-    org: Organization = createOrganization()
-  ) (
-    implicit binary: Binary = createBinary(org),
-             version: String = s"0.0.1-${UUID.randomUUID.toString}".toLowerCase
-  ): BinaryVersion = {
-    BinaryVersionsDao.create(systemUser, binary.id, version)
-  }
-
-  def createLibrary(
-    org: Organization = createOrganization(),
-    user: User = systemUser
-  ) (
-    implicit form: LibraryForm = createLibraryForm(org, user)
-  ): Library = {
-    LibrariesDao.create(user, form).right.getOrElse {
-      sys.error("Failed to create library")
-    }
-  }
-
-  def createLibraryForm(
-    org: Organization = createOrganization(),
-    user: User = systemUser
-  ) (
-    implicit versionForm: VersionForm = VersionForm("0.0.1"),
-             resolver: Resolver = createResolver(org, user)
-  ) = LibraryForm(
-    organizationId = org.id,
-    groupId = s"z-test.${UUID.randomUUID.toString}".toLowerCase,
-    artifactId = s"z-test-${UUID.randomUUID.toString}".toLowerCase,
-    version = Some(versionForm),
-    resolverId = resolver.id
-  )
-
-  def createLibraryVersion(
-    org: Organization = createOrganization(),
-    user: User = systemUser
-  ) (
-    implicit library: Library = createLibrary(org, user),
-             version: VersionForm = createVersionForm()
-  ): LibraryVersion = {
-    LibraryVersionsDao.create(user, library.id, version)
-  }
-
-  def createVersionForm(
-    version: String = s"0.0.1-${UUID.randomUUID.toString}".toLowerCase,
-    crossBuildVersion: Option[String] = None
-  ) = {
-    VersionForm(version, crossBuildVersion)
-  }
-
   def createProject(
     org: Organization = createOrganization()
   ) (
@@ -291,27 +223,6 @@ trait Helpers {
     )
   }
 
-  def createResolver(
-    org: Organization,
-    user: User = systemUser
-  ) (
-    implicit form: ResolverForm = createResolverForm(org)
-  ): Resolver = {
-    create(ResolversDao.create(user, form))
-  }
-
-  def createResolverForm(
-    org: Organization = createOrganization(),
-    visibility: Visibility = Visibility.Private,
-    uri: String = s"http://${UUID.randomUUID.toString}.z-test.flow.io"
-  ) = {
-    ResolverForm(
-      visibility = visibility,
-      organization = org.key,
-      uri = uri
-    )
-  }
-
   def createMembership(
     form: MembershipForm = createMembershipForm()
   ): Membership = {
@@ -328,42 +239,6 @@ trait Helpers {
       userId = user.id,
       role = role
     )
-  }
-
-  def createLibraryWithMultipleVersions(
-    org: Organization
-  ) (
-    implicit versions: Seq[String] = Seq("1.0.0", "1.0.1", "1.0.2")
-  ): (Library, Seq[LibraryVersion]) = {
-    val library = createLibrary(org)(createLibraryForm(org).copy(version = None))
-    (
-      library,
-      versions.map { version =>
-        createLibraryVersion(
-          org
-        ) (
-          library = library,
-          version = VersionForm(version = version)
-        )
-      }
-    )
-  }
-
-  def addLibraryVersion(project: Project, libraryVersion: LibraryVersion) {
-    val projectLibrary = create(
-      ProjectLibrariesDao.upsert(
-        systemUser,
-        ProjectLibraryForm(
-          projectId = project.id,
-          groupId = libraryVersion.library.groupId,
-          artifactId = libraryVersion.library.artifactId,
-          path = "test.sbt",
-          version = VersionForm(libraryVersion.version, libraryVersion.crossBuildVersion)
-        )
-      )
-    )
-
-    ProjectLibrariesDao.setLibrary(systemUser, projectLibrary, libraryVersion.library)
   }
 
   def replaceItem(
@@ -418,67 +293,6 @@ trait Helpers {
     SubscriptionForm(
       userId = user.id,
       publication = publication
-    )
-  }
-
-  def createLastEmail(
-    form: LastEmailForm = createLastEmailForm()
-  ): LastEmail = {
-    LastEmailsDao.record(systemUser, form)
-  }
-
-  def createLastEmailForm(
-    user: User = createUser(),
-    publication: Publication = Publication.DailySummary
-  ) = LastEmailForm(
-    userId = user.id,
-    publication = publication
-  )
-
-  def createProjectLibrary(
-    project: Project = createProject()
-  ) (
-    implicit form: ProjectLibraryForm = createProjectLibraryForm(project)
-  ): ProjectLibrary = {
-    create(ProjectLibrariesDao.create(systemUser, form))
-  }
-
-  def createProjectLibraryForm(
-    project: Project = createProject(),
-    groupId: String = s"z-test.${UUID.randomUUID.toString}".toLowerCase,
-    artifactId: String = s"z-test-${UUID.randomUUID.toString}".toLowerCase,
-    path: String = "build.sbt",
-    version: String = "0.0.1",
-    crossBuildVersion: Option[String] = None
-  ) = {
-    ProjectLibraryForm(
-      projectId = project.id,
-      groupId = groupId,
-      artifactId = artifactId,
-      path = path,
-      version = VersionForm(version, crossBuildVersion)
-    )
-  }
-
-  def createProjectBinary(
-    project: Project = createProject()
-  ) (
-    implicit form: ProjectBinaryForm = createProjectBinaryForm(project)
-  ): ProjectBinary = {
-    create(ProjectBinariesDao.create(systemUser, form))
-  }
-
-  def createProjectBinaryForm(
-    project: Project = createProject(),
-    name: BinaryType = BinaryType.UNDEFINED(createTestKey()),
-    path: String = "build.sbt",
-    version: String = "0.0.1"
-  ) = {
-    ProjectBinaryForm(
-      projectId = project.id,
-      name = name,
-      path = path,
-      version = version
     )
   }
 
