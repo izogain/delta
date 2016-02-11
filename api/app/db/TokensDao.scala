@@ -78,7 +78,7 @@ object TokensDao {
       }
       case Some(existing) => {
         DB.withTransaction { implicit c =>
-          SoftDelete.delete(c, "tokens", createdBy.id, existing.id)
+          Delete.delete(c, "tokens", createdBy.id, existing.id)
           createWithConnection(createdBy, form) match {
             case Left(errors) => sys.error("Failed to create token: " + errors.mkString(", "))
             case Right(token) => token
@@ -162,8 +162,8 @@ object TokensDao {
     ).execute()
   }
 
-  def softDelete(deletedBy: User, token: Token) {
-    SoftDelete.delete("tokens", deletedBy.id, token.id)
+  def delete(deletedBy: User, token: Token) {
+    Delete.delete("tokens", deletedBy.id, token.id)
   }
 
   def getCleartextGithubOauthTokenByUserId(
@@ -171,7 +171,6 @@ object TokensDao {
   ): Option[String] = {
     DB.withConnection { implicit c =>
       SelectCleartextTokenQuery.
-        isNull("tokens.deleted_at").
         equals("tokens.user_id", Some(userId)).
         optionalText("tokens.tag", Some(InternalTokenForm.GithubOauthTag)).
         limit(1).
@@ -198,7 +197,6 @@ object TokensDao {
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
     tag: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("tokens.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -210,7 +208,6 @@ object TokensDao {
         ids = ids,
         userId = userId,
         tag = tag,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset,
         orderBy = orderBy
@@ -224,7 +221,6 @@ object TokensDao {
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
     tag: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("tokens.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -236,7 +232,6 @@ object TokensDao {
       id = id,
       ids = ids,
       orderBy = orderBy.sql,
-      isDeleted = isDeleted,
       limit = limit,
       offset = offset
     ).

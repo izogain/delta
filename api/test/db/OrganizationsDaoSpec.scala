@@ -33,12 +33,10 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     membership.role must be(Role.Admin)
   }
 
-  "softDelete" in {
+  "delete" in {
     val org = createOrganization()
-    OrganizationsDao.softDelete(systemUser, org)
+    OrganizationsDao.delete(systemUser, org)
     OrganizationsDao.findById(Authorization.All, org.id) must be(None)
-    OrganizationsDao.findAll(Authorization.All, id = Some(org.id), isDeleted = Some(false)) must be(Nil)
-    OrganizationsDao.findAll(Authorization.All, id = Some(org.id), isDeleted = Some(true)).map(_.id) must be(Seq(org.id))
   }
 
   "findById" in {

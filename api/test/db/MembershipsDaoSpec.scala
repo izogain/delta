@@ -45,7 +45,7 @@ class MembershipsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "soft delete" in {
     val membership = createMembership()
-    MembershipsDao.softDelete(systemUser, membership)
+    MembershipsDao.delete(systemUser, membership)
     MembershipsDao.findById(Authorization.All, membership.id) must be(None)
   }
 

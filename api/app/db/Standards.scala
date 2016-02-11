@@ -19,7 +19,6 @@ private[db] case object Standards {
     auth: Clause,
     id: Option[String],
     ids: Option[Seq[String]],
-    isDeleted: Option[Boolean],
     orderBy: Option[String],
     limit: Long = 25,
     offset: Long = 0
@@ -28,7 +27,6 @@ private[db] case object Standards {
       equals(s"$tableName.id", id).
       optionalIn(s"$tableName.id", ids).
       and(auth.sql).
-      nullBoolean(s"$tableName.deleted_at", isDeleted).
       orderBy(orderBy).
       limit(limit).
       offset(offset)

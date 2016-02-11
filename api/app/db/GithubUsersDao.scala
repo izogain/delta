@@ -70,7 +70,6 @@ object GithubUsersDao {
     userId: Option[String] = None,
     login: Option[String] = None,
     githubUserId: Option[Long] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("github_users.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -81,7 +80,6 @@ object GithubUsersDao {
         equals("github_users.user_id", userId).
         optionalText("github_users.login", login).
         equals("github_users.github_user_id", githubUserId).
-        nullBoolean("github_users.deleted_at", isDeleted).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).

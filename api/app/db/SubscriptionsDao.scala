@@ -77,8 +77,8 @@ object SubscriptionsDao {
     }
   }
 
-  def softDelete(deletedBy: User, subscription: Subscription) {
-    SoftDelete.delete("subscriptions", deletedBy.id, subscription.id)
+  def delete(deletedBy: User, subscription: Subscription) {
+    Delete.delete("subscriptions", deletedBy.id, subscription.id)
   }
 
   def findByUserIdAndPublication(
@@ -102,7 +102,6 @@ object SubscriptionsDao {
     userId: Option[String] = None,
     identifier: Option[String] = None,
     publication: Option[Publication] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("subscriptions.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -115,7 +114,6 @@ object SubscriptionsDao {
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset
       ).
@@ -123,7 +121,7 @@ object SubscriptionsDao {
         optionalText("subscriptions.publication", publication).
         and(
           identifier.map { id =>
-            "subscriptions.user_id in (select user_id from user_identifiers where deleted_at is null and value = trim({identifier}))"
+            "subscriptions.user_id in (select user_id from user_identifiers where value = trim({identifier}))"
           }
         ).bind("identifier", identifier).
         as(

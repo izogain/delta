@@ -58,7 +58,7 @@ class Tokens @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withToken(request.user, id) { token =>
-      TokensDao.softDelete(request.user, token)
+      TokensDao.delete(request.user, token)
       NoContent
     }
   }

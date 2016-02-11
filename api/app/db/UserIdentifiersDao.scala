@@ -81,8 +81,8 @@ object UserIdentifiersDao {
     }
   }
 
-  def softDelete(deletedBy: User, identifier: UserIdentifier) {
-    SoftDelete.delete("user_identifiers", deletedBy.id, identifier.id)
+  def delete(deletedBy: User, identifier: UserIdentifier) {
+    Delete.delete("user_identifiers", deletedBy.id, identifier.id)
   }
 
   def findById(auth: Authorization, id: String): Option[UserIdentifier] = {
@@ -95,7 +95,6 @@ object UserIdentifiersDao {
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
     value: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[UserIdentifier] = {
@@ -106,7 +105,6 @@ object UserIdentifiersDao {
         ids = ids,
         userId = userId,
         value = value,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset
       )
@@ -119,7 +117,6 @@ object UserIdentifiersDao {
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
     value: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("-user_identifiers.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -131,7 +128,6 @@ object UserIdentifiersDao {
       id = id,
       ids = ids,
       orderBy = orderBy.sql,
-      isDeleted = isDeleted,
       limit = limit,
       offset = offset
     ).

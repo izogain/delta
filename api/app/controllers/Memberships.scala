@@ -62,7 +62,7 @@ class Memberships @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withMembership(request.user, id) { membership =>
-      MembershipsDao.softDelete(request.user, membership)
+      MembershipsDao.delete(request.user, membership)
       NoContent
     }
   }

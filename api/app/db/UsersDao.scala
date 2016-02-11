@@ -10,8 +10,8 @@ import play.api.Play.current
 
 object UsersDao {
 
-  private[db] val SystemEmailAddress = "system@bryzek.com"
-  private[db] val AnonymousEmailAddress = "anonymous@bryzek.com"
+  private[db] val SystemEmailAddress = "otto@flow.io"
+  private[db] val AnonymousEmailAddress = "anonymous@flow.io"
 
   lazy val systemUser: User = {
     findAll(email = Some(SystemEmailAddress), limit = 1).headOption.getOrElse {
@@ -29,8 +29,7 @@ object UsersDao {
     select users.id,
            users.email,
            users.first_name as name_first,
-           users.last_name as name_last,
-           users.avatar_url
+           users.last_name as name_last
       from users
   """)
 
@@ -117,7 +116,6 @@ object UsersDao {
     token: Option[String] = None,
     identifier: Option[String] = None,
     githubUserId: Option[Long] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("users.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -130,7 +128,6 @@ object UsersDao {
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset
       ).
@@ -142,17 +139,17 @@ object UsersDao {
         ).
         and(
           identifier.map { id =>
-            "users.id in (select user_id from user_identifiers where deleted_at is null and value = trim({identifier}))"
+            "users.id in (select user_id from user_identifiers where value = trim({identifier}))"
           }
         ).bind("identifier", identifier).
         and(
           token.map { t =>
-            "users.id in (select user_id from tokens where deleted_at is null and token = trim({token}))"
+            "users.id in (select user_id from tokens where token = trim({token}))"
           }
         ).bind("token", token).
         and(
           githubUserId.map { id =>
-            "users.id in (select user_id from github_users where deleted_at is null and github_user_id = {github_user_id}::numeric)"
+            "users.id in (select user_id from github_users where github_user_id = {github_user_id}::numeric)"
           }
         ).bind("github_user_id", githubUserId).
         as(

@@ -30,11 +30,10 @@ object ItemsDao {
            items.contents,
            items.summary::text,
            items.created_at,
-           items.deleted_at,
            organizations.id as organization_id,
            organizations.key as organization_key
       from items
-      join organizations on organizations.deleted_at is null and organizations.id = items.organization_id
+      join organizations on organizations.id = items.organization_id
   """)
 
   private[this] val InsertQuery = """
@@ -91,7 +90,7 @@ object ItemsDao {
   private[db] def replace(user: User, form: ItemForm): Item = {
     DB.withConnection { implicit c =>
       findByObjectId(Authorization.All, objectId(form.summary)).map { item =>
-        softDeleteWithConnection(user, item)(c)
+        deleteWithConnection(user, item)(c)
       }
 
       Try(create(user, form)(c)) match {
@@ -125,21 +124,21 @@ object ItemsDao {
     }
   }
 
-  def softDelete(deletedBy: User, item: Item) {
+  def delete(deletedBy: User, item: Item) {
     DB.withConnection { implicit c =>
-      softDeleteWithConnection(deletedBy, item)(c)
+      deleteWithConnection(deletedBy, item)(c)
     }
   }
 
-  private[this] def softDeleteWithConnection(deletedBy: User, item: Item)(
+  private[this] def deleteWithConnection(deletedBy: User, item: Item)(
     implicit c: java.sql.Connection
   ) {
-    SoftDelete.delete("items", deletedBy.id, item.id)
+    Delete.delete("items", deletedBy.id, item.id)
   }
 
-  def softDeleteByObjectId(auth: Authorization, deletedBy: User, objectId: String) {
+  def deleteByObjectId(auth: Authorization, deletedBy: User, objectId: String) {
     findByObjectId(auth, objectId).map { item =>
-      softDelete(deletedBy, item)
+      delete(deletedBy, item)
     }
   }
 
@@ -157,7 +156,6 @@ object ItemsDao {
     ids: Option[Seq[String]] = None,
     q: Option[String] = None,
     objectId: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("-lower(items.label), items.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -169,7 +167,6 @@ object ItemsDao {
         optionalIn("items.id", ids).
         and(q.map { v => "items.contents like '%' || lower(trim({q})) || '%' " }).bind("q", q).
         equals("items.object_id", objectId).
-        nullBoolean("items.deleted_at", isDeleted).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).

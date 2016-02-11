@@ -123,8 +123,8 @@ object OrganizationsDao {
     }
   }
 
-  def softDelete(deletedBy: User, organization: Organization) {
-    SoftDelete.delete("organizations", deletedBy.id, organization.id)
+  def delete(deletedBy: User, organization: Organization) {
+    Delete.delete("organizations", deletedBy.id, organization.id)
   }
 
   def findById(auth: Authorization, id: String): Option[Organization] = {
@@ -137,7 +137,6 @@ object OrganizationsDao {
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
     forUserId: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("organizations.id, -organizations.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -150,7 +149,6 @@ object OrganizationsDao {
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset
       ).

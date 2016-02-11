@@ -91,7 +91,7 @@ class Subscriptions @javax.inject.Inject() (
 
   def deleteById(id: String, identifier: Option[String]) = Identified { request =>
     withSubscription(id) { subscription =>
-      SubscriptionsDao.softDelete(request.user, subscription)
+      SubscriptionsDao.delete(request.user, subscription)
       NoContent
     }
   }

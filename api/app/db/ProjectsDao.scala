@@ -22,16 +22,8 @@ object ProjectsDao {
            organizations.id as organization_id,
            organizations.key as organization_key
       from projects
-      left join organizations on organizations.deleted_at is null and organizations.id = projects.organization_id
+      left join organizations on organizations.id = projects.organization_id
   """)
-
-  private[this] val FilterProjectLibraries = """
-    projects.id in (select project_id from project_libraries where deleted_at is null and %s)
-  """.trim
-
-  private[this] val FilterProjectBinaries = """
-    projects.id in (select project_id from project_binaries where deleted_at is null and %s)
-  """.trim
 
   private[this] val InsertQuery = """
     insert into projects
@@ -173,8 +165,8 @@ object ProjectsDao {
     }
   }
 
-  def softDelete(deletedBy: User, project: Project) {
-    SoftDelete.delete("projects", deletedBy.id, project.id)
+  def delete(deletedBy: User, project: Project) {
+    Delete.delete("projects", deletedBy.id, project.id)
     MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
   }
 
@@ -192,7 +184,6 @@ object ProjectsDao {
     ids: Option[Seq[String]] = None,
     organizationId: Option[String] = None,
     name: Option[String] = None,
-    isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -206,7 +197,6 @@ object ProjectsDao {
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
-        isDeleted = isDeleted,
         limit = limit,
         offset = offset
       ).
