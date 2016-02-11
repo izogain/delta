@@ -1,10 +1,12 @@
-FROM flowcommerce/play:0.0.7
+FROM giltarchitecture/ubuntu-jvm:0.6
 
-ADD . /opt/play
+MAINTAINER mbryzek@alum.mit.edu
 
-WORKDIR /opt/play
+ADD . /usr/share/dependency
 
-RUN sbt clean stage
-  
-ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "run", "play", "splashpage", "api/target/universal/stage/bin/splashpage-api"]
+WORKDIR /usr/share/dependency
 
+RUN sbt -Dsbt.ivy.home=.ivy2 clean stage
+
+RUN ln -s /usr/share/dependency/api/target/universal/stage /usr/share/dependency-api
+RUN ln -s /usr/share/dependency/www/target/universal/stage /usr/share/dependency-www
