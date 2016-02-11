@@ -1,5 +1,6 @@
 package db
 
+import io.flow.postgresql.Authorization
 import io.flow.play.clients.MockUserTokensClient
 import io.flow.play.util.Random
 import io.flow.delta.v0.models._
@@ -63,7 +64,7 @@ trait Helpers {
 
   def createOrganizationForm() = {
     OrganizationForm(
-      key = createTestKey()
+      id = createTestKey()
     )
   }
 
@@ -72,7 +73,7 @@ trait Helpers {
   ) (
     implicit form: ProjectForm = createProjectForm(org)
   ): Project = {
-    val user = OrganizationsDao.findByKey(Authorization.All, form.organization).flatMap { org =>
+    val user = OrganizationsDao.findById(Authorization.All, form.organization).flatMap { org =>
       UsersDao.findById(org.user.id)
     }.getOrElse {
       sys.error("Could not find user that created org")
@@ -85,62 +86,12 @@ trait Helpers {
     org: Organization = createOrganization()
   ) = {
     ProjectForm(
-      organization = org.key,
+      organization = org.id,
       name = createTestName(),
       visibility = Visibility.Private,
       scms = Scms.Github,
       uri = s"http://github.com/test/${UUID.randomUUID.toString}"
     )
-  }
-
-  def createProjectWithLibrary(
-    org: Organization = createOrganization(),
-    version: VersionForm = VersionForm(version = "0.0.1")
-  ) (
-    implicit libraryForm: LibraryForm = createLibraryForm(org).copy(
-      groupId = s"z-test-${UUID.randomUUID.toString}".toLowerCase,
-      artifactId = s"z-test-${UUID.randomUUID.toString}".toLowerCase
-    )
-  ): (Project, LibraryVersion) = {
-    val project = createProject(org)
-    val library = createLibrary(org)(libraryForm)
-
-    val projectLibrary = createProjectLibrary(project)(
-      createProjectLibraryForm(
-        project,
-        groupId = library.groupId,
-        artifactId = library.artifactId,
-        version = version.version,
-        crossBuildVersion = version.crossBuildVersion
-      )
-    )
-
-    val libraryVersion = LibraryVersionsDao.upsert(systemUser, library.id, version)
-
-    ProjectLibrariesDao.setLibrary(systemUser, projectLibrary, library)
-
-    (project, libraryVersion)
-  }
-
-  def createProjectWithBinary(
-    org: Organization = createOrganization()
-  ): (Project, BinaryVersion) = {
-    val binary = createBinary(org)
-    val binaryVersion = createBinaryVersion(org)(binary = binary)
-    val project = createProject(org)
-
-    val projectBinary = create(ProjectBinariesDao.create(
-      systemUser,
-      createProjectBinaryForm(
-        project = project,
-        name = binary.name,
-        version = binaryVersion.version
-      )
-    ))
-
-    ProjectBinariesDao.setBinary(systemUser, projectBinary, binary)
-
-    (project, binaryVersion)
   }
 
   def makeUser(
@@ -205,24 +156,6 @@ trait Helpers {
     )
   }
 
-  def createSync(
-    form: SyncForm = createSyncForm()
-  ): Sync = {
-    SyncsDao.create(systemUser, form)
-  }
-
-  def createSyncForm(
-    `type`: String = "test",
-    objectId: String = UUID.randomUUID.toString,
-    event: SyncEvent = SyncEvent.Started
-  ) = {
-    SyncForm(
-      `type` = `type`,
-      objectId = objectId,
-      event = event
-    )
-  }
-
   def createMembership(
     form: MembershipForm = createMembershipForm()
   ): Membership = {
@@ -235,7 +168,7 @@ trait Helpers {
     role: Role = Role.Member
   ) = {
     MembershipForm(
-      organization = org.key,
+      organization = org.id,
       userId = user.id,
       role = role
     )
@@ -252,12 +185,12 @@ trait Helpers {
   def createItemSummary(
     org: Organization
   ) (
-    implicit binary: Binary = createBinary(org)
+    implicit project: Project = createProject(org)
   ): ItemSummary = {
-    BinarySummary(
-      id = binary.id,
-      organization = OrganizationSummary(org.id, org.key),
-      name = binary.name
+    ProjectSummary(
+      id = project.id,
+      organization = OrganizationSummary(org.id),
+      name = project.name
     )
   }
 
@@ -267,8 +200,6 @@ trait Helpers {
     implicit summary: ItemSummary = createItemSummary(org)
   ): ItemForm = {
     val label = summary match {
-      case BinarySummary(id, org, name) => name.toString
-      case LibrarySummary(id, org, groupId, artifactId) => Seq(groupId, artifactId).mkString(".")
       case ProjectSummary(id, org, name) => name
       case ItemSummaryUndefinedType(name) => name
     }
@@ -288,7 +219,7 @@ trait Helpers {
 
   def createSubscriptionForm(
     user: User = createUser(),
-    publication: Publication = Publication.DailySummary
+    publication: Publication = Publication.Deployments
   ) = {
     SubscriptionForm(
       userId = user.id,

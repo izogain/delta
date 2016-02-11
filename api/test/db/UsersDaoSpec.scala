@@ -150,13 +150,5 @@ class UsersDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       }
     }
 
-    "creates user organization asynchronously" in {
-      val user = UsersDao.create(None, createUserForm()).right.get
-
-      waitFor { () =>
-        OrganizationsDao.findAll(Authorization.All, forUserId = Some(user.id)).size == 1
-      } must be(true)
-    }
-
   }
 }

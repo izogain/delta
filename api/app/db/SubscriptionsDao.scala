@@ -102,8 +102,6 @@ object SubscriptionsDao {
     userId: Option[String] = None,
     identifier: Option[String] = None,
     publication: Option[Publication] = None,
-    minHoursSinceLastEmail: Option[Int] = None,
-    minHoursSinceRegistration: Option[Int] = None,
     isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("subscriptions.created_at"),
     limit: Long = 25,
@@ -123,25 +121,6 @@ object SubscriptionsDao {
       ).
         equals("subscriptions.user_id", userId).
         optionalText("subscriptions.publication", publication).
-        and(
-          minHoursSinceLastEmail.map { v => """
-            not exists (select 1
-                          from last_emails
-                         where last_emails.deleted_at is null
-                           and last_emails.user_id = subscriptions.user_id
-                           and last_emails.publication = subscriptions.publication
-                           and last_emails.created_at > now() - interval '1 hour' * {min_hours}::int)
-          """.trim }
-        ).bind("min_hours", minHoursSinceLastEmail).
-        and(
-          minHoursSinceRegistration.map { v => """
-            exists (select 1
-                      from users
-                     where users.deleted_at is null
-                       and users.id = subscriptions.user_id
-                       and users.created_at <= now() - interval '1 hour' * {min_hours_since_registration}::int)
-          """.trim }
-        ).bind("min_hours_since_registration", minHoursSinceRegistration).
         and(
           identifier.map { id =>
             "subscriptions.user_id in (select user_id from user_identifiers where deleted_at is null and value = trim({identifier}))"

@@ -28,7 +28,7 @@ class Projects @javax.inject.Inject() (
           authorization(request),
           ids = optionals(id),
           name = name,
-          organization = organization,
+          organizationId = organization,
           limit = limit,
           offset = offset
         )

@@ -1,7 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.{Authorization, Client}
-import io.flow.delta.v0.models.{ProjectForm, ProjectPatchForm}
+import io.flow.delta.v0.models.ProjectForm
 
 import java.util.UUID
 import play.api.libs.ws._
@@ -17,13 +17,13 @@ class ProjectsSpec extends PlaySpecification with MockClient {
 
   "GET /projects by id" in new WithServer(port=port) {
     await(
-      client.projects.get(id = Some(project1.id))
+      client.projects.get(id = Some(Seq(project1.id)))
     ).map(_.id) must beEqualTo(
       Seq(project1.id)
     )
 
     await(
-      client.projects.get(id = Some(UUID.randomUUID.toString))
+      client.projects.get(id = Some(Seq(UUID.randomUUID.toString)))
     ).map(_.id) must be(
       Nil
     )
@@ -80,22 +80,6 @@ class ProjectsSpec extends PlaySpecification with MockClient {
     val newUri = "http://github.com/mbryzek/test"
     await(client.projects.putById(project.id, form.copy(uri = newUri)))
     await(client.projects.getById(project.id)).uri must beEqualTo(newUri)
-  }
-
-  "PATCH /projects/:id w/ no data leaves project unchanged" in new WithServer(port=port) {
-    val project = createProject(org)()
-    await(client.projects.patchById(project.id, ProjectPatchForm()))
-    val updated = await(client.projects.getById(project.id))
-    updated.name must beEqualTo(project.name)
-    updated.scms must beEqualTo(project.scms)
-    updated.uri must beEqualTo(project.uri)
-  }
-
-  "PATCH /projects/:id w/ name" in new WithServer(port=port) {
-    val project = createProject(org)()
-    val newName = project.name + "2"
-    await(client.projects.patchById(project.id, ProjectPatchForm(name = Some(newName))))
-    await(client.projects.getById(project.id)).name must beEqualTo(newName)
   }
 
   "DELETE /projects" in new WithServer(port=port) {

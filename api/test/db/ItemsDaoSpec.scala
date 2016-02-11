@@ -1,6 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Visibility}
+import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
 import play.api.test.Helpers._
@@ -65,7 +66,7 @@ class ItemsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     actual.summary must be(
       ProjectSummary(
         id = project.id,
-        organization = OrganizationSummary(org.id, org.key),
+        organization = OrganizationSummary(org.id),
         name = project.name
       )
     )

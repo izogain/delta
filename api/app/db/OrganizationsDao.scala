@@ -50,7 +50,7 @@ object OrganizationsDao {
       Seq("Id cannot be empty")
 
     } else {
-      urlKey.validate(form.id.trim) match {
+      urlKey.validate(form.id.trim, "Id") match {
         case Nil => {
           OrganizationsDao.findById(Authorization.All, form.id) match {
             case None => Seq.empty

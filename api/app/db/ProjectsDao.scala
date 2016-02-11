@@ -86,7 +86,7 @@ object ProjectsDao {
       Seq("Name cannot be empty")
 
     } else {
-      ProjectsDao.findByOrganizationAndName(Authorization.All, form.organization, form.name) match {
+      ProjectsDao.findByOrganizationIdAndName(Authorization.All, form.organization, form.name) match {
         case None => Seq.empty
         case Some(p) => {
           Some(p.id) == existing.map(_.id) match {
@@ -178,13 +178,8 @@ object ProjectsDao {
     MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
   }
 
-/*
   def findByOrganizationIdAndName(auth: Authorization, organizationId: String, name: String): Option[Project] = {
     findAll(auth, organizationId = Some(organizationId), name = Some(name), limit = 1).headOption
-  }
- */
-  def findByOrganizationAndName(auth: Authorization, organization: String, name: String): Option[Project] = {
-    findAll(auth, organization = Some(organization), name = Some(name), limit = 1).headOption
   }
 
   def findById(auth: Authorization, id: String): Option[Project] = {
@@ -195,7 +190,6 @@ object ProjectsDao {
     auth: Authorization,
     id: Option[String] = None,
     ids: Option[Seq[String]] = None,
-    organization: Option[String] = None,
     organizationId: Option[String] = None,
     name: Option[String] = None,
     isDeleted: Option[Boolean] = Some(false),
@@ -217,11 +211,10 @@ object ProjectsDao {
         offset = offset
       ).
         optionalText(
-          "organizations.key",
-          organization,
+          "organizations.id",
+          organizationId,
           valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
         ).
-        equals("organizations.id", organizationId).
         optionalText(
           "projects.name",
           name,

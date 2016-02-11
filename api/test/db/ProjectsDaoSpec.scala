@@ -1,6 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{Project, Scms, Visibility}
+import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
 import play.api.test.Helpers._
@@ -16,12 +17,12 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   lazy val project2 = createProject(org)
 
   "findByOrganizationIdAndName" in {
-    ProjectsDao.findByOrganizationAndName(Authorization.All, org.key, project1.name).map(_.id) must be(
+    ProjectsDao.findByOrganizationIdAndName(Authorization.All, org.id, project1.name).map(_.id) must be(
       Some(project1.id)
     )
 
-    ProjectsDao.findByOrganizationAndName(Authorization.All, createTestKey(), project1.name) must be(None)
-    ProjectsDao.findByOrganizationAndName(Authorization.All, org.key, createTestName()) must be(None)
+    ProjectsDao.findByOrganizationIdAndName(Authorization.All, createTestKey(), project1.name) must be(None)
+    ProjectsDao.findByOrganizationIdAndName(Authorization.All, org.id, createTestName()) must be(None)
   }
 
   "findById" in {
@@ -110,14 +111,6 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       )
 
       ProjectsDao.findAll(Authorization.All, id = Some(project1.id), organizationId = Some(createOrganization().id)) must be(Nil)
-    }
-
-    "org" in {
-      ProjectsDao.findAll(Authorization.All, id = Some(project1.id), organization = Some(org.key)).map(_.id) must be(
-        Seq(project1.id)
-      )
-
-      ProjectsDao.findAll(Authorization.All, id = Some(project1.id), organization = Some(createOrganization().key)) must be(Nil)
     }
 
     "authorization for public projects" in {

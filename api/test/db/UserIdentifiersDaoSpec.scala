@@ -2,6 +2,7 @@ package db
 
 import io.flow.delta.v0.models.UserIdentifier
 import io.flow.common.v0.models.User
+import io.flow.postgresql.Authorization
 
 import org.scalatest._
 import play.api.test._

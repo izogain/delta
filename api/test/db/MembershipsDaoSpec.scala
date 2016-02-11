@@ -1,6 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{Membership, OrganizationSummary, Role}
+import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
 import play.api.test.Helpers._
@@ -21,14 +22,6 @@ class MembershipsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     MembershipsDao.isMember(org.id, user) must be(true)
     MembershipsDao.isMember(org.id, createUser()) must be(false)
     MembershipsDao.isMember(createOrganization().id, user) must be(false)
-  }
-
-  "isMember by key" in {
-    membership // Create the membership record
-
-    MembershipsDao.isMemberByOrgKey(org.key, user) must be(true)
-    MembershipsDao.isMemberByOrgKey(org.key, createUser()) must be(false)
-    MembershipsDao.isMemberByOrgKey(createOrganization().key, user) must be(false)
   }
 
   "findByOrganizationIdAndUserId" in {

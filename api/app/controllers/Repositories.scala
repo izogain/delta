@@ -40,8 +40,8 @@ class Repositories @javax.inject.Inject() (
                   case None => true
                   case Some(org) => {
                     existingProject.isEmpty ||
-                    existingProject == Some(true) && !ProjectsDao.findByOrganizationAndName(auth, org.id, r.name).isEmpty ||
-                    existingProject == Some(false) && ProjectsDao.findByOrganizationAndName(auth, org.id, r.name).isEmpty
+                    existingProject == Some(true) && !ProjectsDao.findByOrganizationIdAndName(auth, org.id, r.name).isEmpty ||
+                    existingProject == Some(false) && ProjectsDao.findByOrganizationIdAndName(auth, org.id, r.name).isEmpty
                   }
                 }
               }.

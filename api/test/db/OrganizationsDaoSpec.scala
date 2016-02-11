@@ -1,5 +1,6 @@
 package db
 
+import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Role
 import io.flow.common.v0.models.Name
 import org.scalatest._
@@ -12,40 +13,12 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  "defaultUserName" in {
-    val user = makeUser()
-
-    OrganizationsDao.defaultUserName(
-      user.copy(email = Some("mike@flow.io"))
-    ) must be("mike")
-
-    OrganizationsDao.defaultUserName(
-      user.copy(email = Some("mbryzek@alum.mit.edu"))
-    ) must be("mbryzek")
-
-    OrganizationsDao.defaultUserName(
-      user.copy(name = Name())
-    ).length must be(OrganizationsDao.DefaultUserNameLength)
-
-    OrganizationsDao.defaultUserName(
-      user.copy(name = Name(first = Some("Michael")))
-    ) must be("michael")
-
-    OrganizationsDao.defaultUserName(
-      user.copy(name = Name(last = Some("Bryzek")))
-    ) must be("bryzek")
-
-    OrganizationsDao.defaultUserName(
-      user.copy(name = Name(first = Some("Michael"), last = Some("Bryzek")))
-    ) must be("mbryzek")
-  }
-
   "create" in {
     val form = createOrganizationForm()
     val organization = OrganizationsDao.create(systemUser, form).right.getOrElse {
       sys.error("Failed to create org")
     }
-    organization.key must be(form.key)
+    organization.id must be(form.id)
   }
 
   "creation users added as admin of org" in {
@@ -105,8 +78,8 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validate" must {
 
     "keep key url friendly" in {
-      OrganizationsDao.validate(createOrganizationForm().copy(key = "flow commerce")) must be(
-        Seq("Key must be in all lower case and contain alphanumerics only (-, _, and . are supported). A valid key would be: flow-commerce")
+      OrganizationsDao.validate(createOrganizationForm().copy(id = "flow commerce")) must be(
+        Seq("Id must be in all lower case and contain alphanumerics only (-, _, and . are supported). A valid id would be: flow-commerce")
       )
     }
 
