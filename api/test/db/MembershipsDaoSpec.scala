@@ -18,9 +18,9 @@ class MembershipsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "isMember by id" in {
     membership // Create the membership record
 
-    MembershipsDao.isMemberByOrgId(org.id, user) must be(true)
-    MembershipsDao.isMemberByOrgId(org.id, createUser()) must be(false)
-    MembershipsDao.isMemberByOrgId(createOrganization().id, user) must be(false)
+    MembershipsDao.isMember(org.id, user) must be(true)
+    MembershipsDao.isMember(org.id, createUser()) must be(false)
+    MembershipsDao.isMember(createOrganization().id, user) must be(false)
   }
 
   "isMember by key" in {

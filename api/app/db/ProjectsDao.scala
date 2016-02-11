@@ -97,7 +97,7 @@ object ProjectsDao {
       }
     }
 
-    val organizationErrors = MembershipsDao.isMemberByOrgKey(form.organization, user) match  {
+    val organizationErrors = MembershipsDao.isMember(form.organization, user) match  {
       case false => Seq("You do not have access to this organization")
       case true => Nil
     }
@@ -146,8 +146,8 @@ object ProjectsDao {
         // To support org change - need to record the change as its
         // own record to be able to track changes.
         assert(
-          project.organization.key == form.organization,
-          "Changing organization not currently supported"
+          project.organization.id == form.organization,
+          "Changing organization ID not currently supported"
         )
 
         DB.withConnection { implicit c =>

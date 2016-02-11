@@ -18,8 +18,7 @@ class Memberships @javax.inject.Inject() (
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
-    id: Option[String],
-    ids: Option[Seq[String]],
+    id: Option[Seq[String]],
     organization: Option[String],
     userId: Option[String],
     role: Option[Role],
@@ -30,8 +29,7 @@ class Memberships @javax.inject.Inject() (
       Json.toJson(
         MembershipsDao.findAll(
           authorization(request),
-          id = id,
-          ids = optionals(ids),
+          ids = optionals(id),
           organizationId = organization,
           userId = userId,
           role = role,

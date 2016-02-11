@@ -16,8 +16,7 @@ class Projects @javax.inject.Inject() (
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
-    id: Option[String],
-    ids: Option[Seq[String]],
+    id: Option[Seq[String]],
     organization: Option[String],
     name: Option[String],
     limit: Long = 25,
@@ -27,8 +26,7 @@ class Projects @javax.inject.Inject() (
       Json.toJson(
         ProjectsDao.findAll(
           authorization(request),
-          id = id,
-          ids = optionals(ids),
+          ids = optionals(id),
           name = name,
           organization = organization,
           limit = limit,

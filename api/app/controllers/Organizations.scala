@@ -16,8 +16,7 @@ class Organizations @javax.inject.Inject() (
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def get(
-    id: Option[String],
-    ids: Option[Seq[String]],
+    id: Option[Seq[String]],
     userId: Option[String],
     limit: Long = 25,
     offset: Long = 0
@@ -26,8 +25,7 @@ class Organizations @javax.inject.Inject() (
       Json.toJson(
         OrganizationsDao.findAll(
           authorization(request),
-          id = id,
-          ids = optionals(ids),
+          ids = optionals(id),
           userId = userId,
           limit = limit,
           offset = offset

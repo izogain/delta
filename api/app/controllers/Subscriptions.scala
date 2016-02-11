@@ -47,8 +47,7 @@ class Subscriptions @javax.inject.Inject() (
   }
 
   def get(
-    id: Option[String],
-    ids: Option[Seq[String]],
+    id: Option[Seq[String]],
     userId: Option[String],
     identifier: Option[String],
     publication: Option[Publication],
@@ -58,8 +57,7 @@ class Subscriptions @javax.inject.Inject() (
     Ok(
       Json.toJson(
         SubscriptionsDao.findAll(
-          id = id,
-          ids = optionals(ids),
+          ids = optionals(id),
           userId = userId,
           identifier = identifier,
           publication = publication,

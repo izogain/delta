@@ -32,7 +32,7 @@ object MembershipsDao {
     ({id}, {role}, {user_id}, {organization_id}, {updated_by_user_id})
   """
 
-  def isMemberByOrgId(orgId: String, user: User): Boolean = {
+  def isMember(orgId: String, user: User): Boolean = {
     MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, orgId, user.id) match {
       case None => false
       case Some(_) => true
@@ -46,7 +46,7 @@ object MembershipsDao {
     val roleErrors = form.role match {
       case Role.UNDEFINED(_) => Seq("Invalid role. Must be one of: " + Role.all.map(_.toString).mkString(", "))
       case _ => {
-        MembershipsDao.findByOrganizationAndUserId(Authorization.All, form.organization, form.userId) match {
+        MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, form.userId) match {
           case None => Seq.empty
           case Some(membership) => {
             Seq("User is already a member")
@@ -55,7 +55,7 @@ object MembershipsDao {
       }
     }
 
-    val organizationErrors = MembershipsDao.findByOrganizationAndUserId(Authorization.All, form.organization, user.id) match {
+    val organizationErrors = MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, user.id) match {
       case None => Seq("Organization does not exist or you are not authorized to access this organization")
       case Some(_) => Nil
     }
@@ -66,7 +66,7 @@ object MembershipsDao {
   def create(createdBy: User, form: MembershipForm): Either[Seq[String], Membership] = {
     validate(createdBy, form) match {
       case Nil => {
-        val id = MembershipsDao.findByOrganizationAndUserId(Authorization.All, form.organization, form.userId) match {
+        val id = MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, form.userId) match {
           case None => {
             DB.withConnection { implicit c =>
               create(c, createdBy, form)
@@ -113,19 +113,6 @@ object MembershipsDao {
 
   def softDelete(deletedBy: User, membership: Membership) {
     SoftDelete.delete("memberships", deletedBy.id, membership.id)
-  }
-
-  def findByOrganizationAndUserId(
-    auth: Authorization,
-    organization: String,
-    userId: String
-  ): Option[Membership] = {
-    findAll(
-      auth,
-      organization = Some(organization),
-      userId = Some(userId),
-      limit = 1
-    ).headOption
   }
 
   def findByOrganizationIdAndUserId(

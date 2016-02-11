@@ -324,8 +324,7 @@
           "method": "GET",
           "description": "Search projects. Results are paginated",
           "parameters": [
-            { "name": "id", "type": "string", "description": "Find project with this id. Exact match", "required": false },
-	    { "name": "ids", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
 	    { "name": "organization", "type": "string", "description": "Filter to resolvers belongs to the organization with this key", "required": false },
             { "name": "name", "type": "string", "description": "Find project with this name. Case in-sensitive. Exact match", "required": false },
 	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
@@ -389,10 +388,8 @@
           "method": "GET",
           "description": "Search organizations. Results are paginated",
           "parameters": [
-            { "name": "id", "type": "string", "description": "Find organization with this id. Exact match", "required": false },
-	    { "name": "ids", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "user_id", "type": "string", "description": "Find organizations that this user has access to", "required": false },
-            { "name": "key", "type": "string", "description": "Find organization with this key. Case in-sensitive. Exact match", "required": false },
 	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
           ],
@@ -454,8 +451,7 @@
           "method": "GET",
           "description": "Search all memberships. Results are always paginated.",
           "parameters": [
-            { "name": "id", "type": "string", "description": "Find organization with this id. Exact match", "required": false },
-	    { "name": "ids", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "organization", "type": "string", "required": false, "description": "Filter to organization with this key. Case insensitive" },
             { "name": "user_id", "type": "string", "required": false },
             { "name": "role", "type": "role", "required": false },
@@ -529,8 +525,7 @@
           "method": "GET",
           "description": "Search subscriptions. Always paginated.",
           "parameters": [
-            { "name": "id", "type": "string", "description": "Find the subscription with this id.", "required": false },
-	    { "name": "ids", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "user_id", "type": "string", "description": "Find subscriptions for this user.", "required": false },
 	    { "name": "identifier", "type": "string", "description": "Find subscriptions associated with this user identifier. Exact match", "required": false },
             { "name": "publication", "type": "publication", "description": "Find subscriptions for this publication.", "required": false },
