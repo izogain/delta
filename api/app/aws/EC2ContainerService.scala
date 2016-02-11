@@ -13,7 +13,7 @@ object EC2ContainerService {
   // stuff to make configurable
   lazy val containerMemory = 500
   lazy val serviceRole = "ecsServiceRole"
-  lazy val serviceDesiredCount = 1
+  lazy val serviceDesiredCount = 3
 
   def getClusterName(projectId: String): String = s"$projectId-api-ecs-cluster"
 

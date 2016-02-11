@@ -25,28 +25,24 @@ class ImageActor extends Actor with Util {
   implicit val imageActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("image-actor-context")
 
   def receive = {
-    // id: Docker image style ID
-    // examples: flowcommerce/user:0.0.3, giltarchitecture/ubuntu: 1.2.34
     case msg @ ImageActor.Messages.Deploy(id: String) => withVerboseErrorHandler(msg.toString) {
       val taskDefinition = registerTaskDefinition(id)
-      println(s"[ImageActor.Messages.Deploy] Done - Task Registered: [$id], Task: [${taskDefinition}]")
-
-      val service = createService(id, taskDefinition)
-      println(s"[ImageActor.Messages.Deploy] Done - Service Created: [$id], Service: [${service}]")
-
+      createService(id, taskDefinition)
       ImageActor.ref ! ImageActor.Messages.Monitor(id)
     }
 
     case msg @ ImageActor.Messages.Monitor(id: String) => withVerboseErrorHandler(msg.toString) {
       val ecsService = EC2ContainerService.getServiceInfo(id)
-      val runningCount = ecsService.getRunningCount
-      val desiredCount = ecsService.getDesiredCount
+      val running = ecsService.getRunningCount
+      val desired = ecsService.getDesiredCount
+      val pending = ecsService.getPendingCount
+
       val status = ecsService.getStatus
-      if (runningCount == desiredCount) {
-        println(s"[ImageActor.Messages.Monitor] DONE Deploying - Image: $id, Service: $status, Running: $runningCount, Desired: $desiredCount.")
+      if (running == desired) {
+        println(s"[ImageActor.Messages.Monitor] DONE Deploying - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired.")
         println("===========================")
       } else {
-        println(s"[ImageActor.Messages.Monitor] Still Deploying - Image: $id, Service: $status, Running: $runningCount, Desired: $desiredCount. Next update in 5 seconds.")
+        println(s"[ImageActor.Messages.Monitor] Still Deploying - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
         println("===========================")
         Thread.sleep(5000)
         ImageActor.ref ! ImageActor.Messages.Monitor(id)
@@ -55,11 +51,14 @@ class ImageActor extends Actor with Util {
   }
 
   def registerTaskDefinition(id: String): String = {
-    return EC2ContainerService.registerTaskDefinition(id)
+    val taskDefinition = EC2ContainerService.registerTaskDefinition(id)
+    println(s"[ImageActor.Messages.Deploy] Done - Task Registered: [$id], Task: [${taskDefinition}]")
+    return taskDefinition
   }
 
-  def createService(id: String, taskDefinition: String): String = {
-    return EC2ContainerService.createService(id, taskDefinition)
+  def createService(id: String, taskDefinition: String) {
+    val service = EC2ContainerService.createService(id, taskDefinition)
+    println(s"[ImageActor.Messages.Deploy] Done - Service Created: [$id], Service: [${service}]")
   }
 
 }

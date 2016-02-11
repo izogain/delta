@@ -29,36 +29,36 @@ class ProjectActor extends Actor with Util {
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2(id: String) => withVerboseErrorHandler(msg.toString) {
       val lc = createLaunchConfiguration(id)
-      println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Launch Configuration:  [${lc}]")
-
       val elb = createLoadBalancer(id)
-      println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Load Balancer: [${elb}]")
-
-      val asg = createAutoScalingGroup(id, lc, elb)
-      println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Auto-Scaling Group: [${asg}]")
+      createAutoScalingGroup(id, lc, elb)
     }
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureECS(id: String) => withVerboseErrorHandler(msg.toString) {
-      val cluster = createCluster(id)
-      println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$id], ECS Cluster: [${cluster}]")
+      createCluster(id)
     }
   }
 
   def createLaunchConfiguration(id: String): String = {
-    return AutoScalingGroup.createLaunchConfiguration(id)
+    val lc = AutoScalingGroup.createLaunchConfiguration(id)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Launch Configuration: [${lc}]")
+    return lc
   }
 
   def createLoadBalancer(id: String): String = {
-    return ElasticLoadBalancer.createLoadBalancerAndHealthCheck(id)
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(id)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Load Balancer: [${elb}]")
+    return elb
   }
 
-  def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String): String = {
-    return AutoScalingGroup.createAutoScalingGroup(id, launchConfigName, loadBalancerName)
+  def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String) {
+    val asg = AutoScalingGroup.createAutoScalingGroup(id, launchConfigName, loadBalancerName)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Auto-Scaling Group: [${asg}]")
   }
 
-  def createCluster(id: String): String = {
-    return EC2ContainerService.createCluster(id)
+  def createCluster(id: String) {
+    val cluster = EC2ContainerService.createCluster(id)
+    println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$id], ECS Cluster: [${cluster}]")
   }
 
 }
