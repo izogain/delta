@@ -179,7 +179,7 @@
     },
 
     "tag": {
-      "path": "/:projectId/tags",
+      "path": "/projects/:projectId/tags",
       "operations": [
         {
           "method": "GET",
@@ -200,7 +200,7 @@
     },
 
     "image": {
-      "path": "/:projectId/images",
+      "path": "/projects/:projectId/images",
       "operations": [
         {
           "method": "GET",
@@ -221,7 +221,7 @@
     },
 
     "deployment": {
-      "path": "/:projectId/deployments",
+      "path": "/projects/:projectId/deployments",
       "operations": [
         {
           "method": "GET",
