@@ -13,7 +13,8 @@ object EC2ContainerService {
   // stuff to make configurable
   lazy val containerMemory = 500
   lazy val serviceRole = "ecsServiceRole"
-  lazy val serviceDesiredCount = 3
+  lazy val createServiceDesiredCount = 1
+  lazy val maxScaleUpDesiredCount = 3
 
   def getClusterName(projectId: String): String = s"$projectId-api-ecs-cluster"
 
@@ -27,13 +28,28 @@ object EC2ContainerService {
     return s"$projectId-api-ecs-service-${tag.replaceAll("[.]","-")}"
   }
 
+  def scaleUp(id: String) {
+    val (organization, projectId, tag) = getComponentsFromImageId(id)
+    val service = getServiceName(id, projectId, tag)
+    val cluster = getClusterName(projectId)
+
+    client.updateService(
+      new UpdateServiceRequest()
+        .withCluster(cluster)
+        .withService(service)
+        .withDesiredCount(maxScaleUpDesiredCount)
+    )
+  }
+
   def getServiceInfo(id: String): Service = {
     val (organization, projectId, tag) = getComponentsFromImageId(id)
-    // should only be one thing, since we are passing cluster and service
     val service = getServiceName(id, projectId, tag)
+    val cluster = getClusterName(projectId)
+
+    // should only be one thing, since we are passing cluster and service
     client.describeServices(
       new DescribeServicesRequest()
-        .withCluster(getClusterName(projectId))
+        .withCluster(cluster)
         .withServices(Seq(service).asJava)
     ).getServices().asScala.head
   }
@@ -79,7 +95,7 @@ object EC2ContainerService {
       new CreateServiceRequest()
         .withServiceName(serviceName)
         .withCluster(clusterName)
-        .withDesiredCount(serviceDesiredCount)
+        .withDesiredCount(createServiceDesiredCount)
         .withRole(serviceRole)
         .withTaskDefinition(taskDefinition)
         .withLoadBalancers(
