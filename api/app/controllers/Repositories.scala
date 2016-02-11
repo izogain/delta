@@ -1,11 +1,10 @@
 package controllers
 
-import db.{Authorization, OrganizationsDao, ProjectsDao}
+import db.{OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.Github
 import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.json._
 import io.flow.play.clients.UserTokensClient
-import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation
 import play.api.mvc._
 import play.api.libs.json._
@@ -14,7 +13,7 @@ import scala.concurrent.Future
 class Repositories @javax.inject.Inject() (
   val userTokensClient: UserTokensClient,
   val github: Github
-) extends Controller with IdentifiedRestController {
+) extends Controller with BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -30,7 +29,7 @@ class Repositories @javax.inject.Inject() (
         UnprocessableEntity(Json.toJson(Validation.error("When filtering by existing projects, you must also provide the organization_id")))
       }
     } else {
-      val auth = Authorization.User(request.user.id)
+      val auth = authorization(request)
       github.repositories(request.user).map { repos =>
         Ok(
           Json.toJson(
@@ -41,8 +40,8 @@ class Repositories @javax.inject.Inject() (
                   case None => true
                   case Some(org) => {
                     existingProject.isEmpty ||
-                    existingProject == Some(true) && !ProjectsDao.findByOrganizationAndName(auth, org.key, r.name).isEmpty ||
-                    existingProject == Some(false) && ProjectsDao.findByOrganizationAndName(auth, org.key, r.name).isEmpty
+                    existingProject == Some(true) && !ProjectsDao.findByOrganizationAndName(auth, org.id, r.name).isEmpty ||
+                    existingProject == Some(false) && ProjectsDao.findByOrganizationAndName(auth, org.id, r.name).isEmpty
                   }
                 }
               }.

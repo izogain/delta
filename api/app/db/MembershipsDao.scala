@@ -1,7 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{Membership, MembershipForm, Organization, OrganizationSummary, Role}
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
@@ -16,7 +16,6 @@ object MembershipsDao {
     select memberships.id,
            memberships.role,
            organizations.id as organization_id,
-           organizations.key as organization_key,
            users.id as user_id,
            users.email  as user_email,
            users.first_name as user_name_first,
@@ -35,13 +34,6 @@ object MembershipsDao {
 
   def isMemberByOrgId(orgId: String, user: User): Boolean = {
     MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, orgId, user.id) match {
-      case None => false
-      case Some(_) => true
-    }
-  }
-
-  def isMemberByOrgKey(org: String, user: User): Boolean = {
-    MembershipsDao.findByOrganizationAndUserId(Authorization.All, org, user.id) match {
       case None => false
       case Some(_) => true
     }
@@ -99,8 +91,8 @@ object MembershipsDao {
   }
 
   private[db] def create(implicit c: java.sql.Connection, createdBy: User, form: MembershipForm): String = {
-    val org = OrganizationsDao.findByKey(Authorization.All, form.organization).getOrElse {
-      sys.error("Could not find organization with key[${form.organization}]")
+    val org = OrganizationsDao.findById(Authorization.All, form.organization).getOrElse {
+      sys.error("Could not find organization with id[${form.organization}]")
     }
 
     create(c, createdBy, org.id, form.userId, form.role)
@@ -157,7 +149,6 @@ object MembershipsDao {
     auth: Authorization,
     id: Option[String] = None,
     ids: Option[Seq[String]] = None,
-     organization: Option[String] = None,
     organizationId: Option[String] = None,
     userId: Option[String] = None,
     role: Option[Role] = None,
@@ -170,7 +161,7 @@ object MembershipsDao {
     Standards.query(
       BaseQuery,
       tableName = "memberships",
-      auth = auth.organizations("organizations.id"),
+      auth = Filters(auth).organizations("organizations.id"),
       id = id,
       ids = ids,
       orderBy = orderBy.sql,
@@ -179,7 +170,6 @@ object MembershipsDao {
       offset = offset
     ).
       equals("memberships.organization_id", organizationId).
-      optionalText("organizations.key", organization, valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)).
       equals("memberships.user_id", userId).
       optionalText("memberships.role", role.map(_.toString.toLowerCase)).
       as(

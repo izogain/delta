@@ -1,9 +1,9 @@
 package controllers
 
-import db.Authorization
+import io.flow.postgresql.Authorization
 import io.flow.play.controllers.IdentifiedRestController
 
-trait BaseIdentifiedController extends IdentifiedRestController with Helpers {
+trait BaseIdentifiedRestController extends IdentifiedRestController with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

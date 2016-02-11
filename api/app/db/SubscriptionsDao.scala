@@ -2,7 +2,7 @@ package db
 
 import io.flow.delta.v0.models.{Publication, Subscription, SubscriptionForm}
 import io.flow.common.v0.models.User
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
 import play.api.db._
 import play.api.Play.current

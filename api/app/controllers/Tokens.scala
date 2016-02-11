@@ -1,18 +1,19 @@
 package controllers
 
-import db.{Authorization, InternalTokenForm, TokensDao}
-import io.flow.play.clients.UserTokensClient
-import io.flow.play.util.Validation
-import io.flow.common.v0.models.User
+import db.{InternalTokenForm, TokensDao}
 import io.flow.delta.v0.models.{Token, TokenForm}
 import io.flow.delta.v0.models.json._
+import io.flow.common.v0.models.User
 import io.flow.common.v0.models.json._
+import io.flow.play.clients.UserTokensClient
+import io.flow.play.util.Validation
+import io.flow.postgresql.Authorization
 import play.api.mvc._
 import play.api.libs.json._
 
 class Tokens @javax.inject.Inject() (
   val userTokensClient: UserTokensClient
-) extends Controller with BaseIdentifiedController {
+) extends Controller with BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -25,7 +26,7 @@ class Tokens @javax.inject.Inject() (
     Ok(
       Json.toJson(
         TokensDao.findAll(
-          Authorization.User(request.user.id),
+          authorization(request),
           ids = optionals(ids),
           userId = userId,
           limit = limit,

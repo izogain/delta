@@ -3,7 +3,7 @@ package db
 import io.flow.delta.v0.models.{Token, TokenForm}
 import io.flow.common.v0.models.User
 import io.flow.play.util.Random
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -232,7 +232,7 @@ object TokensDao {
     Standards.query(
       BaseQuery,
       tableName = "tokens",
-      auth = auth.users("tokens.user_id"),
+      auth = Filters(auth).users("tokens.user_id"),
       id = id,
       ids = ids,
       orderBy = orderBy.sql,

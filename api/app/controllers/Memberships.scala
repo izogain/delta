@@ -1,12 +1,13 @@
 package controllers
 
-import db.{Authorization, MembershipsDao}
-import io.flow.play.clients.UserTokensClient
-import io.flow.play.controllers.IdentifiedRestController
-import io.flow.play.util.Validation
+import db.MembershipsDao
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.{Membership, MembershipForm, Role}
 import io.flow.delta.v0.models.json._
+import io.flow.play.clients.UserTokensClient
+import io.flow.play.controllers.IdentifiedRestController
+import io.flow.play.util.Validation
+import io.flow.postgresql.Authorization
 import io.flow.common.v0.models.json._
 import play.api.mvc._
 import play.api.libs.json._
@@ -14,7 +15,7 @@ import play.api.libs.json._
 @javax.inject.Singleton
 class Memberships @javax.inject.Inject() (
   val userTokensClient: UserTokensClient
-) extends Controller with IdentifiedRestController with Helpers {
+) extends Controller with BaseIdentifiedRestController {
 
   def get(
     id: Option[String],
@@ -28,10 +29,10 @@ class Memberships @javax.inject.Inject() (
     Ok(
       Json.toJson(
         MembershipsDao.findAll(
-          Authorization.User(request.user.id),
+          authorization(request),
           id = id,
           ids = optionals(ids),
-          organization = organization,
+          organizationId = organization,
           userId = userId,
           role = role,
           limit = limit,

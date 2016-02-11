@@ -2,7 +2,8 @@ package io.flow.delta.actors
 
 import io.flow.delta.v0.models.ProjectSummary
 import io.flow.play.actors.Util
-import db.{Authorization, ItemForm, ItemsDao, ProjectsDao}
+import io.flow.postgresql.Authorization
+import db.{ItemForm, ItemsDao, ProjectsDao}
 import play.api.Logger
 import akka.actor.Actor
 

@@ -4,7 +4,7 @@ import io.flow.delta.v0.models.{Item, ItemSummary, ItemSummaryUndefinedType}
 import io.flow.delta.v0.models.{OrganizationSummary, Project, ProjectSummary, Visibility}
 import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.User
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -164,7 +164,7 @@ object ItemsDao {
   ): Seq[Item] = {
     DB.withConnection { implicit c =>
       BaseQuery.
-        and(auth.organizations("items.organization_id", Some("items.visibility")).sql).
+        and(Filters(auth).organizations("items.organization_id", Some("items.visibility")).sql).
         equals("items.id", id).
         optionalIn("items.id", ids).
         and(q.map { v => "items.contents like '%' || lower(trim({q})) || '%' " }).bind("q", q).

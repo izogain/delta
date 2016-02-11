@@ -1,7 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{MembershipForm, Organization, OrganizationForm, Role}
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.play.util.{IdGenerator, Random, UrlKey}
 import io.flow.common.v0.models.User
 import anorm._
@@ -15,22 +15,20 @@ object OrganizationsDao {
 
   private[this] val BaseQuery = Query(s"""
     select organizations.id,
-           organizations.user_id,
-           organizations.key
+           organizations.user_id
       from organizations
   """)
 
   private[this] val InsertQuery = """
     insert into organizations
-    (id, user_id, key, updated_by_user_id)
+    (id, user_id, updated_by_user_id)
     values
-    ({id}, {user_id}, {key}, {updated_by_user_id})
+    ({id}, {user_id}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update organizations
-       set key = {key},
-           updated_by_user_id = {updated_by_user_id}
+       set updated_by_user_id = {updated_by_user_id}
      where id = {id}
   """
 
@@ -48,18 +46,18 @@ object OrganizationsDao {
     form: OrganizationForm,
     existing: Option[Organization] = None
   ): Seq[String] = {
-    if (form.key.trim == "") {
-      Seq("Key cannot be empty")
+    if (form.id.trim == "") {
+      Seq("Id cannot be empty")
 
     } else {
-      urlKey.validate(form.key.trim) match {
+      urlKey.validate(form.id.trim) match {
         case Nil => {
-          OrganizationsDao.findByKey(Authorization.All, form.key) match {
+          OrganizationsDao.findById(Authorization.All, form.id) match {
             case None => Seq.empty
             case Some(p) => {
               Some(p.id) == existing.map(_.id) match {
                 case true => Nil
-                case false => Seq("Organization with this key already exists")
+                case false => Seq("Organization with this id already exists")
               }
             }
           }
@@ -91,7 +89,6 @@ object OrganizationsDao {
     SQL(InsertQuery).on(
       'id -> id,
       'user_id -> createdBy.id,
-      'key -> form.key.trim,
       'updated_by_user_id -> createdBy.id
     ).execute()
 
@@ -112,7 +109,6 @@ object OrganizationsDao {
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'id -> organization.id,
-            'key -> form.key.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -131,56 +127,6 @@ object OrganizationsDao {
     SoftDelete.delete("organizations", deletedBy.id, organization.id)
   }
 
-  def upsertForUser(user: User): Organization = {
-    findAll(Authorization.All, forUserId = Some(user.id), limit = 1).headOption.getOrElse {
-      val key = urlKey.generate(defaultUserName(user))
-
-      val orgId = DB.withTransaction { implicit c =>
-        val orgId = create(c, user, OrganizationForm(
-          key = key
-        ))
-
-        SQL(InsertUserOrganizationQuery).on(
-          'id -> IdGenerator("uso").randomId(),
-          'user_id -> user.id,
-          'organization_id -> orgId,
-          'updated_by_user_id -> user.id
-        ).execute()
-
-        orgId
-      }
-      findById(Authorization.All, orgId).getOrElse {
-        sys.error(s"Failed to create an organization for the user[$user]")
-      }
-    }
-  }
-
-  /**
-   * Generates a default username for this user based on email or
-   * name.
-   */
-  def defaultUserName(user: User): String = {
-    urlKey.format(
-      user.email match {
-        case Some(email) => {
-          email.substring(0, email.indexOf("@"))
-        }
-        case None => {
-          (user.name.first, user.name.last) match {
-            case (None, None) => random.alphaNumeric(DefaultUserNameLength)
-            case (Some(first), None) => first
-            case (None, Some(last)) => last
-            case (Some(first), Some(last)) => first(0) + last
-          }
-        }
-      }
-    )
-  }
-
-  def findByKey(auth: Authorization, key: String): Option[Organization] = {
-    findAll(auth, key = Some(key), limit = 1).headOption
-  }
-
   def findById(auth: Authorization, id: String): Option[Organization] = {
     findAll(auth, id = Some(id), limit = 1).headOption
   }
@@ -190,10 +136,9 @@ object OrganizationsDao {
     id: Option[String] = None,
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
-    key: Option[String] = None,
     forUserId: Option[String] = None,
     isDeleted: Option[Boolean] = Some(false),
-    orderBy: OrderBy = OrderBy("organizations.key, -organizations.created_at"),
+    orderBy: OrderBy = OrderBy("organizations.id, -organizations.created_at"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[Organization] = {
@@ -201,7 +146,7 @@ object OrganizationsDao {
       Standards.query(
         BaseQuery,
         tableName = "organizations",
-        auth = auth.organizations("organizations.id"),
+        auth = Filters(auth).organizations("organizations.id"),
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
@@ -214,12 +159,6 @@ object OrganizationsDao {
             "organizations.id in (select organization_id from memberships where deleted_at is null and user_id = {user_id})"
           }
         ).bind("user_id", userId).
-        optionalText(
-          "organizations.key",
-          key,
-          columnFunctions = Seq(Query.Function.Lower),
-          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
-        ).
         and(
           forUserId.map { id =>
             "organizations.id in (select organization_id from user_organizations where deleted_at is null and user_id = {for_user_id})"

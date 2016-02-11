@@ -50,20 +50,6 @@ object GithubHelper {
 trait Github {
 
   /**
-    * Fetches the contents of the file at the specified path from the
-    * given repository. Returns None if the file is not found.
-    * 
-    * @param path e.g. "build.sbt",  "project/plugins.sbt", etc.
-    */
-  def file(
-    user: User,
-    projectUri: String,
-    path: String
-  ) (
-    implicit ec: ExecutionContext
-  ): Future[Option[String]]
-
-  /**
     * Given an auth validation code, pings the github UI to access the
     * user data, upserts that user with the delta database, and
     * returns the user (or a list of errors).
@@ -205,40 +191,6 @@ class DefaultGithub @javax.inject.Inject() () extends Github {
     TokensDao.getCleartextGithubOauthTokenByUserId(user.id)
   }
 
-  override def file(
-    user: User,
-    projectUri: String,
-    path: String
-  ) (
-    implicit ec: ExecutionContext
-  ): Future[Option[String]] = {
-    GithubUtil.parseUri(projectUri) match {
-      case Left(error) => {
-        sys.error(error)
-      }
-      case Right(repo) => {
-        oauthToken(user) match {
-          case None => Future {
-            None
-          }
-          case Some(token) => {
-            GithubHelper.apiClient(token).contents.getContentsByPath(
-              owner = repo.owner,
-              repo = repo.project,
-              path = path
-            ).map { contents =>
-              Some(GithubUtil.toText(contents))
-            }.recover {
-              case UnitResponse(404) => {
-                None
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
 }
 
 class MockGithub() extends Github {
@@ -262,18 +214,6 @@ class MockGithub() extends Github {
     MockGithubData.getToken(user)
   }
 
-  override def file(
-    user: User,
-    projectUri: String,
-    path: String
-  ) (
-    implicit ec: ExecutionContext
-  ): Future[Option[String]] = {
-    Future {
-      MockGithubData.getFile(projectUri, path)
-    }
-  }
-
 }
 
 object MockGithubData {
@@ -281,7 +221,6 @@ object MockGithubData {
   private[this] var githubUserByCodes = scala.collection.mutable.Map[String, GithubUserData]()
   private[this] var userTokens = scala.collection.mutable.Map[String, String]()
   private[this] var repositories = scala.collection.mutable.Map[String, Repository]()
-  private[this] var files = scala.collection.mutable.Map[String, String]()
 
   def addUser(githubUser: GithubUser, code: String, token: Option[String] = None) {
     githubUserByCodes +== (
@@ -317,21 +256,6 @@ object MockGithubData {
       case None => Nil
       case Some(repo) => Seq(repo)
     }
-  }
-
-  def addFile(
-    projectUri: String,
-    path: String,
-    contents: String
-  ) {
-    files +== (s"${projectUri}.$path" -> contents)
-  }
-
-  def getFile(
-    projectUri: String,
-    path: String
-  ): Option[String] = {
-    files.get(s"${projectUri}.$path")
   }
 
 }

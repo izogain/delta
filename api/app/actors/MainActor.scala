@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import db.Authorization
+import io.flow.postgresql.Authorization
 import io.flow.play.actors.Util
 import play.api.libs.concurrent.Akka
 import akka.actor._

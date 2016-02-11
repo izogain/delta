@@ -9,7 +9,7 @@ import play.api.libs.json._
 @javax.inject.Singleton
 class Items @javax.inject.Inject() (
   val userTokensClient: UserTokensClient
-) extends Controller with BaseIdentifiedController {
+) extends Controller with BaseIdentifiedRestController {
 
   def get(
     q: Option[String],

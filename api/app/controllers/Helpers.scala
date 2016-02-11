@@ -1,6 +1,7 @@
 package controllers
 
-import db.{Authorization, OrganizationsDao, ProjectsDao, UsersDao}
+import db.{OrganizationsDao, ProjectsDao, UsersDao}
+import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.{Organization, Project}
 import io.flow.common.v0.models.User
 import play.api.mvc.{Result, Results}

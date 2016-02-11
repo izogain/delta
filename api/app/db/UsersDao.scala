@@ -2,7 +2,7 @@ package db
 
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.actors.MainActor
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.{Name, User}
 import anorm._
 import play.api.db._

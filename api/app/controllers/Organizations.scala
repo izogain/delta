@@ -11,7 +11,7 @@ import play.api.libs.json._
 
 class Organizations @javax.inject.Inject() (
   val userTokensClient: UserTokensClient
-) extends Controller with BaseIdentifiedController {
+) extends Controller with BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -19,7 +19,6 @@ class Organizations @javax.inject.Inject() (
     id: Option[String],
     ids: Option[Seq[String]],
     userId: Option[String],
-    key: Option[String],
     limit: Long = 25,
     offset: Long = 0
   ) = Identified { request =>
@@ -30,7 +29,6 @@ class Organizations @javax.inject.Inject() (
           id = id,
           ids = optionals(ids),
           userId = userId,
-          key = key,
           limit = limit,
           offset = offset
         )
@@ -41,12 +39,6 @@ class Organizations @javax.inject.Inject() (
   def getById(id: String) = Identified { request =>
     withOrganization(request.user, id) { organization =>
       Ok(Json.toJson(organization))
-    }
-  }
-
-  def getUsersByUserId(userId: String) = Identified { request =>
-    withUser(userId) { user =>
-      Ok(Json.toJson(OrganizationsDao.upsertForUser(user)))
     }
   }
 

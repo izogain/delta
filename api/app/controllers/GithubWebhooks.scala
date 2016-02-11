@@ -1,9 +1,10 @@
 package controllers
 
+import io.flow.common.v0.models.json._
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.json._
-import io.flow.common.v0.models.json._
-import db.{Authorization, ProjectsDao}
+import io.flow.postgresql.Authorization
+import db.ProjectsDao
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation

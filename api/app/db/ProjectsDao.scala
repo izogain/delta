@@ -1,9 +1,9 @@
 package db
 
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Scms, Binary, BinaryForm, Library, LibraryForm, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
+import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
 import io.flow.delta.api.lib.GithubUtil
-import io.flow.postgresql.{Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
@@ -53,7 +53,7 @@ object ProjectsDao {
   def toSummary(project: Project): ProjectSummary = {
     ProjectSummary(
       id = project.id,
-      organization = OrganizationSummary(project.organization.id, project.organization.key),
+      organization = OrganizationSummary(project.organization.id),
       name = project.name
     )
   }
@@ -109,8 +109,8 @@ object ProjectsDao {
     validate(createdBy, form) match {
       case Nil => {
 
-        val org = OrganizationsDao.findByKey(Authorization.All, form.organization).getOrElse {
-          sys.error("Could not find organization with key[${form.organization}]")
+        val org = OrganizationsDao.findById(Authorization.All, form.organization).getOrElse {
+          sys.error("Could not find organization with id[${form.organization}]")
         }
         
         val id = io.flow.play.util.IdGenerator("prj").randomId()
@@ -198,12 +198,6 @@ object ProjectsDao {
     organization: Option[String] = None,
     organizationId: Option[String] = None,
     name: Option[String] = None,
-    groupId: Option[String] = None,
-    artifactId: Option[String] = None,
-    version: Option[String] = None,
-    libraryId: Option[String] = None,
-    binary: Option[String] = None,
-    binaryId: Option[String] = None,
     isDeleted: Option[Boolean] = Some(false),
     orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
     limit: Long = 25,
@@ -214,7 +208,7 @@ object ProjectsDao {
       Standards.query(
         BaseQuery,
         tableName = "projects",
-        auth = auth.organizations("projects.organization_id", Some("projects.visibility")),
+        auth = Filters(auth).organizations("projects.organization_id", Some("projects.visibility")),
         id = id,
         ids = ids,
         orderBy = orderBy.sql,
@@ -234,24 +228,6 @@ object ProjectsDao {
           columnFunctions = Seq(Query.Function.Lower),
           valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
         ).
-        and(
-          groupId.map { v => FilterProjectLibraries.format("project_libraries.group_id = trim({group_id})") }
-        ).bind("group_id", groupId).
-        and(
-          artifactId.map { v => FilterProjectLibraries.format("project_libraries.artifact_id = trim({artifact_id})") }
-        ).bind("artifact_id", artifactId).
-        and(
-          version.map { v => FilterProjectLibraries.format("project_libraries.version = trim({version})") }
-        ).bind("version", version).
-        and(
-          libraryId.map { v => FilterProjectLibraries.format("project_libraries.library_id = {library_id}") }
-        ).bind("library_id", libraryId).
-        and(
-          binary.map { v => FilterProjectBinaries.format("project_binaries.name = trim({binary})") }
-        ).bind("binary", binary).
-        and(
-          binaryId.map { v => FilterProjectBinaries.format("project_binaries.binary_id = {binary_id}") }
-        ).bind("binary_id", binaryId).
         as(
           io.flow.delta.v0.anorm.parsers.Project.parser().*
         )
