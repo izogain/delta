@@ -1,4 +1,4 @@
-package aws
+package io.flow.delta.aws
 
 import util.RegistryClient
 
