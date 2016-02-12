@@ -93,7 +93,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
   }
 
   def upsert(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
-    findByProjectId(project.id) match {
+    findByProjectId(Authorization.All, project.id) match {
       case None => create(createdBy, project, form)
       case Some(_) => update(createdBy, project, form)
     }

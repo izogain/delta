@@ -36,6 +36,14 @@ class ProjectExpectedStatesDaoSpec extends PlaySpec with OneAppPerSuite with Hel
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
+  "upsert" in {
+    val project = createProject()
+    val state = rightOrErrors(ProjectExpectedStatesDao.upsert(systemUser, project, createStateForm()))
+    val second = rightOrErrors(ProjectExpectedStatesDao.upsert(systemUser, project, createStateForm()))
+    state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
+    state.versions.map(_.instances) must be(Seq(3, 2))
+  }
+
   /*
   "upsertMaster" in {
     val project = createProject()
