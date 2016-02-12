@@ -1,0 +1,39 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  organization: io.flow.delta.v0.models.Organization,
+  projects: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Project]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some(organization.id))) {
+
+  <div class="pull-right">
+    <a href="@routes.MembersController.index(organization.id)">Members</a>
+
+    @if(io.flow.delta.www.lib.Permissions.Organization.edit(organization, data.user)) {
+      | <a href="@routes.OrganizationsController.edit(organization.id)">Edit</a>
+    }
+
+    @if(io.flow.delta.www.lib.Permissions.Organization.delete(organization, data.user)) {
+      | <a class="delete" data-confirm="Are you sure?" href="@routes.OrganizationsController.postDelete(organization.id)">Delete</a>
+    }
+  </div>
+
+  <h3>Projects</h3>
+  @if(projects.isEmpty) {
+    <em>This organization does not have any projects</em>
+  } else {
+    @views.html.projects.table(projects.items)
+    @if(projects.hasPrevious || projects.hasNext) {
+      <ul class="pager">
+        @if(projects.hasPrevious) {
+          <li><a href="@routes.OrganizationsController.show(organization.id, projectsPage = projects.page - 1)">Previous</a></li>
+        }
+        @if(projects.hasNext) {
+          <li><a href="@routes.OrganizationsController.show(organization.id, projectsPage = projects.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+
+  }
+
+}

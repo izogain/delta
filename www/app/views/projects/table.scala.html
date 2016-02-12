@@ -1,0 +1,16 @@
+@(projects: Seq[io.flow.delta.v0.models.Project])
+
+<div class="table-responsive">
+  <table class="table">
+    <tr>
+      <th>Owner</th>
+      <th>Project</th>
+    </tr>
+    @projects.map { p =>
+      <tr>
+        <td><a href="@routes.OrganizationsController.show(p.organization.id)">@{p.organization.id}</a></td>
+        <td><a href="@routes.ProjectsController.show(p.id)">@{p.name}</a></td>
+      </tr>
+    }
+  </table>
+</div>

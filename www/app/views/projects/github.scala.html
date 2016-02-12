@@ -1,0 +1,22 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  orgs: Seq[io.flow.delta.v0.models.Organization]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some("Add project - Select organization"))) {
+
+  <div class="pull-right">
+    <span class="glyphicon glyphicon-plus"></span> <a href="@routes.ProjectsController.create()">Add project manually</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      @orgs.map { org =>
+        <tr>
+          <td><a href="@routes.ProjectsController.githubOrg(org.id)">@{org.id}</a></td>
+        </tr>
+      }
+    </table>
+  </div>
+
+}

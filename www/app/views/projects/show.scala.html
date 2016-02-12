@@ -1,0 +1,25 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  project: io.flow.delta.v0.models.Project
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some(project.name))) {
+
+  <div class="pull-right">
+    @if(io.flow.delta.www.lib.Permissions.Project.edit(project, data.user)) {
+      <a href="@routes.ProjectsController.edit(project.id)">Edit</a>
+    }
+    @if(io.flow.delta.www.lib.Permissions.Project.delete(project, data.user)) {
+      | <a class="delete" data-confirm="Are you sure?" href="@routes.ProjectsController.postDelete(project.id)">Delete</a>
+    }
+
+  </div>
+
+  <ul>
+    <li>Owner: <a href="@routes.OrganizationsController.show(project.organization.id)">@project.organization.id</a></li>
+    <li>Visbility: @project.visibility.toString</li>
+    <li>SCMS: @project.scms.toString</li>
+    <li>URI: <a href="@project.uri">@project.uri</a></li>
+  </ul>
+
+}
