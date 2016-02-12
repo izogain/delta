@@ -93,6 +93,14 @@ package io.flow.delta.v0.models {
     uri: String
   )
 
+  /**
+   * Returns the latest expected and actual states for this project
+   */
+  case class ProjectState(
+    expected: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
+    actual: _root_.scala.Option[io.flow.delta.v0.models.State] = None
+  )
+
   case class ProjectSummary(
     id: String,
     organization: io.flow.delta.v0.models.OrganizationSummary,
@@ -107,6 +115,19 @@ package io.flow.delta.v0.models {
     name: String,
     visibility: io.flow.delta.v0.models.Visibility,
     uri: String
+  )
+
+  /**
+   * Used to describe the actual state of a project in AWS. Specifically which
+   * versions are running and eventually what % of traffic each version is carrying
+   */
+  case class State(
+    version: String,
+    instances: Long
+  )
+
+  case class StateForm(
+    states: Seq[io.flow.delta.v0.models.State]
   )
 
   /**
@@ -744,6 +765,32 @@ package io.flow.delta.v0.models {
       }
     }
 
+    implicit def jsonReadsDeltaProjectState: play.api.libs.json.Reads[ProjectState] = {
+      (
+        (__ \ "expected").readNullable[io.flow.delta.v0.models.State] and
+        (__ \ "actual").readNullable[io.flow.delta.v0.models.State]
+      )(ProjectState.apply _)
+    }
+
+    def jsObjectProjectState(obj: io.flow.delta.v0.models.ProjectState) = {
+      (obj.expected match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("expected" -> jsObjectState(x))
+      }) ++
+      (obj.actual match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("actual" -> jsObjectState(x))
+      })
+    }
+
+    implicit def jsonWritesDeltaProjectState: play.api.libs.json.Writes[ProjectState] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.ProjectState] {
+        def writes(obj: io.flow.delta.v0.models.ProjectState) = {
+          jsObjectProjectState(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsDeltaProjectSummary: play.api.libs.json.Reads[ProjectSummary] = {
       (
         (__ \ "id").read[String] and
@@ -798,6 +845,46 @@ package io.flow.delta.v0.models {
       new play.api.libs.json.Writes[io.flow.delta.v0.models.Repository] {
         def writes(obj: io.flow.delta.v0.models.Repository) = {
           jsObjectRepository(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaState: play.api.libs.json.Reads[State] = {
+      (
+        (__ \ "version").read[String] and
+        (__ \ "instances").read[Long]
+      )(State.apply _)
+    }
+
+    def jsObjectState(obj: io.flow.delta.v0.models.State) = {
+      play.api.libs.json.Json.obj(
+        "version" -> play.api.libs.json.JsString(obj.version),
+        "instances" -> play.api.libs.json.JsNumber(obj.instances)
+      )
+    }
+
+    implicit def jsonWritesDeltaState: play.api.libs.json.Writes[State] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.State] {
+        def writes(obj: io.flow.delta.v0.models.State) = {
+          jsObjectState(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaStateForm: play.api.libs.json.Reads[StateForm] = {
+      (__ \ "states").read[Seq[io.flow.delta.v0.models.State]].map { x => new StateForm(states = x) }
+    }
+
+    def jsObjectStateForm(obj: io.flow.delta.v0.models.StateForm) = {
+      play.api.libs.json.Json.obj(
+        "states" -> play.api.libs.json.Json.toJson(obj.states)
+      )
+    }
+
+    implicit def jsonWritesDeltaStateForm: play.api.libs.json.Writes[StateForm] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.StateForm] {
+        def writes(obj: io.flow.delta.v0.models.StateForm) = {
+          jsObjectStateForm(obj)
         }
       }
     }
@@ -1417,6 +1504,50 @@ package io.flow.delta.v0 {
           case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 204, 401, 404")
         }
       }
+
+      override def getStateAndLatestById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.ProjectState] = {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/latest").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.delta.v0.models.ProjectState", r, _.validate[io.flow.delta.v0.models.ProjectState])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
+
+      override def getStateAndExpectedById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/expected").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
+
+      override def postStateAndExpectedById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]] = {
+        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/expected").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.StateForm]", r, _.validate[Seq[io.flow.delta.v0.models.StateForm]])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
+
+      override def getStateAndActualById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/actual").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
     }
 
     object Repositories extends Repositories {
@@ -1865,6 +1996,22 @@ package io.flow.delta.v0 {
     def deleteById(
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit]
+
+    def getStateAndLatestById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.ProjectState]
+
+    def getStateAndExpectedById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]
+
+    def postStateAndExpectedById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]]
+
+    def getStateAndActualById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]
   }
 
   trait Repositories {

@@ -401,6 +401,30 @@ package io.flow.delta.v0.anorm.parsers {
 
   }
 
+  object ProjectState {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      expectedPrefix = s"$prefix${sep}expected",
+      actualPrefix = s"$prefix${sep}actual"
+    )
+
+    def parser(
+      expectedPrefix: String = "expected",
+      actualPrefix: String = "actual"
+    ): RowParser[io.flow.delta.v0.models.ProjectState] = {
+      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(expectedPrefix).? ~
+      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(actualPrefix).? map {
+        case expected ~ actual => {
+          io.flow.delta.v0.models.ProjectState(
+            expected = expected,
+            actual = actual
+          )
+        }
+      }
+    }
+
+  }
+
   object ProjectSummary {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
@@ -470,6 +494,50 @@ package io.flow.delta.v0.anorm.parsers {
             name = name,
             visibility = visibility,
             uri = uri
+          )
+        }
+      }
+    }
+
+  }
+
+  object State {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      version = s"$prefix${sep}version",
+      instances = s"$prefix${sep}instances"
+    )
+
+    def parser(
+      version: String = "version",
+      instances: String = "instances"
+    ): RowParser[io.flow.delta.v0.models.State] = {
+      SqlParser.str(version) ~
+      SqlParser.long(instances) map {
+        case version ~ instances => {
+          io.flow.delta.v0.models.State(
+            version = version,
+            instances = instances
+          )
+        }
+      }
+    }
+
+  }
+
+  object StateForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      states = s"$prefix${sep}states"
+    )
+
+    def parser(
+      states: String = "states"
+    ): RowParser[io.flow.delta.v0.models.StateForm] = {
+      SqlParser.get[Seq[io.flow.delta.v0.models.State]](states) map {
+        case states => {
+          io.flow.delta.v0.models.StateForm(
+            states = states
           )
         }
       }

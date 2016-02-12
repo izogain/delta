@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import aws._
 import io.flow.postgresql.Authorization
 import db.{ProjectsDao, TokensDao, UsersDao}
-import io.flow.delta.api.lib.{GithubUtil, GithubHelper}
+import io.flow.delta.api.lib.{GithubUtil, GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
@@ -25,7 +25,7 @@ object ProjectActor {
     case object ConfigureECS // One-time ECS setup
 
     case object CreateHooks extends Message
-    case object Sync extends Message
+    case object SyncGithub extends Message
   }
 
 }
@@ -39,26 +39,44 @@ class ProjectActor extends Actor with Util {
   private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
 
   private[this] var dataProject: Option[Project] = None
+  private[this] var dataRepo: Option[Repo] = None
   
   def receive = {
 
     case m @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
-      dataProject = ProjectsDao.findById(Authorization.All, id)
+      ProjectsDao.findById(Authorization.All, id) match {
+        case None => {
+          dataProject = None
+          dataRepo = None
+        }
+        case Some(project) => {
+          dataProject = Some(project)
+          dataRepo = GithubUtil.parseUri(project.uri) match {
+            case Left(error) => {
+              Logger.warn(s"Project id[${project.id}] name[${project.name}]: $error")
+              None
+            }
+            case Right(repo) => {
+              Some(repo)
+            }
+          }
+        }
+      }
     }
     
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
-      dataProject.foreach { project =>
-        val lc = createLaunchConfiguration(project.id)
-        val elb = createLoadBalancer(project.id)
-        createAutoScalingGroup(project.id, lc, elb)
+      dataRepo.foreach { repo =>
+        val lc = createLaunchConfiguration(repo)
+        val elb = createLoadBalancer(repo)
+        createAutoScalingGroup(repo, lc, elb)
       }
     }
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg.toString) {
-      dataProject.foreach { project =>
-        createCluster(project.id)
+      dataRepo.foreach { repo =>
+        createCluster(repo)
       }
     }
 
@@ -122,9 +140,9 @@ class ProjectActor extends Actor with Util {
       }
     }
 
-    case m @ ProjectActor.Messages.Sync => withVerboseErrorHandler(m.toString) {
+    case m @ ProjectActor.Messages.SyncGithub => withVerboseErrorHandler(m.toString) {
       dataProject.foreach { project =>
-        println(s"ProjectActor.Messages.Sync id[${project.id}] name[${project.name}]")
+        println(s"ProjectActor.Messages.SyncGithub id[${project.id}] name[${project.name}]")
 
         UsersDao.findById(project.user.id).flatMap { u =>
           TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
@@ -168,26 +186,26 @@ class ProjectActor extends Actor with Util {
 
   }
 
-  def createLaunchConfiguration(id: String): String = {
-    val lc = AutoScalingGroup.createLaunchConfiguration(id)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Launch Configuration: [${lc}]")
+  def createLaunchConfiguration(repo: Repo): String = {
+    val lc = AutoScalingGroup.createLaunchConfiguration(repo.awsName)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Launch Configuration: [$lc]")
     return lc
   }
 
-  def createLoadBalancer(id: String): String = {
-    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(id)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Load Balancer: [${elb}]")
+  def createLoadBalancer(repo: Repo): String = {
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(repo.awsName)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Load Balancer: [$elb]")
     return elb
   }
 
-  def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String) {
-    val asg = AutoScalingGroup.createAutoScalingGroup(id, launchConfigName, loadBalancerName)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Auto-Scaling Group: [${asg}]")
+  def createAutoScalingGroup(repo: Repo, launchConfigName: String, loadBalancerName: String) {
+    val asg = AutoScalingGroup.createAutoScalingGroup(repo.awsName, launchConfigName, loadBalancerName)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Auto-Scaling Group: [$asg]")
   }
 
-  def createCluster(id: String) {
-    val cluster = EC2ContainerService.createCluster(id)
-    println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$id], ECS Cluster: [${cluster}]")
+  def createCluster(repo: Repo) {
+    val cluster = EC2ContainerService.createCluster(repo.awsName)
+    println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$repo], ECS Cluster: [$cluster]")
   }
 
 }

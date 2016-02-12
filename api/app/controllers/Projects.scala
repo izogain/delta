@@ -79,4 +79,8 @@ class Projects @javax.inject.Inject() (
     }
   }
 
+  def getStateAndLatestById(id: String) = TODO
+  def getStateAndExpectedById(id: String) = TODO
+  def postStateAndExpectedById(id: String) = TODO
+  def getStateAndActualById(id: String) = TODO
 }

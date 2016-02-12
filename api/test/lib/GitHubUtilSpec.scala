@@ -18,7 +18,7 @@ class GithubUtilSpec extends Specification {
   "parseUri" in {
     GithubUtil.parseUri("http://github.com/mbryzek/apidoc") must beEqualTo(
       Right(
-        GithubUtil.Repository("mbryzek", "apidoc")
+        Repo("mbryzek", "apidoc")
       )
     )
   }

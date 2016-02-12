@@ -13,13 +13,13 @@ case class Sha(
   id: String,
   project: ProjectSummary,
   branch: String,
-  sha: String
+  hash: String
 )
 
 case class ShaForm(
   projectId: String,
   branch: String,
-  sha: String
+  hash: String
 )
 
 object ShasDao {
@@ -27,7 +27,7 @@ object ShasDao {
   private[this] val BaseQuery = Query(s"""
     select shas.id,
            shas.branch,
-           shas.sha,
+           shas.hash,
            projects.id as project_id,
            projects.id as project_name,
            projects.organization_id as project_organization_id
@@ -37,16 +37,16 @@ object ShasDao {
 
   private[this] val InsertQuery = """
     insert into shas
-    (id, project_id, branch, sha, updated_by_user_id)
+    (id, project_id, branch, hash, updated_by_user_id)
     values
-    ({id}, {project_id}, {branch}, {sha}, {updated_by_user_id})
+    ({id}, {project_id}, {branch}, {hash}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update shas
        set project_id = {project_id},
            branch = {branch},
-           sha = {sha},
+           hash = {hash},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
   """
@@ -56,8 +56,8 @@ object ShasDao {
     form: ShaForm,
     existing: Option[Sha] = None
   ): Seq[String] = {
-    val shaErrors = if (form.sha.trim == "") {
-      Seq("Sha cannot be empty")
+    val hashErrors = if (form.hash.trim == "") {
+      Seq("Hash cannot be empty")
     } else {
       Nil
     }
@@ -83,12 +83,12 @@ object ShasDao {
       case Some(found) => {
         existing.map(_.id) == Some(found.id) match {
           case true => Nil
-          case false => Seq("Project already has a sha for this branch")
+          case false => Seq("Project already has a hash for this branch")
         }
       }
     }
 
-    shaErrors ++ branchErrors ++ projectErrors ++ existingErrors
+    hashErrors ++ branchErrors ++ projectErrors ++ existingErrors
   }
 
   def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
@@ -102,7 +102,7 @@ object ShasDao {
             'id -> id,
             'project_id -> form.projectId,
             'branch -> form.branch.trim,
-            'sha -> form.sha.trim,
+            'hash -> form.hash.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -127,7 +127,7 @@ object ShasDao {
             'id -> sha.id,
             'project_id -> form.projectId,
             'branch -> form.branch.trim,
-            'sha -> form.sha.trim,
+            'hash -> form.hash.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -192,13 +192,13 @@ object ShasDao {
     SqlParser.str("id") ~
     io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix("project") ~
     SqlParser.str("branch") ~
-    SqlParser.str("sha") map {
-      case id ~ project ~ branch ~ sha => {
+    SqlParser.str("hash") map {
+      case id ~ project ~ branch ~ hash => {
         Sha(
           id = id,
           project = project,
           branch = branch,
-          sha = sha
+          hash = hash
         )
       }
     }

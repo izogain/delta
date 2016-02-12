@@ -13,11 +13,12 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "create" in {
     val project = createProject()
-    val form = createShaForm(project).copy(branch = "master", sha = "foo")
-    val commit = rightOrErrors(ShasDao.create(systemUser, form))
-    commit.project.id must be(project.id)
-    commit.branch must be("master")
-    commit.sha must be("foo")
+    val hash = createTestKey()
+    val form = createShaForm(project).copy(branch = "master", hash = hash)
+    val sha = rightOrErrors(ShasDao.create(systemUser, form))
+    sha.project.id must be(project.id)
+    sha.branch must be("master")
+    sha.hash must be(hash)
   }
 
   "delete" in {
@@ -44,8 +45,8 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val fooForm = createShaForm(project).copy(branch = "foo")
     val foo = rightOrErrors(ShasDao.create(systemUser, fooForm))
 
-    ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "master").map(_.sha) must be(Some(masterForm.sha))
-    ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "foo").map(_.sha) must be(Some(fooForm.sha))
+    ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "master").map(_.hash) must be(Some(masterForm.hash))
+    ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "foo").map(_.hash) must be(Some(fooForm.hash))
     ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "other") must be(None)
   }
 
@@ -83,8 +84,8 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validate" must {
 
     "require sha" in {
-      ShasDao.validate(systemUser, createShaForm().copy(sha = "   ")) must be(
-        Seq("Sha cannot be empty")
+      ShasDao.validate(systemUser, createShaForm().copy(hash = "   ")) must be(
+        Seq("Hash cannot be empty")
       )
     }
 
@@ -117,7 +118,7 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       val sha = createSha(form)
 
       ShasDao.validate(systemUser, form) must be(
-        Seq("Project already has a sha for this branch")
+        Seq("Project already has a hash for this branch")
       )
 
       ShasDao.validate(systemUser, form.copy(branch = createTestKey())) must be(Nil)
