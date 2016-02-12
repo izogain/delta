@@ -40,6 +40,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val imageActors = scala.collection.mutable.Map[String, ActorRef]()
 
   implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
 
@@ -49,6 +50,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       val actor = upsertProjectActor(projectId)
       actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
       actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
+    }
+
+    case msg @ MainActor.Messages.Deploy(id) => withVerboseErrorHandler(msg) {
+      upsertImageActor(id) ! ImageActor.Messages.Deploy
     }
 
     case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {
@@ -85,6 +90,15 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       val ref = Akka.system.actorOf(Props[UserActor], name = s"$name:userActor:$id")
       ref ! UserActor.Messages.Data(id)
       userActors += (id -> ref)
+      ref
+    }
+  }
+
+  def upsertImageActor(id: String): ActorRef = {
+    imageActors.lift(id).getOrElse {
+      val ref = Akka.system.actorOf(Props[ImageActor], name = s"$name:imageActor:$id")
+      ref ! UserActor.Messages.Data(id)
+      imageActors += (id -> ref)
       ref
     }
   }
