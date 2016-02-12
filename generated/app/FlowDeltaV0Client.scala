@@ -64,7 +64,7 @@ package io.flow.delta.v0.models {
 
   case class Organization(
     id: String,
-    user: io.flow.common.v0.models.UserSummary
+    user: io.flow.delta.v0.models.UserSummary
   )
 
   case class OrganizationForm(
@@ -629,14 +629,14 @@ package io.flow.delta.v0.models {
     implicit def jsonReadsDeltaOrganization: play.api.libs.json.Reads[Organization] = {
       (
         (__ \ "id").read[String] and
-        (__ \ "user").read[io.flow.common.v0.models.UserSummary]
+        (__ \ "user").read[io.flow.delta.v0.models.UserSummary]
       )(Organization.apply _)
     }
 
     def jsObjectOrganization(obj: io.flow.delta.v0.models.Organization) = {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
-        "user" -> io.flow.common.v0.models.json.jsObjectUserSummary(obj.user)
+        "user" -> jsObjectUserSummary(obj.user)
       )
     }
 
@@ -1279,13 +1279,11 @@ package io.flow.delta.v0 {
       override def get(
         id: _root_.scala.Option[Seq[String]] = None,
         userId: _root_.scala.Option[String] = None,
-        key: _root_.scala.Option[String] = None,
         limit: Long = 25,
         offset: Long = 0
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Organization]] = {
         val queryParameters = Seq(
           userId.map("user_id" -> _),
-          key.map("key" -> _),
           Some("limit" -> limit.toString),
           Some("offset" -> offset.toString)
         ).flatten ++
@@ -1799,7 +1797,6 @@ package io.flow.delta.v0 {
     def get(
       id: _root_.scala.Option[Seq[String]] = None,
       userId: _root_.scala.Option[String] = None,
-      key: _root_.scala.Option[String] = None,
       limit: Long = 25,
       offset: Long = 0
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Organization]]

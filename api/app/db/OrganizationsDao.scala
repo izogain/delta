@@ -15,8 +15,13 @@ object OrganizationsDao {
 
   private[this] val BaseQuery = Query(s"""
     select organizations.id,
-           organizations.user_id
+           organizations.user_id,
+           users.id as user_id,
+           users.email as user_email,
+           users.first_name as name_first,
+           users.last_name as name_last
       from organizations
+      join users on users.id = organizations.user_id
   """)
 
   private[this] val InsertQuery = """
@@ -30,13 +35,6 @@ object OrganizationsDao {
     update organizations
        set updated_by_user_id = {updated_by_user_id}
      where id = {id}
-  """
-
-  private[this] val InsertUserOrganizationQuery = """
-    insert into user_organizations
-    (id, user_id, organization_id, updated_by_user_id)
-    values
-    ({id}, {user_id}, {organization_id}, {updated_by_user_id})
   """
 
   private[this] val random = Random()
@@ -73,6 +71,7 @@ object OrganizationsDao {
         val id = DB.withTransaction { implicit c =>
           create(c, createdBy, form)
         }
+
         Right(
           findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create organization")
@@ -136,8 +135,7 @@ object OrganizationsDao {
     id: Option[String] = None,
     ids: Option[Seq[String]] = None,
     userId: Option[String] = None,
-    forUserId: Option[String] = None,
-    orderBy: OrderBy = OrderBy("organizations.id, -organizations.created_at"),
+    orderBy: OrderBy = OrderBy("organizations.id"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[Organization] = {
@@ -157,15 +155,11 @@ object OrganizationsDao {
             "organizations.id in (select organization_id from memberships where deleted_at is null and user_id = {user_id})"
           }
         ).bind("user_id", userId).
-        and(
-          forUserId.map { id =>
-            "organizations.id in (select organization_id from user_organizations where deleted_at is null and user_id = {for_user_id})"
-          }
-        ).bind("for_user_id", forUserId).
         as(
           io.flow.delta.v0.anorm.parsers.Organization.parser().*
         )
     }
+  
   }
 
 }

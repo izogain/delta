@@ -62,7 +62,7 @@
     "organization": {
       "fields": [
 	{ "name": "id", "type": "string" },
-	{ "name": "user", "type": "io.flow.common.v0.models.user_summary", "description": "The user that created this organization" }
+	{ "name": "user", "type": "user_summary", "description": "The user that created this organization" }
       ]
     },
 

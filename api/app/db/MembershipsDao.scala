@@ -17,7 +17,7 @@ object MembershipsDao {
            memberships.role,
            organizations.id as organization_id,
            users.id as user_id,
-           users.email  as user_email,
+           users.email as user_email,
            users.first_name as user_name_first,
            users.last_name as user_name_last
       from memberships
@@ -66,19 +66,8 @@ object MembershipsDao {
   def create(createdBy: User, form: MembershipForm): Either[Seq[String], Membership] = {
     validate(createdBy, form) match {
       case Nil => {
-        val id = MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, form.userId) match {
-          case None => {
-            DB.withConnection { implicit c =>
-              create(c, createdBy, form)
-            }
-          }
-          case Some(existing) => {
-            // the role is changing. Replace record
-            DB.withTransaction { implicit c =>
-              Delete.delete(c, "memberships", createdBy.id, existing.id)
-              create(c, createdBy, form)
-            }
-          }
+        val id = DB.withConnection { implicit c =>
+          create(c, createdBy, form)
         }
         Right(
           findById(Authorization.All, id).getOrElse {
@@ -157,6 +146,7 @@ object MembershipsDao {
       equals("memberships.organization_id", organizationId).
       equals("memberships.user_id", userId).
       optionalText("memberships.role", role.map(_.toString.toLowerCase)).
+      withDebugging().
       as(
         io.flow.delta.v0.anorm.parsers.Membership.parser().*
       )

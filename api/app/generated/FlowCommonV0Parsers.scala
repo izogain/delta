@@ -541,18 +541,22 @@ package io.flow.common.v0.anorm.parsers {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       id = s"$prefix${sep}id",
+      email = s"$prefix${sep}email",
       name = s"$prefix${sep}name"
     )
 
     def parser(
       id: String = "id",
+      email: String = "email",
       name: String = "name"
     ): RowParser[io.flow.common.v0.models.UserSummary] = {
       SqlParser.str(id) ~
+      SqlParser.str(email).? ~
       SqlParser.str(name) map {
-        case id ~ name => {
+        case id ~ email ~ name => {
           io.flow.common.v0.models.UserSummary(
             id = id,
+            email = email,
             name = name
           )
         }

@@ -61,18 +61,6 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     OrganizationsDao.findAll(Authorization.All, ids = Some(Seq(organization1.id, UUID.randomUUID.toString))).map(_.id) must be(Seq(organization1.id))
   }
 
-  "findAll by userId includes user's org" in {
-    val user = createUser()
-
-    waitFor { () =>
-      !OrganizationsDao.findAll(Authorization.All, forUserId = Some(user.id)).isEmpty
-    }
-
-    val org = OrganizationsDao.findAll(Authorization.All, forUserId = Some(user.id)).head
-    OrganizationsDao.findAll(Authorization.All, id = Some(org.id), userId = Some(user.id)).map(_.id) must be(Seq(org.id))
-    OrganizationsDao.findAll(Authorization.All, id = Some(org.id), userId = Some(UUID.randomUUID.toString)) must be(Nil)
-  }
-
   "validate" must {
 
     "keep key url friendly" in {

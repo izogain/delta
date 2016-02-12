@@ -113,6 +113,7 @@ package io.flow.common.v0.models {
 
   case class UserSummary(
     id: String,
+    email: _root_.scala.Option[String] = None,
     name: String
   )
 
@@ -1296,6 +1297,7 @@ package io.flow.common.v0.models {
     implicit def jsonReadsCommonUserSummary: play.api.libs.json.Reads[UserSummary] = {
       (
         (__ \ "id").read[String] and
+        (__ \ "email").readNullable[String] and
         (__ \ "name").read[String]
       )(UserSummary.apply _)
     }
@@ -1304,7 +1306,10 @@ package io.flow.common.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "name" -> play.api.libs.json.JsString(obj.name)
-      )
+      ) ++ (obj.email match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("email" -> play.api.libs.json.JsString(x))
+      })
     }
 
     implicit def jsonWritesCommonUserSummary: play.api.libs.json.Writes[UserSummary] = {

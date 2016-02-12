@@ -269,7 +269,7 @@ package io.flow.delta.v0.anorm.parsers {
       userPrefix: String = "user"
     ): RowParser[io.flow.delta.v0.models.Organization] = {
       SqlParser.str(id) ~
-      io.flow.common.v0.anorm.parsers.UserSummary.parserWithPrefix(userPrefix) map {
+      io.flow.delta.v0.anorm.parsers.UserSummary.parserWithPrefix(userPrefix) map {
         case id ~ user => {
           io.flow.delta.v0.models.Organization(
             id = id,
