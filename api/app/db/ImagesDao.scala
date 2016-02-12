@@ -82,7 +82,7 @@ object ImagesDao {
         MainActor.ref ! MainActor.Messages.ImageCreated(id)
 
         Right(
-          findById(Authorization.All, id).getOrElse {
+          findById(id).getOrElse {
             sys.error("Failed to create image")
           }
         )
