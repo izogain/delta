@@ -41,6 +41,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
   private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
   private[this] val deployImageActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val dockerHubActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val supervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
@@ -89,8 +90,21 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
+    case msg @ MainActor.Messages.ImageCreated(projectId) => withVerboseErrorHandler(msg) {
+      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
+    }
+
     case msg: Any => logUnhandledMessage(msg)
 
+  }
+
+  def upsertDockerHubActor(id: String): ActorRef = {
+    dockerHubActors.lift(id).getOrElse {
+      val ref = Akka.system.actorOf(Props[DockerHubActor], name = s"$name:dockerHubActor:$id")
+      ref ! DockerHubActor.Messages.Data(id)
+      dockerHubActors += (id -> ref)
+      ref
+    }
   }
 
   def upsertUserActor(id: String): ActorRef = {
@@ -131,5 +145,4 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       ref
     }
   }
-
 }

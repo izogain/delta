@@ -5,6 +5,10 @@ code:
       generators:
         play_2_x_json: generated/app
         anorm_2_x_parsers: api/app/generated
+    docker-registry:
+      version: latest
+      generators:
+        play_2_4_client: generated/app
     github:
       version: latest
       generators:
