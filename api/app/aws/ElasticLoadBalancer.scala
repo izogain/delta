@@ -12,7 +12,7 @@ object ElasticLoadBalancer {
 
   // vals to be used
   val elbSubnets = Seq("subnet-4a8ee313", "subnet-7d2f1547", "subnet-c99a0de2", "subnet-dc2961ab")
-  val elbSecurityGroups = Seq("sg-4aead833")
+  val elbSecurityGroups = Seq("sg-2ed73856")
 
   def getLoadBalancerName(id: String): String = s"$id-ecs-lb"
 

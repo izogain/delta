@@ -92,24 +92,24 @@ class DeployImageActor extends Actor with Util {
   }
 
   def scaleUpService(image: Image) {
-    EC2ContainerService.scaleUp(image.id, image.project.name)
+    EC2ContainerService.scaleUp(image.id, image.version, image.project.name)
   }
 
   def registerTaskDefinition(image: Image): String = {
     log.started(s"Registering task definition: [${image.id}]")
-    val taskDefinition = EC2ContainerService.registerTaskDefinition(image.id, image.project.name)
+    val taskDefinition = EC2ContainerService.registerTaskDefinition(image.id, image.version, image.project.name)
     log.completed(s"Task Registered: [${image.id}], Task: [${taskDefinition}]")
     taskDefinition
   }
 
   def createService(image: Image, taskDefinition: String) {
     log.started(s"Creating service: [${image.id}]")
-    val service = EC2ContainerService.createService(image.id, image.project.name, taskDefinition)
+    val service = EC2ContainerService.createService(image.id, image.version, image.project.name, taskDefinition)
     log.completed(s"Service Created: [${image.id}], Service: [${service}]")
   }
 
   def monitorScaleUp(image: Image) {
-    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.project.name)
+    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.version, image.project.name)
     val running = ecsService.getRunningCount
     val desired = ecsService.getDesiredCount
     val pending = ecsService.getPendingCount
@@ -127,7 +127,7 @@ class DeployImageActor extends Actor with Util {
   }
 
   def monitorCreatedCanary(image: Image) {
-    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.project.name)
+    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.version, image.project.name)
     val running = ecsService.getRunningCount
     val desired = ecsService.getDesiredCount
     val pending = ecsService.getPendingCount
