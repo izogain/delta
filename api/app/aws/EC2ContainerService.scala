@@ -7,13 +7,8 @@ import com.amazonaws.services.ecs.model._
 
 import collection.JavaConverters._
 
-object EC2ContainerService {
+object EC2ContainerService extends Settings {
   lazy val client = new AmazonECSClient()
-
-  val containerMemory = 500
-  val serviceRole = "ecsServiceRole"
-  val createServiceDesiredCount = 0 // create the service first without any task instances
-  val maxScaleUpDesiredCount = 3 // scale up...
 
   /**
   * Name creation helper functions

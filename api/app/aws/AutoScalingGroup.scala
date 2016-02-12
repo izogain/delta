@@ -7,26 +7,14 @@ import sun.misc.BASE64Encoder
 
 import collection.JavaConverters._
 
-object AutoScalingGroup {
+object AutoScalingGroup extends Settings {
   lazy val client = new AmazonAutoScalingClient()
   lazy val encoder = new BASE64Encoder()
-
-  // vals to be used
-  val asgHealthCheckGracePeriod = 300
-  val asgMinSize = 3
-  val asgMaxSize = 3
-  val asgDesiredSize = 3
-  val asgSubnets = "subnet-4a8ee313,subnet-7d2f1547,subnet-c99a0de2,subnet-dc2961ab"
-  val ec2KeyName = "mbryzek-key-pair-us-east"
-  val lcImageId = "ami-9886a0f2"
-  val lcInstanceType = "t2.micro"
-  val lcIamInstanceProfile = "ecsInstanceRole"
-  val lcSecurityGroups = Seq("sg-2ed73856", "sg-abfaf7cf").asJava
 
   /**
   * Defined Values, probably make object vals somewhere?
   */
-  val lcBlockDeviceMappings = Seq(
+  val launchConfigBlockDeviceMappings = Seq(
     new BlockDeviceMapping()
       .withDeviceName("/dev/xvda")
       .withEbs(new Ebs()
@@ -55,12 +43,12 @@ object AutoScalingGroup {
         new CreateLaunchConfigurationRequest()
           .withLaunchConfigurationName(name)
           .withAssociatePublicIpAddress(false)
-          .withIamInstanceProfile(lcIamInstanceProfile)
-          .withBlockDeviceMappings(lcBlockDeviceMappings)
-          .withSecurityGroups(lcSecurityGroups)
+          .withIamInstanceProfile(launchConfigIamInstanceProfile)
+          .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
+          .withSecurityGroups(securityGroups.asJava)
           .withKeyName(ec2KeyName)
-          .withImageId(lcImageId)
-          .withInstanceType(lcInstanceType)
+          .withImageId(launchConfigImageId)
+          .withInstanceType(launchConfigInstanceType)
           .withUserData(encoder.encode(lcUserData(id).getBytes))
       )
     } catch {
@@ -78,13 +66,13 @@ object AutoScalingGroup {
           .withAutoScalingGroupName(name)
           .withLaunchConfigurationName(launchConfigName)
           .withLoadBalancerNames(Seq(loadBalancerName).asJava)
-          .withVPCZoneIdentifier(asgSubnets)
+          .withVPCZoneIdentifier(subnets.mkString(","))
           .withNewInstancesProtectedFromScaleIn(false)
           .withHealthCheckGracePeriod(asgHealthCheckGracePeriod)
           .withMinSize(asgMinSize)
           .withMaxSize(asgMaxSize)
           .withDesiredCapacity(asgDesiredSize)
-      )      
+      )
     } catch {
       case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
     }
