@@ -19,8 +19,7 @@ object MainActor {
 
   object Messages {
 
-    case class Deploy(projectId: String)
-    case class Configure(projectId: String)
+    case class Deploy(projectId: String, imageId: String)
 
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
@@ -46,14 +45,8 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   def receive = akka.event.LoggingReceive {
 
-    case msg @ MainActor.Messages.Configure(projectId) => withVerboseErrorHandler(msg) {
-      val actor = upsertProjectActor(projectId)
-      actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
-      actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
-    }
-
-    case msg @ MainActor.Messages.Deploy(id) => withVerboseErrorHandler(msg) {
-      upsertImageActor(id) ! ImageActor.Messages.Deploy
+    case msg @ MainActor.Messages.Deploy(projectId, imageId) => withVerboseErrorHandler(msg) {
+      upsertImageActor(projectId, imageId) ! ImageActor.Messages.Deploy
     }
 
     case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {
@@ -63,12 +56,14 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     case m @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(m) {
       val actor = upsertProjectActor(id)
       actor ! ProjectActor.Messages.CreateHooks
-      actor ! ProjectActor.Messages.Sync
+      actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
+      actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
+      actor ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
     case m @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(m) {
-      upsertProjectActor(id) ! ProjectActor.Messages.Sync
+      upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
@@ -77,7 +72,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case m @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(m) {
-      upsertProjectActor(id) ! ProjectActor.Messages.Sync
+      upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
@@ -94,11 +89,14 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
   }
 
-  def upsertImageActor(id: String): ActorRef = {
-    imageActors.lift(id).getOrElse {
-      val ref = Akka.system.actorOf(Props[ImageActor], name = s"$name:imageActor:$id")
-      ref ! UserActor.Messages.Data(id)
-      imageActors += (id -> ref)
+  /**
+    * @param imageId e.g. "flowcommerce/user:0.0.1"
+    */
+  def upsertImageActor(projectId: String, imageId: String): ActorRef = {
+    imageActors.lift(imageId).getOrElse {
+      val ref = Akka.system.actorOf(Props[ImageActor], name = s"$name:imageActor:$imageId")
+      ref ! ImageActor.Messages.Data(projectId, imageId)
+      imageActors += (imageId -> ref)
       ref
     }
   }

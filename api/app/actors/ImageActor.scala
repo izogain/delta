@@ -1,7 +1,11 @@
 package io.flow.delta.actors
 
 import aws.EC2ContainerService
+import db.ProjectsDao
+import io.flow.delta.api.lib.EventLog
+import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
+import io.flow.postgresql.Authorization
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor,Props}
 import play.api.Logger
@@ -14,7 +18,7 @@ object ImageActor {
   trait Message
 
   object Messages {
-    case class Data(id: String) extends Message // Deploy image to AWS
+    case class Data(projectId: String, id: String) extends Message // Deploy image to AWS
     case object Deploy extends Message // Deploy image to AWS
     case object MonitorCreate extends Message // Monitor newly created ecs service
     case object ScaleUp extends Message // Scale up to max
@@ -28,10 +32,26 @@ class ImageActor extends Actor with Util {
   implicit val imageActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("image-actor-context")
 
   private[this] var dataImage: Option[String] = None
+  private[this] var dataProject: Option[Project] = None
+
+  private[this] def log: EventLog = {
+    dataProject.map { EventLog.withSystemUser(_, "ImageActor.Messages.Monitor") }.getOrElse {
+      sys.error("Cannot get log with empty data")
+    }
+  }
 
   def receive = {
-    case msg @ ImageActor.Messages.Data(id: String) => withVerboseErrorHandler(msg.toString) {
-      dataImage = Some(id)
+    case msg @ ImageActor.Messages.Data(projectId: String, imageId: String) => withVerboseErrorHandler(msg.toString) {
+      ProjectsDao.findById(Authorization.All, projectId) match {
+        case None => {
+          dataImage = None
+          dataProject = None
+        }
+        case Some(project) => {
+          dataImage = Some(imageId)
+          dataProject = Some(project)
+        }
+      }
     }
 
     case msg @ ImageActor.Messages.Deploy => withVerboseErrorHandler(msg.toString) {
@@ -69,14 +89,16 @@ class ImageActor extends Actor with Util {
   }
 
   def registerTaskDefinition(id: String): String = {
+    log.started(s"Registering task definition: [$id]")
     val taskDefinition = EC2ContainerService.registerTaskDefinition(id)
-    println(s"[ImageActor.Messages.Deploy] Done - Task Registered: [$id], Task: [${taskDefinition}]")
-    return taskDefinition
+    log.completed(s"Task Registered: [$id], Task: [${taskDefinition}]")
+    taskDefinition
   }
 
   def createService(id: String, taskDefinition: String) {
+    log.started(s"Creating service: [$id]")
     val service = EC2ContainerService.createService(id, taskDefinition)
-    println(s"[ImageActor.Messages.Deploy] Done - Service Created: [$id], Service: [${service}]")
+    log.completed(s"Service Created: [$id], Service: [${service}]")
   }
 
   def monitorScaleUp(id: String) {
@@ -87,11 +109,9 @@ class ImageActor extends Actor with Util {
 
     val status = ecsService.getStatus
     if (running == desired) {
-      println(s"[ImageActor.Messages.Monitor] DONE Deploying Scaling Up - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired.")
-      println("===========================")
+      log.completed("Deploying Scaling Up - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired.")
     } else {
-      println(s"[ImageActor.Messages.Monitor] Still Scaling Up - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
-      println("===========================")
+      log.running("Still Scaling Up - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
         self ! ImageActor.Messages.MonitorScaleUp
@@ -107,12 +127,10 @@ class ImageActor extends Actor with Util {
 
     val status = ecsService.getStatus
     if (running == desired) {
-      println(s"[ImageActor.Messages.Monitor] DONE Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Scaling up to max now.")
-      println("===========================")
+      log.completed("Completed Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Scaling up to max now.")
       self ! ImageActor.Messages.ScaleUp
     } else {
-      println(s"[ImageActor.Messages.Monitor] Still Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
-      println("===========================")
+      log.running("Still Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
         self ! ImageActor.Messages.MonitorCreate
