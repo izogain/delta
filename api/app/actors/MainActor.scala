@@ -26,7 +26,8 @@ object MainActor {
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
 
-
+    case class ShaCreated(projectId: String, id: String)
+    
     case class UserCreated(id: String)
   }
 }
@@ -37,11 +38,16 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
-  private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
-  private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val deployImageActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val supervisorActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
+
+  private[this] val periodicActor = Akka.system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
+  scheduleRecurring(periodicActor, "io.flow.delta.api.CheckProjects.seconds", PeriodicActor.Messages.CheckProjects)
 
   implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
+
 
   def receive = akka.event.LoggingReceive {
 
@@ -49,11 +55,11 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       upsertImageActor(projectId, imageId) ! DeployImageActor.Messages.Deploy
     }
 
-    case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {
+    case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
       upsertUserActor(id) ! UserActor.Messages.Created
     }
 
-    case m @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(m) {
+    case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
       val actor = upsertProjectActor(id)
       actor ! ProjectActor.Messages.CreateHooks
       actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
@@ -62,21 +68,26 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
-    case m @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(m) {
+    case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
       upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
-    case m @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(m) {
+    case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
-    case m @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(m) {
+    case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
       upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
     }
 
-    case m: Any => logUnhandledMessage(m)
+    case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    }
+      
+    case msg: Any => logUnhandledMessage(msg)
 
   }
 
@@ -108,6 +119,15 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       projectActors += (id -> ref)
       ref
     }
- }
+  }
+
+  def upsertSupervisorActor(id: String): ActorRef = {
+    supervisorActors.lift(id).getOrElse {
+      val ref = Akka.system.actorOf(Props[SupervisorActor], name = s"$name:supervisorActor:$id")
+      ref ! SupervisorActor.Messages.Data(id)
+      supervisorActors += (id -> ref)
+      ref
+    }
+  }
 
 }

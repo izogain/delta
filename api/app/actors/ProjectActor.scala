@@ -2,8 +2,8 @@ package io.flow.delta.actors
 
 import aws._
 import io.flow.postgresql.Authorization
-import db.{ProjectsDao, TokensDao, UsersDao}
-import io.flow.delta.api.lib.{GithubUtil, GithubHelper, Repo}
+import db.{ProjectsDao, ShasDao, TokensDao, UsersDao}
+import io.flow.delta.api.lib.{EventLog, GithubUtil, GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
@@ -12,17 +12,15 @@ import play.libs.Akka
 import akka.actor.Actor
 import scala.concurrent.ExecutionContext
 
-//import play.api.Play.current
-
 object ProjectActor {
 
   trait Message
 
   object Messages {
-    case class Data(id: String)
+    case class Data(id: String) extends Message
 
-    case object ConfigureEC2 // One-time EC2 setup
-    case object ConfigureECS // One-time ECS setup
+    case object ConfigureEC2 extends Message // One-time EC2 setup
+    case object ConfigureECS extends Message // One-time ECS setup
 
     case object CreateHooks extends Message
     case object SyncGithub extends Message
@@ -40,6 +38,12 @@ class ProjectActor extends Actor with Util {
 
   private[this] var dataProject: Option[Project] = None
   private[this] var dataRepo: Option[Repo] = None
+
+  private[this] def log: EventLog = {
+    dataProject.map { EventLog.withSystemUser(_, "ProjectActor") }.getOrElse {
+      sys.error("Cannot get log with empty data")
+    }
+  }
   
   def receive = {
 
@@ -140,42 +144,16 @@ class ProjectActor extends Actor with Util {
       }
     }
 
+    /**
+      * Look up the sha for the master branch from github, and record
+      * it in the shas table.
+      */
     case m @ ProjectActor.Messages.SyncGithub => withVerboseErrorHandler(m.toString) {
       dataProject.foreach { project =>
-        println(s"ProjectActor.Messages.SyncGithub id[${project.id}] name[${project.name}]")
-
-        UsersDao.findById(project.user.id).flatMap { u =>
-          TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
-        } match {
-          case None => {
-            Logger.warn(s"No oauth token for project[${project.id}] user[${project.user.id}]")
-          }
-          case Some(token) => {
-            GithubUtil.parseUri(project.uri) match {
-              case Left(errors) => {
-                Logger.warn(s"Error parsing project name[${project.name}]: $errors")
-              }
-              case Right(repo) => {
-                val client = GithubHelper.apiClient(token)
-
-                for {
-                  master <- client.refs.getByRef(repo.owner, repo.project, "heads/master")
-                  tags <- client.tags.get(repo.owner, repo.project)
-                } yield {
-                  val masterSha = master.`object`.sha
-
-                  tags.find { t => t.commit.sha == masterSha } match {
-                    case None => println("  No tag found matching master[$masterSha]")
-                    case Some(t) => println(s"  Tag[${t.name}] is master[$masterSha]")
-                  }
-
-                  println("")
-                  println("  ALL TAGS")
-                  tags.foreach { tag =>
-                    println(s"   - ${tag.name}[${tag.commit.sha}]")
-                  }
-                }
-              }
+        dataRepo.foreach { repo =>
+          GithubHelper.apiClientFromUser(project.user.id).map { client =>
+            client.refs.getByRef(repo.owner, repo.project, "heads/master").map { master =>
+              ShasDao.upsertMaster(UsersDao.systemUser, project.id, master.`object`.sha)
             }
           }
         }
@@ -187,25 +165,29 @@ class ProjectActor extends Actor with Util {
   }
 
   def createLaunchConfiguration(repo: Repo): String = {
+    log.started("EC2 auto scaling group launch configuration")
     val lc = AutoScalingGroup.createLaunchConfiguration(repo.awsName)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Launch Configuration: [$lc]")
+    log.completed("EC2 auto scaling group launch configuration: [$lc]")
     return lc
   }
 
   def createLoadBalancer(repo: Repo): String = {
+    log.started("EC2 load balancer")
     val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(repo.awsName)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Load Balancer: [$elb]")
+    log.completed(s"EC2 Load Balancer: [$elb]")
     return elb
   }
 
   def createAutoScalingGroup(repo: Repo, launchConfigName: String, loadBalancerName: String) {
+    log.started("EC2 auto scaling group")
     val asg = AutoScalingGroup.createAutoScalingGroup(repo.awsName, launchConfigName, loadBalancerName)
-    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$repo], EC2 Auto-Scaling Group: [$asg]")
+    log.completed(s"EC2 auto scaling group: [$asg]")
   }
 
   def createCluster(repo: Repo) {
+    log.started("ECS Cluster")
     val cluster = EC2ContainerService.createCluster(repo.awsName)
-    println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$repo], ECS Cluster: [$cluster]")
+    log.completed("ECS Cluster: [$cluster]")
   }
 
 }

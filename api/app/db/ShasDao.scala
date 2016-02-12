@@ -107,6 +107,8 @@ object ShasDao {
           ).execute()
         }
 
+        MainActor.ref ! MainActor.Messages.ShaCreated(form.projectId, id)
+
         Right(
           findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create sha")
@@ -117,7 +119,42 @@ object ShasDao {
     }
   }
 
-  // TODO upsert
+  /**
+    * Sets the value of the hash for the master branch, creating or
+    * updated the sha record as needed. Returns the created or updated
+    * sha.
+    */
+  def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
+    upsertBranch(createdBy, projectId, "master", hash)
+  }
+
+  private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
+    val form = ShaForm(
+      projectId = projectId,
+      branch = branch,
+      hash = hash
+    )
+
+    findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
+      case None => {
+        create(createdBy, form) match {
+          case Left(errors) => sys.error(errors.mkString(", "))
+          case Right(sha) => sha
+        }
+      }
+      case Some(existing) => {
+        existing.hash == hash match {
+          case true => existing
+          case false => {
+            update(createdBy, existing, form) match {
+              case Left(errors) => sys.error(errors.mkString(", "))
+              case Right(sha) => sha
+            }
+          }
+        }
+      }
+    }
+  }
 
   private[this] def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
     validate(createdBy, form, Some(sha)) match {
