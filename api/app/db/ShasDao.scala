@@ -72,7 +72,7 @@ object ShasDao {
       case None => Seq("Project not found")
       case Some(project) => {
         MembershipsDao.isMember(project.organization.id, user) match  {
-          case false => Seq("You do not have access to this organization")
+          case false => Seq("User does not have access to this organization")
           case true => Nil
         }
       }
@@ -83,7 +83,7 @@ object ShasDao {
       case Some(found) => {
         existing.map(_.id) == Some(found.id) match {
           case true => Nil
-          case false => Seq("Project already has a sha for this branchg")
+          case false => Seq("Project already has a sha for this branch")
         }
       }
     }
@@ -117,7 +117,9 @@ object ShasDao {
     }
   }
 
-  def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
+  // TODO upsert
+
+  private[this] def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
     validate(createdBy, form, Some(sha)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -151,6 +153,7 @@ object ShasDao {
   def findById(auth: Authorization, id: String): Option[Sha] = {
     findAll(auth, ids = Some(Seq(id)), limit = 1).headOption
   }
+
 
   def findAll(
     auth: Authorization,
