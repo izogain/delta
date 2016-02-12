@@ -1,6 +1,6 @@
 package io.flow.delta.www.lib
 
-import io.flow.delta.v0.models.{BinarySummary, ItemSummary, ItemSummaryUndefinedType, LibrarySummary, ProjectSummary, Recommendation, RecommendationType, Scms}
+import io.flow.delta.v0.models.{ItemSummary, ItemSummaryUndefinedType, ProjectSummary, Scms}
 import io.flow.play.util.DefaultConfig
 import java.net.URLEncoder
 

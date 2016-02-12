@@ -47,13 +47,13 @@ abstract class BaseController(
 
   def withOrganization[T](
     request: IdentifiedRequest[T],
-    key: String
+    id: String
   ) (
     f: Organization => Future[Result]
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ) = {
-    deltaClient(request).organizations.get(key = Some(key), limit = 1).flatMap { organizations =>
+    deltaClient(request).organizations.get(id = Some(Seq(id)), limit = 1).flatMap { organizations =>
       organizations.headOption match {
         case None => Future {
           Redirect(routes.ApplicationController.index()).flashing("warning" -> s"Organization not found")

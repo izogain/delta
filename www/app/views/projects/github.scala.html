@@ -13,7 +13,7 @@
     <table class="table">
       @orgs.map { org =>
         <tr>
-          <td><a href="@routes.ProjectsController.githubOrg(org.key)">@{org.key}</a></td>
+          <td><a href="@routes.ProjectsController.githubOrg(org.id)">@{org.id}</a></td>
         </tr>
       }
     </table>

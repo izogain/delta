@@ -5,11 +5,11 @@
   errorMessages: Seq[String] = Nil
 )(implicit flash: Flash, messages: Messages)
 
-@main(data.copy(title = Some(s"${org.key}: Add member")), errorMessages = errorMessages) {
+@main(data.copy(title = Some(s"${org.id}: Add member")), errorMessages = errorMessages) {
 
   <div class="container">
 
-    @helper.form(action = routes.MembersController.postCreate(org.key)) {
+    @helper.form(action = routes.MembersController.postCreate(org.id)) {
 
       <fieldset>
 

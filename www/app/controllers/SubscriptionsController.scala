@@ -16,7 +16,7 @@ object Subscriptions {
 
   case class UserPublication(publication: Publication, isSubscribed: Boolean) {
     val label = publication match {
-      case Publication.DailySummary => "Email me a daily summary of dependencies to upgrade"
+      case Publication.Deployments => "Email me whenever a new deployment is created"
       case Publication.UNDEFINED(key) => key
     }
   }

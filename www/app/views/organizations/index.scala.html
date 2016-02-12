@@ -17,7 +17,7 @@
     <table class="table">
       @organizations.items.map { org =>
         <tr>
-          <td><a href="@routes.OrganizationsController.show(org.key)">@{org.key}</a></td>
+          <td><a href="@routes.OrganizationsController.show(org.id)">@{org.id}</a></td>
         </tr>
       }
     </table>

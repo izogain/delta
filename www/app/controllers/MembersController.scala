@@ -22,20 +22,20 @@ class MembersController @javax.inject.Inject() (
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  override def section = Some(io.flow.delta.www.lib.Section.Members)
+  override def section = None
 
-  def index(orgKey: String, page: Int = 0) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+  def index(orgId: String, page: Int = 0) = Identified.async { implicit request =>
+    withOrganization(request, orgId) { org =>
       for {
         memberships <- deltaClient(request).memberships.get(
-          organization = Some(org.key),
+          organization = Some(org.id),
           limit = Pagination.DefaultLimit+1,
           offset = page * Pagination.DefaultLimit
         )
       } yield {
         Ok(
           views.html.members.index(
-            uiData(request).copy(organization = Some(org.key)),
+            uiData(request).copy(organization = Some(org.id)),
             org,
             PaginatedCollection(page, memberships)
           )
@@ -44,12 +44,12 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def create(orgKey: String) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+  def create(orgId: String) = Identified.async { implicit request =>
+    withOrganization(request, orgId) { org =>
       Future {
         Ok(
           views.html.members.create(
-            uiData(request).copy(organization = Some(org.key)),
+            uiData(request).copy(organization = Some(org.id)),
             org,
             MembersController.uiForm
           )
@@ -58,15 +58,15 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def postCreate(orgKey: String) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+  def postCreate(orgId: String) = Identified.async { implicit request =>
+    withOrganization(request, orgId) { org =>
       val boundForm = MembersController.uiForm.bindFromRequest
 
       organizations(request).flatMap { orgs =>
         boundForm.fold (
 
           formWithErrors => Future {
-            Ok(views.html.members.create(uiData(request).copy(organization = Some(org.key)), org, formWithErrors))
+            Ok(views.html.members.create(uiData(request).copy(organization = Some(org.id)), org, formWithErrors))
           },
 
           uiForm => {
@@ -74,22 +74,22 @@ class MembersController @javax.inject.Inject() (
               users.headOption match {
                 case None => Future {
                   Ok(views.html.members.create(uiData(request).copy(
-                    organization = Some(org.key)), org, boundForm, Seq("User with specified email not found"))
+                    organization = Some(org.id)), org, boundForm, Seq("User with specified email not found"))
                   )
                 }
                 case Some(user) => {
                   deltaClient(request).memberships.post(
                     MembershipForm(
-                      organization = org.key,
+                      organization = org.id,
                       userId = user.id,
                       role = Role(uiForm.role)
                     )
                   ).map { membership =>
-                    Redirect(routes.MembersController.index(org.key)).flashing("success" -> s"User added as ${membership.role}")
+                    Redirect(routes.MembersController.index(org.id)).flashing("success" -> s"User added as ${membership.role}")
                   }.recover {
                     case response: io.flow.delta.v0.errors.ErrorsResponse => {
                       Ok(views.html.members.create(
-                        uiData(request).copy(organization = Some(org.key)), org, boundForm, response.errors.map(_.message))
+                        uiData(request).copy(organization = Some(org.id)), org, boundForm, response.errors.map(_.message))
                       )
                     }
                   }
@@ -102,45 +102,45 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def postDelete(orgKey: String, id: String) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+  def postDelete(orgId: String, id: String) = Identified.async { implicit request =>
+    withOrganization(request, orgId) { org =>
       deltaClient(request).memberships.deleteById(id).map { response =>
-        Redirect(routes.MembersController.index(org.key)).flashing("success" -> s"Membership deleted")
+        Redirect(routes.MembersController.index(org.id)).flashing("success" -> s"Membership deleted")
       }.recover {
         case UnitResponse(404) => {
-          Redirect(routes.MembersController.index(org.key)).flashing("warning" -> s"Membership not found")
+          Redirect(routes.MembersController.index(org.id)).flashing("warning" -> s"Membership not found")
         }
       }
     }
   }
 
-  def postMakeMember(orgKey: String, id: String) = Identified.async { implicit request =>
-    makeRole(request, orgKey, id, Role.Member)
+  def postMakeMember(orgId: String, id: String) = Identified.async { implicit request =>
+    makeRole(request, orgId, id, Role.Member)
   }
 
-  def postMakeAdmin(orgKey: String, id: String) = Identified.async { implicit request =>
-    makeRole(request, orgKey, id, Role.Admin)
+  def postMakeAdmin(orgId: String, id: String) = Identified.async { implicit request =>
+    makeRole(request, orgId, id, Role.Admin)
   }
 
   def makeRole[T](
     request: IdentifiedRequest[T],
-    orgKey: String,
+    orgId: String,
     id: String,
     role: Role
   ): Future[Result] = {
-    withOrganization(request, orgKey) { org =>
-      withMembership(org.key, request, id) { membership =>
+    withOrganization(request, orgId) { org =>
+      withMembership(org.id, request, id) { membership =>
         deltaClient(request).memberships.post(
           MembershipForm(
-            organization = membership.organization.key,
+            organization = membership.organization.id,
             userId = membership.user.id,
             role = role
           )
         ).map { membership =>
-          Redirect(routes.MembersController.index(membership.organization.key)).flashing("success" -> s"User added as ${membership.role}")
+          Redirect(routes.MembersController.index(membership.organization.id)).flashing("success" -> s"User added as ${membership.role}")
         }.recover {
           case response: io.flow.delta.v0.errors.ErrorsResponse => {
-            Redirect(routes.MembersController.index(membership.organization.key)).flashing("warning" -> response.errors.map(_.message).mkString(", "))
+            Redirect(routes.MembersController.index(membership.organization.id)).flashing("warning" -> response.errors.map(_.message).mkString(", "))
           }
         }
       }

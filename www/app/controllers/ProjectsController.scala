@@ -1,7 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{Organization, Project, ProjectForm, Scms, SyncEvent, Visibility}
+import io.flow.delta.v0.models.{Organization, Project, ProjectForm, Scms, Visibility}
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.common.v0.models.User
 import io.flow.play.clients.UserTokensClient
@@ -40,38 +40,13 @@ class ProjectsController @javax.inject.Inject() (
     }
   }
 
-  def show(id: String, recommendationsPage: Int = 0, binariesPage: Int = 0, librariesPage: Int = 0) = Identified.async { implicit request =>
+  def show(id: String) = Identified.async { implicit request =>
     withProject(request, id) { project =>
-      for {
-        recommendations <- deltaClient(request).recommendations.get(
-          projectId = Some(project.id),
-          limit = Pagination.DefaultLimit+1,
-          offset = recommendationsPage * Pagination.DefaultLimit
-        )
-        projectBinaries <- deltaClient(request).projectBinaries.get(
-          projectId = Some(id),
-          limit = Pagination.DefaultLimit+1,
-          offset = binariesPage * Pagination.DefaultLimit
-        )
-        projectLibraries <- deltaClient(request).projectLibraries.get(
-          projectId = Some(id),
-          limit = Pagination.DefaultLimit+1,
-          offset = librariesPage * Pagination.DefaultLimit
-        )
-        syncs <- deltaClient(request).syncs.get(
-          objectId = Some(id),
-          event = Some(SyncEvent.Completed),
-          limit = 1
-        )
-      } yield {
+      Future {
         Ok(
           views.html.projects.show(
             uiData(request),
-            project,
-            PaginatedCollection(recommendationsPage, recommendations),
-            PaginatedCollection(binariesPage, projectBinaries),
-            PaginatedCollection(librariesPage, projectLibraries),
-            syncs.headOption
+            project
           )
         )
       }
@@ -87,7 +62,7 @@ class ProjectsController @javax.inject.Inject() (
           Redirect(routes.OrganizationsController.index()).flashing("warning" -> "Add a new org before adding a project")
         }
         case one :: Nil => {
-          Redirect(routes.ProjectsController.githubOrg(one.key))
+          Redirect(routes.ProjectsController.githubOrg(one.id))
         }
         case multiple => {
           Ok(
@@ -100,8 +75,8 @@ class ProjectsController @javax.inject.Inject() (
     }
   }
 
-  def githubOrg(orgKey: String, repositoriesPage: Int = 0) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+  def githubOrg(orgId: String, repositoriesPage: Int = 0) = Identified.async { implicit request =>
+    withOrganization(request, orgId) { org =>
       for {
         repositories <- deltaClient(request).repositories.getGithub(
           organizationId = Some(org.id),
@@ -120,11 +95,11 @@ class ProjectsController @javax.inject.Inject() (
   }
 
   def postGithubOrg(
-    orgKey: String,
+    orgId: String,
     name: String,
     repositoriesPage: Int = 0
   ) = Identified.async { implicit request =>
-    withOrganization(request, orgKey) { org =>
+    withOrganization(request, orgId) { org =>
       deltaClient(request).repositories.getGithub(
         organizationId = Some(org.id),
         name = Some(name)
@@ -136,14 +111,14 @@ class ProjectsController @javax.inject.Inject() (
           case Some(repo) => {
             deltaClient(request).projects.post(
               ProjectForm(
-                organization = org.key,
+                organization = org.id,
                 name = repo.name,
                 scms = Scms.Github,
                 visibility = repo.visibility,
                 uri = repo.uri
               )
             ).map { project =>
-              Redirect(routes.ProjectsController.sync(project.id)).flashing("success" -> "Project added")
+              Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project added")
             }
           }
         }
@@ -183,7 +158,7 @@ class ProjectsController @javax.inject.Inject() (
               uri = uiForm.uri
             )
           ).map { project =>
-            Redirect(routes.ProjectsController.sync(project.id)).flashing("success" -> "Project created")
+            Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project created")
           }.recover {
             case response: io.flow.delta.v0.errors.ErrorsResponse => {
               Ok(views.html.projects.create(uiData(request), boundForm, orgs, response.errors.map(_.message)))
@@ -203,7 +178,7 @@ class ProjectsController @javax.inject.Inject() (
             project,
             ProjectsController.uiForm.fill(
               ProjectsController.UiForm(
-                organization = project.organization.key,
+                organization = project.organization.id,
                 name = project.name,
                 scms = project.scms.toString,
                 visibility = project.visibility.toString,
@@ -231,7 +206,7 @@ class ProjectsController @javax.inject.Inject() (
               deltaClient(request).projects.putById(
                 project.id,
                 ProjectForm(
-                  organization = project.organization.key,
+                  organization = project.organization.id,
                   name = uiForm.name,
                   scms = Scms(uiForm.scms),
                   visibility = Visibility(uiForm.visibility),
@@ -256,80 +231,6 @@ class ProjectsController @javax.inject.Inject() (
     }.recover {
       case UnitResponse(404) => {
         Redirect(routes.ProjectsController.index()).flashing("warning" -> s"Project not found")
-      }
-    }
-  }
-
-  /**
-    * Waits for the latest sync to complete for this project.
-    */
-  def sync(id: String, n: Int, librariesPage: Int = 0) = Identified.async { implicit request =>
-    withProject(request, id) { project =>
-      for {
-        syncs <- deltaClient(request).syncs.get(
-          objectId = Some(id)
-        )
-        pendingProjectLibraries <- deltaClient(request).projectLibraries.get(
-          projectId = Some(id),
-          isSynced = Some(false),
-          limit = 100
-        )
-        completedProjectLibraries <- deltaClient(request).projectLibraries.get(
-          projectId = Some(id),
-          isSynced = Some(true),
-          limit = 100
-        )
-        pendingProjectBinaries <- deltaClient(request).projectBinaries.get(
-          projectId = Some(id),
-          isSynced = Some(false),
-          limit = 100
-        )
-        completedProjectBinaries <- deltaClient(request).projectBinaries.get(
-          projectId = Some(id),
-          isSynced = Some(true),
-          limit = 100
-        )
-      } yield {
-        val actualN = if (n < 1) { 1 } else { n }
-
-        val sleepTime = (actualN * 1.1).toInt match {
-          case `actualN` => actualN + 1
-          case other => other
-        }
-
-        val pending = pendingProjectLibraries.map { lib =>
-          s"${lib.groupId}.${lib.artifactId}"
-        } ++ pendingProjectBinaries.map { _.name }
-
-        val completed = completedProjectLibraries.map { lib =>
-          s"${lib.groupId}.${lib.artifactId}"
-        } ++ completedProjectBinaries.map { _.name }
-
-        syncs.find { _.event == SyncEvent.Completed } match {
-          case Some(rec) => {
-            Redirect(routes.ProjectsController.show(id))
-          }
-          case None => {
-            val syncStarted = syncs.find { _.event == SyncEvent.Started }
-            if (!syncStarted.isEmpty && pending.isEmpty && !completed.isEmpty) {
-              Redirect(routes.ProjectsController.show(id))
-            } else if (n >= 10) {
-              Redirect(routes.ProjectsController.show(id))
-            } else {
-              Ok(
-                views.html.projects.sync(
-                  uiData(request),
-                  id,
-                  actualN + 1,
-                  sleepTime,
-                  syncStarted,
-                  pending,
-                  completed
-                )
-              )
-            }
-          }
-        }
       }
     }
   }

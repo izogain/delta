@@ -43,11 +43,11 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def show(key: String, projectsPage: Int = 0) = Identified.async { implicit request =>
-    withOrganization(request, key) { org =>
+  def show(id: String, projectsPage: Int = 0) = Identified.async { implicit request =>
+    withOrganization(request, id) { org =>
       for {
         projects <- deltaClient(request).projects.get(
-          organization = Some(key),
+          organization = Some(id),
           limit = Pagination.DefaultLimit+1,
           offset = projectsPage * Pagination.DefaultLimit
         )
@@ -82,7 +82,7 @@ class OrganizationsController @javax.inject.Inject() (
 
       uiForm => {
         deltaClient(request).organizations.post(uiForm.organizationForm).map { organization =>
-          Redirect(routes.OrganizationsController.show(organization.key)).flashing("success" -> "Organization created")
+          Redirect(routes.OrganizationsController.show(organization.id)).flashing("success" -> "Organization created")
         }.recover {
           case response: io.flow.delta.v0.errors.ErrorsResponse => {
             Ok(views.html.organizations.create(uiData(request), boundForm, response.errors.map(_.message)))
@@ -92,8 +92,8 @@ class OrganizationsController @javax.inject.Inject() (
     )
   }
 
-  def edit(key: String) = Identified.async { implicit request =>
-    withOrganization(request, key) { organization =>
+  def edit(id: String) = Identified.async { implicit request =>
+    withOrganization(request, id) { organization =>
       Future {
         Ok(
           views.html.organizations.edit(
@@ -101,7 +101,7 @@ class OrganizationsController @javax.inject.Inject() (
             organization,
             OrganizationsController.uiForm.fill(
               OrganizationsController.UiForm(
-                key = organization.key
+                id = organization.id
               )
             )
           )
@@ -110,8 +110,8 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def postEdit(key: String) = Identified.async { implicit request =>
-    withOrganization(request, key) { organization =>
+  def postEdit(id: String) = Identified.async { implicit request =>
+    withOrganization(request, id) { organization =>
       val boundForm = OrganizationsController.uiForm.bindFromRequest
       boundForm.fold (
 
@@ -121,7 +121,7 @@ class OrganizationsController @javax.inject.Inject() (
 
         uiForm => {
           deltaClient(request).organizations.putById(organization.id, uiForm.organizationForm).map { updated =>
-            Redirect(routes.OrganizationsController.show(updated.key)).flashing("success" -> "Organization updated")
+            Redirect(routes.OrganizationsController.show(updated.id)).flashing("success" -> "Organization updated")
           }.recover {
             case response: io.flow.delta.v0.errors.ErrorsResponse => {
               Ok(views.html.organizations.edit(uiData(request), organization, boundForm, response.errors.map(_.message)))
@@ -132,8 +132,8 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def postDelete(key: String) = Identified.async { implicit request =>
-    withOrganization(request, key) { org =>
+  def postDelete(id: String) = Identified.async { implicit request =>
+    withOrganization(request, id) { org =>
       deltaClient(request).organizations.deleteById(org.id).map { response =>
         Redirect(routes.OrganizationsController.index()).flashing("success" -> s"Organization deleted")
       }.recover {
@@ -149,11 +149,11 @@ class OrganizationsController @javax.inject.Inject() (
 object OrganizationsController {
 
   case class UiForm(
-    key: String
+    id: String
   ) {
 
     val organizationForm = OrganizationForm(
-      key = key
+      id = id
     )
 
   }

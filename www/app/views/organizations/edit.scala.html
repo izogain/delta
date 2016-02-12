@@ -9,9 +9,9 @@
 
   <div class="container">
 
-    @helper.form(action = routes.OrganizationsController.postEdit(organization.key)) {
+    @helper.form(action = routes.OrganizationsController.postEdit(organization.id)) {
 
-      @organizationForm(form, routes.OrganizationsController.show(organization.key))
+      @organizationForm(form, routes.OrganizationsController.show(organization.id))
 
     }
 

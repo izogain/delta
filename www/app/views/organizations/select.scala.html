@@ -5,11 +5,11 @@
 )(implicit messages: Messages)
 
 @if(orgs.size == 1) {
-  <input type='hidden' name='organization' value='@orgs.head.key' />
+  <input type='hidden' name='organization' value='@orgs.head.id' />
 } else {
   @helper.select(
       value,
-      Seq( ("" -> "-- select --") ) ++ orgs.map( v => (v.key -> v.key) ),
+      Seq( ("" -> "-- select --") ) ++ orgs.map( v => (v.id -> v.id) ),
       '_label -> "Organization",
       '_error -> error
   )
