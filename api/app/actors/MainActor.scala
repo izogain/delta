@@ -19,6 +19,8 @@ object MainActor {
 
   object Messages {
 
+    case class Configure(projectId: String)
+
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
     case class ProjectDeleted(id: String)
@@ -41,9 +43,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   def receive = akka.event.LoggingReceive {
 
-    case msg @ MainActor.Messages.Configure(id) => withVerboseErrorHandler(msg) {
-      projectActor ! ProjectActor.Messages.ConfigureECS(id) // One-time ECS setup
-      projectActor ! ProjectActor.Messages.ConfigureEC2(id) // One-time EC2 setup
+    case msg @ MainActor.Messages.Configure(projectId) => withVerboseErrorHandler(msg) {
+      val actor = upsertProjectActor(projectId)
+      actor ! ProjectActor.Messages.ConfigureECS(projectId) // One-time ECS setup
+      actor ! ProjectActor.Messages.ConfigureEC2(projectId) // One-time EC2 setup
     }
 
     case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {

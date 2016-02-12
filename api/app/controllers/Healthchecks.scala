@@ -15,7 +15,7 @@ class Healthchecks extends Controller {
     // ------------------------------------------------------------
     // Hack just to test if this all works with minimal supervision
     // ------------------------------------------------------------
-    import actors.MainActor
+    import io.flow.delta.actors.MainActor
     MainActor.ref ! MainActor.Messages.Configure("splashpage")
     println("DONE CONFIGURE! SLEEPING FOR 10 SECONDS....")
     Thread.sleep(10000)
