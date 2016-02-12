@@ -92,7 +92,14 @@ class ProjectStatesDao(table: String, idPrefix: String) {
     }
   }
 
-  def update(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
+  def upsert(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
+    findByProjectId(project.id) match {
+      case None => create(createdBy, project, form)
+      case Some(_) => update(createdBy, project, form)
+    }
+  }
+
+  private[this] def update(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
     validate(createdBy, project, form) match {
       case Nil => {
         val sortedVersions = form.versions.sortBy { v => (v.name, v.instances) }
