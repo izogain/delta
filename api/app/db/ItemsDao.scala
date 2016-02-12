@@ -44,8 +44,8 @@ object ItemsDao {
 
   private[this] def objectId(summary: ItemSummary): String = {
     summary match {
-      case ProjectSummary(id, org, name, uri) => id
-      case ItemSummaryUndefinedType(name) => sys.error(s"Cannot get a id from ItemSummaryUndefinedType($name)")
+     case ProjectSummary(id, org, name, uri) => id
+     case ItemSummaryUndefinedType(name) => sys.error(s"Cannot get a id from ItemSummaryUndefinedType($name)")
     }
   }
 
