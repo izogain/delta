@@ -42,7 +42,7 @@ class DeployImageActor extends Actor with Util {
 
   def receive = {
     case msg @ DeployImageActor.Messages.Data(imageId: String) => withVerboseErrorHandler(msg.toString) {
-      ImagesDao.findById(Authorization.All, imageId) match {
+      ImagesDao.findById(imageId) match {
         case None => {
           dataImage = None
           dataProject = None

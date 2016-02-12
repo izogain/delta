@@ -36,31 +36,36 @@ object ElasticLoadBalancer {
     )
 
     try {
-      client.createLoadBalancer(
+      val result = client.createLoadBalancer(
         new CreateLoadBalancerRequest()
           .withLoadBalancerName(name)
           .withListeners(elbListeners.asJava)
           .withSubnets(elbSubnets.asJava)
           .withSecurityGroups(elbSecurityGroups.asJava)
       )
+      println(s"Created Load Balancer: ${result.getDNSName}")
     } catch {
       case e: DuplicateLoadBalancerNameException => println(s"Launch Configuration '$name' already exists")
     }
   }
 
   def configureHealthCheck(name: String, externalPort: Long) {
-    client.configureHealthCheck(
-      new ConfigureHealthCheckRequest()
-        .withLoadBalancerName(name)
-        .withHealthCheck(
-          new HealthCheck()
-            .withHealthyThreshold(2)
-            .withInterval(30)
-            .withTarget(s"HTTP:$externalPort/_internal_/healthcheck")
-            .withTimeout(5)
-            .withUnhealthyThreshold(2)
-        )
-    )
+    try {
+      client.configureHealthCheck(
+        new ConfigureHealthCheckRequest()
+          .withLoadBalancerName(name)
+          .withHealthCheck(
+            new HealthCheck()
+              .withHealthyThreshold(2)
+              .withInterval(30)
+              .withTarget(s"HTTP:$externalPort/_internal_/healthcheck")
+              .withTimeout(5)
+              .withUnhealthyThreshold(2)
+          )
+      )
+    } catch {
+      case e: LoadBalancerNotFoundException => sys.error("Cannoy find load balancer $name")
+    }
   }
 
 }
