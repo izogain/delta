@@ -35,13 +35,17 @@ object ElasticLoadBalancer {
         .withInstancePort(externalPort.toInt)
     )
 
-    client.createLoadBalancer(
-      new CreateLoadBalancerRequest()
-        .withLoadBalancerName(name)
-        .withListeners(elbListeners.asJava)
-        .withSubnets(elbSubnets.asJava)
-        .withSecurityGroups(elbSecurityGroups.asJava)
-    )
+    try {
+      client.createLoadBalancer(
+        new CreateLoadBalancerRequest()
+          .withLoadBalancerName(name)
+          .withListeners(elbListeners.asJava)
+          .withSubnets(elbSubnets.asJava)
+          .withSecurityGroups(elbSecurityGroups.asJava)
+      )
+    } catch {
+      case e: DuplicateLoadBalancerNameException => println(s"Launch Configuration '$name' already exists")
+    }
   }
 
   def configureHealthCheck(name: String, externalPort: Long) {
