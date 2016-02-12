@@ -30,8 +30,7 @@ object ItemsDao {
            items.contents,
            items.summary::text,
            items.created_at,
-           organizations.id as organization_id,
-           organizations.key as organization_key
+           organizations.id as organization_id
       from items
       join organizations on organizations.id = items.organization_id
   """)

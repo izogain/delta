@@ -19,8 +19,7 @@ object ProjectsDao {
            projects.scms,
            projects.name,
            projects.uri,
-           organizations.id as organization_id,
-           organizations.key as organization_key
+           organizations.id as organization_id
       from projects
       left join organizations on organizations.id = projects.organization_id
   """)
