@@ -142,39 +142,25 @@ class ProjectActor extends Actor with Util {
 
     case m @ ProjectActor.Messages.SyncGithub => withVerboseErrorHandler(m.toString) {
       dataProject.foreach { project =>
-        println(s"ProjectActor.Messages.SyncGithub id[${project.id}] name[${project.name}]")
+        dataRepo.foreach { repo =>
+          println(s"ProjectActor.Messages.SyncGithub $repo")
 
-        UsersDao.findById(project.user.id).flatMap { u =>
-          TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
-        } match {
-          case None => {
-            Logger.warn(s"No oauth token for project[${project.id}] user[${project.user.id}]")
-          }
-          case Some(token) => {
-            GithubUtil.parseUri(project.uri) match {
-              case Left(errors) => {
-                Logger.warn(s"Error parsing project name[${project.name}]: $errors")
+          GithubHelper.apiClientFromUser(project.user.id).map { client =>
+            for {
+              master <- client.refs.getByRef(repo.owner, repo.project, "heads/master")
+              tags <- client.tags.get(repo.owner, repo.project)
+            } yield {
+              val masterSha = master.`object`.sha
+
+              tags.find { t => t.commit.sha == masterSha } match {
+                case None => println("  No tag found matching master[$masterSha]")
+                case Some(t) => println(s"  Tag[${t.name}] is master[$masterSha]")
               }
-              case Right(repo) => {
-                val client = GithubHelper.apiClient(token)
 
-                for {
-                  master <- client.refs.getByRef(repo.owner, repo.project, "heads/master")
-                  tags <- client.tags.get(repo.owner, repo.project)
-                } yield {
-                  val masterSha = master.`object`.sha
-
-                  tags.find { t => t.commit.sha == masterSha } match {
-                    case None => println("  No tag found matching master[$masterSha]")
-                    case Some(t) => println(s"  Tag[${t.name}] is master[$masterSha]")
-                  }
-
-                  println("")
-                  println("  ALL TAGS")
-                  tags.foreach { tag =>
-                    println(s"   - ${tag.name}[${tag.commit.sha}]")
-                  }
-                }
+              println("")
+              println("  ALL TAGS")
+              tags.foreach { tag =>
+                println(s"   - ${tag.name}[${tag.commit.sha}]")
               }
             }
           }
