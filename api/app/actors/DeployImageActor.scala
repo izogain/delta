@@ -13,7 +13,7 @@ import play.api.Play.current
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-object ImageActor {
+object DeployImageActor {
 
   trait Message
 
@@ -27,7 +27,7 @@ object ImageActor {
 
 }
 
-class ImageActor extends Actor with Util {
+class DeployImageActor extends Actor with Util {
 
   implicit val imageActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("image-actor-context")
 
@@ -35,13 +35,13 @@ class ImageActor extends Actor with Util {
   private[this] var dataProject: Option[Project] = None
 
   private[this] def log: EventLog = {
-    dataProject.map { EventLog.withSystemUser(_, "ImageActor.Messages.Monitor") }.getOrElse {
+    dataProject.map { EventLog.withSystemUser(_, "DeployImageActor.Messages.Monitor") }.getOrElse {
       sys.error("Cannot get log with empty data")
     }
   }
 
   def receive = {
-    case msg @ ImageActor.Messages.Data(projectId: String, imageId: String) => withVerboseErrorHandler(msg.toString) {
+    case msg @ DeployImageActor.Messages.Data(projectId: String, imageId: String) => withVerboseErrorHandler(msg.toString) {
       ProjectsDao.findById(Authorization.All, projectId) match {
         case None => {
           dataImage = None
@@ -54,28 +54,28 @@ class ImageActor extends Actor with Util {
       }
     }
 
-    case msg @ ImageActor.Messages.Deploy => withVerboseErrorHandler(msg.toString) {
+    case msg @ DeployImageActor.Messages.Deploy => withVerboseErrorHandler(msg.toString) {
       dataImage.foreach { id =>
         val taskDefinition = registerTaskDefinition(id)
         createService(id, taskDefinition)
-        self ! ImageActor.Messages.MonitorCreate
+        self ! DeployImageActor.Messages.MonitorCreate
       }
     }
 
-    case msg @ ImageActor.Messages.MonitorCreate => withVerboseErrorHandler(msg.toString) {
+    case msg @ DeployImageActor.Messages.MonitorCreate => withVerboseErrorHandler(msg.toString) {
       dataImage.foreach { id =>
         monitorCreatedCanary(id)
       }
     }
 
-    case msg @ ImageActor.Messages.ScaleUp => withVerboseErrorHandler(msg.toString) {
+    case msg @ DeployImageActor.Messages.ScaleUp => withVerboseErrorHandler(msg.toString) {
       dataImage.foreach { id =>
         scaleUpService(id)
         monitorScaleUp(id)
       }
     }
 
-    case msg @ ImageActor.Messages.MonitorScaleUp => withVerboseErrorHandler(msg.toString) {
+    case msg @ DeployImageActor.Messages.MonitorScaleUp => withVerboseErrorHandler(msg.toString) {
       dataImage.foreach { id =>
         monitorScaleUp(id)
       }
@@ -114,7 +114,7 @@ class ImageActor extends Actor with Util {
       log.running("Still Scaling Up - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
-        self ! ImageActor.Messages.MonitorScaleUp
+        self ! DeployImageActor.Messages.MonitorScaleUp
       }
     }
   }
@@ -128,12 +128,12 @@ class ImageActor extends Actor with Util {
     val status = ecsService.getStatus
     if (running == desired) {
       log.completed("Completed Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Scaling up to max now.")
-      self ! ImageActor.Messages.ScaleUp
+      self ! DeployImageActor.Messages.ScaleUp
     } else {
       log.running("Still Deploying Canary - Image: $id, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
-        self ! ImageActor.Messages.MonitorCreate
+        self ! DeployImageActor.Messages.MonitorCreate
       }
     }
   }

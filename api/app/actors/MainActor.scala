@@ -26,7 +26,7 @@ object MainActor {
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
 
-    
+
     case class UserCreated(id: String)
   }
 }
@@ -39,14 +39,14 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
-  private[this] val imageActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val deployImageActors = scala.collection.mutable.Map[String, ActorRef]()
 
   implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
 
   def receive = akka.event.LoggingReceive {
 
     case msg @ MainActor.Messages.Deploy(projectId, imageId) => withVerboseErrorHandler(msg) {
-      upsertImageActor(projectId, imageId) ! ImageActor.Messages.Deploy
+      upsertImageActor(projectId, imageId) ! DeployImageActor.Messages.Deploy
     }
 
     case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {
@@ -93,10 +93,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     * @param imageId e.g. "flowcommerce/user:0.0.1"
     */
   def upsertImageActor(projectId: String, imageId: String): ActorRef = {
-    imageActors.lift(imageId).getOrElse {
-      val ref = Akka.system.actorOf(Props[ImageActor], name = s"$name:imageActor:$imageId")
-      ref ! ImageActor.Messages.Data(projectId, imageId)
-      imageActors += (imageId -> ref)
+    deployImageActors.lift(imageId).getOrElse {
+      val ref = Akka.system.actorOf(Props[DeployImageActor], name = s"$name:deployImageActor:$imageId")
+      ref ! DeployImageActor.Messages.Data(projectId, imageId)
+      deployImageActors += (imageId -> ref)
       ref
     }
   }
