@@ -29,8 +29,8 @@ class MainActor(name: String) extends Actor with Util {
 
   def receive = akka.event.LoggingReceive {
     case msg @ MainActor.Messages.Configure(id) => withVerboseErrorHandler(msg) {
-      projectActor ! ProjectActor.Messages.ConfigureEC2(id) // One-time EC2 setup
       projectActor ! ProjectActor.Messages.ConfigureECS(id) // One-time ECS setup
+      projectActor ! ProjectActor.Messages.ConfigureEC2(id) // One-time EC2 setup
     }
 
     case msg @ MainActor.Messages.Deploy(id) => withVerboseErrorHandler(msg) {

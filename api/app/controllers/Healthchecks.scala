@@ -19,7 +19,8 @@ class Healthchecks() extends Controller {
     // ------------------------------------------------------------
     import actors.MainActor
     MainActor.ref ! MainActor.Messages.Configure("splashpage")
-    Thread.sleep(5000)
+    println("DONE CONFIGURE! SLEEPING FOR 10 SECONDS....")
+    Thread.sleep(10000)
     MainActor.ref ! MainActor.Messages.Deploy("flowcommerce/splashpage:0.1.13")
     // ------------------------------------------------------------
 
