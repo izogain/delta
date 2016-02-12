@@ -5,6 +5,11 @@
  */
 package io.flow.github.v0.models {
 
+  case class Commit(
+    sha: String,
+    url: String
+  )
+
   case class Contents(
     `type`: io.flow.github.v0.models.ContentsType,
     encoding: io.flow.github.v0.models.Encoding,
@@ -17,6 +22,12 @@ package io.flow.github.v0.models {
     gitUrl: String,
     htmlUrl: String,
     downloadUrl: String
+  )
+
+  case class GithubObject(
+    `type`: String,
+    sha: String,
+    url: String
   )
 
   /**
@@ -40,6 +51,12 @@ package io.flow.github.v0.models {
     contentType: _root_.scala.Option[String] = None
   )
 
+  case class Ref(
+    ref: String,
+    url: String,
+    `object`: io.flow.github.v0.models.GithubObject
+  )
+
   case class Repository(
     id: Long,
     owner: io.flow.github.v0.models.User,
@@ -49,6 +66,26 @@ package io.flow.github.v0.models {
     description: _root_.scala.Option[String] = None,
     url: String,
     htmlUrl: String
+  )
+
+  case class Tag(
+    tag: String,
+    sha: String,
+    url: String,
+    message: String,
+    tagger: io.flow.github.v0.models.Tagger,
+    `object`: io.flow.github.v0.models.GithubObject
+  )
+
+  case class TagSummary(
+    name: String,
+    commit: io.flow.github.v0.models.Commit
+  )
+
+  case class Tagger(
+    name: String,
+    email: String,
+    date: _root_.org.joda.time.DateTime
   )
 
   case class User(
@@ -420,6 +457,28 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubCommit: play.api.libs.json.Reads[Commit] = {
+      (
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String]
+      )(Commit.apply _)
+    }
+
+    def jsObjectCommit(obj: io.flow.github.v0.models.Commit) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url)
+      )
+    }
+
+    implicit def jsonWritesGithubCommit: play.api.libs.json.Writes[Commit] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Commit] {
+        def writes(obj: io.flow.github.v0.models.Commit) = {
+          jsObjectCommit(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubContents: play.api.libs.json.Reads[Contents] = {
       (
         (__ \ "type").read[io.flow.github.v0.models.ContentsType] and
@@ -458,6 +517,30 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Contents] {
         def writes(obj: io.flow.github.v0.models.Contents) = {
           jsObjectContents(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubGithubObject: play.api.libs.json.Reads[GithubObject] = {
+      (
+        (__ \ "type").read[String] and
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String]
+      )(GithubObject.apply _)
+    }
+
+    def jsObjectGithubObject(obj: io.flow.github.v0.models.GithubObject) = {
+      play.api.libs.json.Json.obj(
+        "type" -> play.api.libs.json.JsString(obj.`type`),
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url)
+      )
+    }
+
+    implicit def jsonWritesGithubGithubObject: play.api.libs.json.Writes[GithubObject] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.GithubObject] {
+        def writes(obj: io.flow.github.v0.models.GithubObject) = {
+          jsObjectGithubObject(obj)
         }
       }
     }
@@ -526,6 +609,30 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubRef: play.api.libs.json.Reads[Ref] = {
+      (
+        (__ \ "ref").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "object").read[io.flow.github.v0.models.GithubObject]
+      )(Ref.apply _)
+    }
+
+    def jsObjectRef(obj: io.flow.github.v0.models.Ref) = {
+      play.api.libs.json.Json.obj(
+        "ref" -> play.api.libs.json.JsString(obj.ref),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "object" -> jsObjectGithubObject(obj.`object`)
+      )
+    }
+
+    implicit def jsonWritesGithubRef: play.api.libs.json.Writes[Ref] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Ref] {
+        def writes(obj: io.flow.github.v0.models.Ref) = {
+          jsObjectRef(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubRepository: play.api.libs.json.Reads[Repository] = {
       (
         (__ \ "id").read[Long] and
@@ -558,6 +665,82 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Repository] {
         def writes(obj: io.flow.github.v0.models.Repository) = {
           jsObjectRepository(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTag: play.api.libs.json.Reads[Tag] = {
+      (
+        (__ \ "tag").read[String] and
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "message").read[String] and
+        (__ \ "tagger").read[io.flow.github.v0.models.Tagger] and
+        (__ \ "object").read[io.flow.github.v0.models.GithubObject]
+      )(Tag.apply _)
+    }
+
+    def jsObjectTag(obj: io.flow.github.v0.models.Tag) = {
+      play.api.libs.json.Json.obj(
+        "tag" -> play.api.libs.json.JsString(obj.tag),
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "tagger" -> jsObjectTagger(obj.tagger),
+        "object" -> jsObjectGithubObject(obj.`object`)
+      )
+    }
+
+    implicit def jsonWritesGithubTag: play.api.libs.json.Writes[Tag] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Tag] {
+        def writes(obj: io.flow.github.v0.models.Tag) = {
+          jsObjectTag(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTagSummary: play.api.libs.json.Reads[TagSummary] = {
+      (
+        (__ \ "name").read[String] and
+        (__ \ "commit").read[io.flow.github.v0.models.Commit]
+      )(TagSummary.apply _)
+    }
+
+    def jsObjectTagSummary(obj: io.flow.github.v0.models.TagSummary) = {
+      play.api.libs.json.Json.obj(
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "commit" -> jsObjectCommit(obj.commit)
+      )
+    }
+
+    implicit def jsonWritesGithubTagSummary: play.api.libs.json.Writes[TagSummary] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TagSummary] {
+        def writes(obj: io.flow.github.v0.models.TagSummary) = {
+          jsObjectTagSummary(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTagger: play.api.libs.json.Reads[Tagger] = {
+      (
+        (__ \ "name").read[String] and
+        (__ \ "email").read[String] and
+        (__ \ "date").read[_root_.org.joda.time.DateTime]
+      )(Tagger.apply _)
+    }
+
+    def jsObjectTagger(obj: io.flow.github.v0.models.Tagger) = {
+      play.api.libs.json.Json.obj(
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "email" -> play.api.libs.json.JsString(obj.email),
+        "date" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.date))
+      )
+    }
+
+    implicit def jsonWritesGithubTagger: play.api.libs.json.Writes[Tagger] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Tagger] {
+        def writes(obj: io.flow.github.v0.models.Tagger) = {
+          jsObjectTagger(obj)
         }
       }
     }
@@ -749,7 +932,11 @@ package io.flow.github.v0 {
 
     def hooks: Hooks = Hooks
 
+    def refs: Refs = Refs
+
     def repositories: Repositories = Repositories
+
+    def tags: Tags = Tags
 
     def userEmails: UserEmails = UserEmails
 
@@ -851,6 +1038,31 @@ package io.flow.github.v0 {
       }
     }
 
+    object Refs extends Refs {
+      override def get(
+        owner: String,
+        repo: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Ref]] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/refs").map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("Seq[io.flow.github.v0.models.Ref]", r, _.validate[Seq[io.flow.github.v0.models.Ref]])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def getByRef(
+        owner: String,
+        repo: String,
+        ref: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/refs/${play.utils.UriEncoding.encodePathSegment(ref, "UTF-8")}").map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Ref", r, _.validate[io.flow.github.v0.models.Ref])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+    }
+
     object Repositories extends Repositories {
       override def getUserAndRepos(
         visibility: io.flow.github.v0.models.Visibility = io.flow.github.v0.models.Visibility("all"),
@@ -909,6 +1121,31 @@ package io.flow.github.v0 {
           case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("Seq[io.flow.github.v0.models.Repository]", r, _.validate[Seq[io.flow.github.v0.models.Repository]])
           case r if r.status == 401 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
+        }
+      }
+    }
+
+    object Tags extends Tags {
+      override def get(
+        owner: String,
+        repo: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/tags").map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("Seq[io.flow.github.v0.models.TagSummary]", r, _.validate[Seq[io.flow.github.v0.models.TagSummary]])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def getBySha(
+        owner: String,
+        repo: String,
+        sha: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/tags/${play.utils.UriEncoding.encodePathSegment(sha, "UTF-8")}").map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
         }
       }
     }
@@ -1025,7 +1262,9 @@ package io.flow.github.v0 {
     trait Client {
       def contents: io.flow.github.v0.Contents
       def hooks: io.flow.github.v0.Hooks
+      def refs: io.flow.github.v0.Refs
       def repositories: io.flow.github.v0.Repositories
+      def tags: io.flow.github.v0.Tags
       def userEmails: io.flow.github.v0.UserEmails
       def users: io.flow.github.v0.Users
     }
@@ -1075,6 +1314,19 @@ package io.flow.github.v0 {
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit]
   }
 
+  trait Refs {
+    def get(
+      owner: String,
+      repo: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Ref]]
+
+    def getByRef(
+      owner: String,
+      repo: String,
+      ref: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref]
+  }
+
   trait Repositories {
     def getUserAndRepos(
       visibility: io.flow.github.v0.models.Visibility = io.flow.github.v0.models.Visibility("all"),
@@ -1103,6 +1355,19 @@ package io.flow.github.v0 {
       sort: String = "full_name",
       direction: String = "asc"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Repository]]
+  }
+
+  trait Tags {
+    def get(
+      owner: String,
+      repo: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]]
+
+    def getBySha(
+      owner: String,
+      repo: String,
+      sha: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
   }
 
   trait UserEmails {
