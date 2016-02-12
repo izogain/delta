@@ -30,6 +30,7 @@ object ShasDao {
            shas.hash,
            projects.id as project_id,
            projects.id as project_name,
+           projects.uri as project_uri,
            projects.organization_id as project_organization_id
       from shas
       join projects on shas.project_id = projects.id
@@ -171,7 +172,7 @@ object ShasDao {
 
         Right(
           findById(Authorization.All, sha.id).getOrElse {
-            sys.error("Failed to create sha")
+            sys.error("Failed to update sha")
           }
         )
       }

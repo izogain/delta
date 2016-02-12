@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import aws._
+import io.flow.delta.aws._
 import io.flow.postgresql.Authorization
 import db.ProjectsDao
 import io.flow.delta.api.lib.EventLog
@@ -33,13 +33,13 @@ class SupervisorActor extends Actor with Util {
       sys.error("Cannot get log with empty data")
     }
   }
-  
+
   def receive = {
 
     case m @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
       dataProject = ProjectsDao.findById(Authorization.All, id)
     }
-    
+
     case msg @ SupervisorActor.Messages.PursueExpectedState => {
       dataProject.foreach { project =>
         println(s"Pursuing expected state for project: $project")

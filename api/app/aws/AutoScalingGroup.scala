@@ -21,7 +21,7 @@ object AutoScalingGroup {
   val lcImageId = "ami-9886a0f2"
   val lcInstanceType = "t2.micro"
   val lcIamInstanceProfile = "ecsInstanceRole"
-  val lcSecurityGroups = Seq("sg-4aead833", "sg-abfaf7cf").asJava
+  val lcSecurityGroups = Seq("sg-2ed73856", "sg-abfaf7cf").asJava
 
   /**
   * Defined Values, probably make object vals somewhere?
