@@ -94,7 +94,8 @@
       "fields": [
 	{ "name": "id", "type": "string" },
 	{ "name": "organization", "type": "organization_summary" },
-	{ "name": "name", "type": "string" }
+	{ "name": "name", "type": "string" },
+    { "name": "uri", "type": "string" }
       ]
     },
 
@@ -251,7 +252,27 @@
     "github_webhook": {
       "description": "Defines a github hook",
       "fields": [
-	{ "name": "id", "type": "long" }
+        {
+          "name": "id",
+          "type": "long"
+        }
+      ]
+    },
+
+    "image" : {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "project", "type": "project_summary" },
+        { "name": "name", "type": "string" },
+        { "name": "version", "type": "string" }
+      ]
+    },
+
+    "image_form" : {
+      "fields": [
+        { "name": "project", "type": "project_summary" },
+        { "name": "name", "type": "string" },
+        { "name": "version", "type": "string" }
       ]
     }
 
@@ -722,6 +743,24 @@
 	  "path": "/:project_id",
 	  "description": "Receives a webhook on push for this particular project"
 	}
+      ]
+    },
+
+    "image": {
+      "operations": [
+        {
+          "method": "GET",
+          "description": "Returns a list of all matching images",
+          "parameters": [
+            { "name": "name", "type": "string", "required": false, "description": "Optionally filter by repo name. Case in-sensitive. Exact match" },
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+          ],
+          "responses": {
+            "200": { "type": "[image]" },
+            "401": { "type": "unit" }
+          }
+        }
       ]
     }
   }
