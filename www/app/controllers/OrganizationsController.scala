@@ -160,7 +160,7 @@ object OrganizationsController {
 
   private val uiForm = Form(
     mapping(
-      "key" -> nonEmptyText
+      "id" -> nonEmptyText
     )(UiForm.apply)(UiForm.unapply)
   )
 
