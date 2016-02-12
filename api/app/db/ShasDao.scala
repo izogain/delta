@@ -107,6 +107,8 @@ object ShasDao {
           ).execute()
         }
 
+        MainActor.ref ! MainActor.Messages.ShaCreated(form.projectId, id)
+
         Right(
           findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create sha")
@@ -124,7 +126,7 @@ object ShasDao {
     */
   def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
     upsertBranch(createdBy, projectId, "master", hash)
-    }
+  }
 
   private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
     val form = ShaForm(
