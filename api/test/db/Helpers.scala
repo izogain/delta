@@ -190,7 +190,8 @@ trait Helpers {
     ProjectSummary(
       id = project.id,
       organization = OrganizationSummary(org.id),
-      name = project.name
+      name = project.name,
+      uri = project.uri
     )
   }
 
@@ -200,7 +201,7 @@ trait Helpers {
     implicit summary: ItemSummary = createItemSummary(org)
   ): ItemForm = {
     val label = summary match {
-      case ProjectSummary(id, org, name) => name
+      case ProjectSummary(id, org, name, uri) => name
       case ItemSummaryUndefinedType(name) => name
     }
     ItemForm(

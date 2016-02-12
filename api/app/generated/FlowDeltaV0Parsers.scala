@@ -157,6 +157,66 @@ package io.flow.delta.v0.anorm.parsers {
 
   }
 
+  object Image {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      projectPrefix = s"$prefix${sep}project",
+      name = s"$prefix${sep}name",
+      version = s"$prefix${sep}version"
+    )
+
+    def parser(
+      id: String = "id",
+      projectPrefix: String = "project",
+      name: String = "name",
+      version: String = "version"
+    ): RowParser[io.flow.delta.v0.models.Image] = {
+      SqlParser.str(id) ~
+      io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix(projectPrefix) ~
+      SqlParser.str(name) ~
+      SqlParser.str(version) map {
+        case id ~ project ~ name ~ version => {
+          io.flow.delta.v0.models.Image(
+            id = id,
+            project = project,
+            name = name,
+            version = version
+          )
+        }
+      }
+    }
+
+  }
+
+  object ImageForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      projectPrefix = s"$prefix${sep}project",
+      name = s"$prefix${sep}name",
+      version = s"$prefix${sep}version"
+    )
+
+    def parser(
+      projectPrefix: String = "project",
+      name: String = "name",
+      version: String = "version"
+    ): RowParser[io.flow.delta.v0.models.ImageForm] = {
+      io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix(projectPrefix) ~
+      SqlParser.str(name) ~
+      SqlParser.str(version) map {
+        case project ~ name ~ version => {
+          io.flow.delta.v0.models.ImageForm(
+            project = project,
+            name = name,
+            version = version
+          )
+        }
+      }
+    }
+
+  }
+
   object Item {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
@@ -430,22 +490,26 @@ package io.flow.delta.v0.anorm.parsers {
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       id = s"$prefix${sep}id",
       organizationPrefix = s"$prefix${sep}organization",
-      name = s"$prefix${sep}name"
+      name = s"$prefix${sep}name",
+      uri = s"$prefix${sep}uri"
     )
 
     def parser(
       id: String = "id",
       organizationPrefix: String = "organization",
-      name: String = "name"
+      name: String = "name",
+      uri: String = "uri"
     ): RowParser[io.flow.delta.v0.models.ProjectSummary] = {
       SqlParser.str(id) ~
       io.flow.delta.v0.anorm.parsers.OrganizationSummary.parserWithPrefix(organizationPrefix) ~
-      SqlParser.str(name) map {
-        case id ~ organization ~ name => {
+      SqlParser.str(name) ~
+      SqlParser.str(uri) map {
+        case id ~ organization ~ name ~ uri => {
           io.flow.delta.v0.models.ProjectSummary(
             id = id,
             organization = organization,
-            name = name
+            name = name,
+            uri = uri
           )
         }
       }

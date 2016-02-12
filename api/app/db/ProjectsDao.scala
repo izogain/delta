@@ -45,7 +45,8 @@ object ProjectsDao {
     ProjectSummary(
       id = project.id,
       organization = OrganizationSummary(project.organization.id),
-      name = project.name
+      name = project.name,
+      uri = project.uri
     )
   }
 

@@ -20,11 +20,15 @@ trait Factories {
   def makeProjectSummary(
     id: String = idGenerator.randomId(),
     name: String = makeName()
-  ) = ProjectSummary(
-    id = id,
-    organization = makeOrganizationSummary(),
-    name = name
-  )
+  ) = {
+    val org = makeOrganizationSummary()
+    ProjectSummary(
+      id = id,
+      organization = org,
+      name = name,
+      uri = "https://github.com/%s/%s".format(org.id, name)
+    )
+  }
 
   def makeOrganizationSummary(
     id: String = makeKey()

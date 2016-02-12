@@ -67,7 +67,8 @@ class ItemsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       ProjectSummary(
         id = project.id,
         organization = OrganizationSummary(org.id),
-        name = project.name
+        name = project.name,
+        uri = project.uri
       )
     )
 
