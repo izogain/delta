@@ -1,4 +1,4 @@
-package aws
+package io.flow.delta.aws
 
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
 import com.amazonaws.services.autoscaling.model._

@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import aws.EC2ContainerService
+import io.flow.delta.aws.EC2ContainerService
 import db.{ImagesDao,ProjectsDao}
 import io.flow.delta.api.lib.EventLog
 import io.flow.delta.v0.models.{Image,Project}

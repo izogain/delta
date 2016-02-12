@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import aws._
+import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import io.flow.postgresql.Authorization
 import db.{ProjectsDao, ShasDao, TokensDao, UsersDao}
 import io.flow.delta.api.lib.{EventLog, GithubUtil, GithubHelper, Repo}
@@ -44,7 +44,7 @@ class ProjectActor extends Actor with Util {
       sys.error("Cannot get log with empty data")
     }
   }
-  
+
   def receive = {
 
     case m @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
@@ -67,7 +67,7 @@ class ProjectActor extends Actor with Util {
         }
       }
     }
-    
+
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
       dataRepo.foreach { repo =>
