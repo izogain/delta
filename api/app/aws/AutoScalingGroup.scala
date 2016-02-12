@@ -8,28 +8,25 @@ import sun.misc.BASE64Encoder
 import collection.JavaConverters._
 
 object AutoScalingGroup {
-
   lazy val client = new AmazonAutoScalingClient()
-
   lazy val encoder = new BASE64Encoder()
 
-  // Stuff needed to set up related things
-  // TODO: Make configurable
-  lazy val asgHealthCheckGracePeriod = 300
-  lazy val asgMinSize = 3
-  lazy val asgMaxSize = 3
-  lazy val asgDesiredSize = 3
-  lazy val asgSubnets = "subnet-4a8ee313,subnet-7d2f1547,subnet-c99a0de2,subnet-dc2961ab"
-  lazy val ec2KeyName = "mbryzek-key-pair-us-east"
-  lazy val lcImageId = "ami-9886a0f2"
-  lazy val lcInstanceType = "t2.micro"
-  lazy val lcIamInstanceProfile = "ecsInstanceRole"
-  lazy val lcSecurityGroups = Seq("sg-4aead833", "sg-abfaf7cf").asJava
+  // vals to be used
+  val asgHealthCheckGracePeriod = 300
+  val asgMinSize = 3
+  val asgMaxSize = 3
+  val asgDesiredSize = 3
+  val asgSubnets = "subnet-4a8ee313,subnet-7d2f1547,subnet-c99a0de2,subnet-dc2961ab"
+  val ec2KeyName = "mbryzek-key-pair-us-east"
+  val lcImageId = "ami-9886a0f2"
+  val lcInstanceType = "t2.micro"
+  val lcIamInstanceProfile = "ecsInstanceRole"
+  val lcSecurityGroups = Seq("sg-4aead833", "sg-abfaf7cf").asJava
 
   /**
   * Defined Values, probably make object vals somewhere?
   */
-  lazy val lcBlockDeviceMappings = Seq(
+  val lcBlockDeviceMappings = Seq(
     new BlockDeviceMapping()
       .withDeviceName("/dev/xvda")
       .withEbs(new Ebs()
@@ -47,12 +44,16 @@ object AutoScalingGroup {
       )
   ).asJava
 
+  def getLaunchConfigurationName(id: String) = s"$id-ecs-launch-configuration"
+
+  def getAutoScalingGroupName(id: String) = s"$id-ecs-auto-scaling-group"
+
   def createLaunchConfiguration(id: String): String = {
-    val name = s"$id-api-ecs-launch-configuration"
+    val name = getLaunchConfigurationName(id)
     client.createLaunchConfiguration(
       new CreateLaunchConfigurationRequest()
         .withLaunchConfigurationName(name)
-        .withAssociatePublicIpAddress(true)
+        .withAssociatePublicIpAddress(false)
         .withIamInstanceProfile(lcIamInstanceProfile)
         .withBlockDeviceMappings(lcBlockDeviceMappings)
         .withSecurityGroups(lcSecurityGroups)
@@ -65,7 +66,7 @@ object AutoScalingGroup {
   }
 
   def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String): String = {
-    val name = s"$id-api-ecs-auto-scaling-group"
+    val name = getAutoScalingGroupName(id)
     client.createAutoScalingGroup(
       new CreateAutoScalingGroupRequest()
         .withAutoScalingGroupName(name)

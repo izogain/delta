@@ -27,7 +27,7 @@ object MainActor {
     case class ProjectSync(id: String)
 
     case class ShaCreated(projectId: String, id: String)
-    
+
     case class UserCreated(id: String)
 
     case class ImageCreated(id: String)
@@ -88,7 +88,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
-      
+
     case msg: Any => logUnhandledMessage(msg)
 
   }
@@ -108,7 +108,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
   def upsertImageActor(projectId: String, imageId: String): ActorRef = {
     deployImageActors.lift(imageId).getOrElse {
       val ref = Akka.system.actorOf(Props[DeployImageActor], name = s"$name:deployImageActor:$imageId")
-      ref ! DeployImageActor.Messages.Data(projectId, imageId)
+      ref ! DeployImageActor.Messages.Data(imageId)
       deployImageActors += (imageId -> ref)
       ref
     }

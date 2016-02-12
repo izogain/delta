@@ -10,28 +10,32 @@ import collection.JavaConverters._
 object EC2ContainerService {
   lazy val client = new AmazonECSClient()
 
-  // stuff to make configurable
-  lazy val containerMemory = 500
-  lazy val serviceRole = "ecsServiceRole"
-  lazy val createServiceDesiredCount = 1
-  lazy val maxScaleUpDesiredCount = 3
+  val containerMemory = 500
+  val serviceRole = "ecsServiceRole"
+  val createServiceDesiredCount = 1
+  val maxScaleUpDesiredCount = 3
 
-  def getClusterName(projectId: String): String = s"$projectId-api-ecs-cluster"
+  def getClusterName(projectName: String): String = s"$projectName-ecs-cluster"
 
-  def createCluster(projectId: String): String = {
-    val name = getClusterName(projectId)
+  def getContainerName(projectName: String): String = s"$projectName-ecs-container"
+
+  def getTaskName(projectName: String): String = s"$projectName-ecs-task"
+
+  def createCluster(projectName: String): String = {
+    val name = getClusterName(projectName)
     client.createCluster(new CreateClusterRequest().withClusterName(name))
     return name
   }
 
-  def getServiceName(id: String, projectId: String, tag: String): String = {
-    return s"$projectId-api-ecs-service-${tag.replaceAll("[.]","-")}"
+  def getServiceName(id: String, projectName: String): String = {
+    val pattern = "(\\w+)/(\\w+):(.+)".r
+    val pattern(o, p, tag) = id
+    return s"$projectName-api-ecs-service-${tag.replaceAll("[.]","-")}"
   }
 
-  def scaleUp(id: String) {
-    val (organization, projectId, tag) = getComponentsFromImageId(id)
-    val service = getServiceName(id, projectId, tag)
-    val cluster = getClusterName(projectId)
+  def scaleUp(id: String, projectName: String) {
+    val service = getServiceName(id, projectName)
+    val cluster = getClusterName(projectName)
 
     client.updateService(
       new UpdateServiceRequest()
@@ -41,10 +45,9 @@ object EC2ContainerService {
     )
   }
 
-  def getServiceInfo(id: String): Service = {
-    val (organization, projectId, tag) = getComponentsFromImageId(id)
-    val service = getServiceName(id, projectId, tag)
-    val cluster = getClusterName(projectId)
+  def getServiceInfo(id: String, projectName: String): Service = {
+    val service = getServiceName(id, projectName)
+    val cluster = getClusterName(projectName)
 
     // should only be one thing, since we are passing cluster and service
     client.describeServices(
@@ -54,11 +57,10 @@ object EC2ContainerService {
     ).getServices().asScala.head
   }
 
-  def registerTaskDefinition(id: String): String = {
-    val (organization, projectId, tag) = getComponentsFromImageId(id)
-    val taskName = s"$projectId-api-ecs-task"
-    val containerName = s"$projectId-api-ecs-container"
-    val registryPorts = RegistryClient.ports(projectId)
+  def registerTaskDefinition(id: String, projectName: String): String = {
+    val taskName = getTaskName(projectName)
+    val containerName = getContainerName(projectName)
+    val registryPorts = RegistryClient.ports(projectName)
 
     client.registerTaskDefinition(
       new RegisterTaskDefinitionRequest()
@@ -84,12 +86,11 @@ object EC2ContainerService {
     return taskName
   }
 
-  def createService(id: String, taskDefinition: String): String = {
-    val (organization, projectId, tag) = getComponentsFromImageId(id)
-    val serviceName = getServiceName(id, projectId, tag)
-    val clusterName = s"$projectId-api-ecs-cluster"
-    val containerName = s"$projectId-api-ecs-container"
-    val loadBalancerName = s"$projectId-api-ecs-lb"
+  def createService(id: String, projectName: String, taskDefinition: String): String = {
+    val serviceName = getServiceName(id, projectName)
+    val clusterName = getClusterName(projectName)
+    val containerName = getContainerName(projectName)
+    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectName)
 
     return client.createService(
       new CreateServiceRequest()
@@ -103,16 +104,10 @@ object EC2ContainerService {
             new LoadBalancer()
               .withContainerName(containerName)
               .withLoadBalancerName(loadBalancerName)
-              .withContainerPort(RegistryClient.ports(projectId).internal.toInt)
+              .withContainerPort(RegistryClient.ports(projectName).internal.toInt)
           ).asJava
         )
     ).getService().getServiceName()
-  }
-
-  def getComponentsFromImageId(id: String): (String,String,String) = {
-    val pattern = "(\\w+)/(\\w+):(.+)".r
-    val pattern(organization, projectId, tag) = id
-    return (organization, projectId, tag)
   }
 
 }

@@ -10,15 +10,16 @@ import collection.JavaConverters._
 object ElasticLoadBalancer {
   lazy val client = new AmazonElasticLoadBalancingClient()
 
-  // TODO: Assume that these are already created?
-  // Should we create something to check?
-  lazy val elbSubnets = Seq("subnet-4a8ee313", "subnet-7d2f1547", "subnet-c99a0de2", "subnet-dc2961ab")
-  lazy val elbSecurityGroups = Seq("sg-4aead833")
+  // vals to be used
+  val elbSubnets = Seq("subnet-4a8ee313", "subnet-7d2f1547", "subnet-c99a0de2", "subnet-dc2961ab")
+  val elbSecurityGroups = Seq("sg-4aead833")
+
+  def getLoadBalancerName(id: String): String = s"$id-ecs-lb"
 
   def createLoadBalancerAndHealthCheck(id: String): String = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
-    val name = s"$id-api-ecs-lb"
+    val name = getLoadBalancerName(id)
     val externalPort = RegistryClient.ports(id).external
     createLoadBalancer(name, externalPort)
     configureHealthCheck(name, externalPort)
@@ -29,8 +30,8 @@ object ElasticLoadBalancer {
     val elbListeners = Seq(
       new Listener()
         .withProtocol("HTTP")
-        .withLoadBalancerPort(80)
         .withInstanceProtocol("HTTP")
+        .withLoadBalancerPort(80)
         .withInstancePort(externalPort.toInt)
     )
 
