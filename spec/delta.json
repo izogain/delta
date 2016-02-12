@@ -107,7 +107,29 @@
 	{ "name": "uri", "type": "string" }
       ]
     },
+    
+    "project_state": {
+      "description": "Returns the latest expected and actual states for this project",
+      "fields": [
+        { "name": "expected", "type": "state", "required": false },
+        { "name": "actual", "type": "state", "required": false }
+      ]
+    },
 
+    "state": {
+      "description": "Used to describe the actual state of a project in AWS. Specifically which versions are running and eventually what % of traffic each version is carrying",
+      "fields": [
+        { "name": "version", "type": "string", "example": "0.0.1" },
+        { "name": "instances", "type": "long", "description": "The number of instances running this version" }
+      ]
+    },
+
+    "state_form": {
+      "fields": [
+        { "name": "states", "type": "[state]" }
+      ]
+    },
+    
     "repository": {
       "fields": [
 	{ "name": "name", "type": "string" },
@@ -378,7 +400,48 @@
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
+        },
+
+        {
+          "method": "GET",
+          "path": "/:id/state/latest",
+          "responses": {
+            "200": { "type": "project_state" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+
+        {
+          "method": "GET",
+          "path": "/:id/state/expected",
+          "responses": {
+            "200": { "type": "[state]" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+
+        {
+          "method": "POST",
+          "path": "/:id/state/expected",
+          "responses": {
+            "200": { "type": "[state_form]" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+
+        {
+          "method": "GET",
+          "path": "/:id/state/actual",
+          "responses": {
+            "200": { "type": "[state]" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
         }
+
       ]
     },
 
