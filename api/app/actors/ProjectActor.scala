@@ -1,5 +1,6 @@
 package io.flow.delta.actors
 
+import aws._
 import io.flow.postgresql.Authorization
 import db.{ProjectsDao, TokensDao, UsersDao}
 import io.flow.delta.api.lib.{GithubUtil, GithubHelper}
@@ -11,12 +12,18 @@ import play.libs.Akka
 import akka.actor.Actor
 import scala.concurrent.ExecutionContext
 
+//import play.api.Play.current
+
 object ProjectActor {
 
   trait Message
 
   object Messages {
-    case class Data(id: String) extends Message
+    case class Data(id: String)
+
+    case object ConfigureEC2 // One-time EC2 setup
+    case object ConfigureECS // One-time ECS setup
+
     case object CreateHooks extends Message
     case object Sync extends Message
   }
@@ -25,18 +32,34 @@ object ProjectActor {
 
 class ProjectActor extends Actor with Util {
 
-  implicit val projectExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
+  implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
   private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
   private[this] val HookName = "web"
   private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
 
   private[this] var dataProject: Option[Project] = None
-
+  
   def receive = {
 
     case m @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
       dataProject = ProjectsDao.findById(Authorization.All, id)
+    }
+    
+    // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
+    case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
+      dataProject.foreach { project =>
+        val lc = createLaunchConfiguration(project.id)
+        val elb = createLoadBalancer(project.id)
+        createAutoScalingGroup(project.id, lc, elb)
+      }
+    }
+
+    // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
+    case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg.toString) {
+      dataProject.foreach { project =>
+        createCluster(project.id)
+      }
     }
 
     case m @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(m.toString) {
@@ -141,8 +164,30 @@ class ProjectActor extends Actor with Util {
       }
     }
 
-
     case m: Any => logUnhandledMessage(m)
+
+  }
+
+  def createLaunchConfiguration(id: String): String = {
+    val lc = AutoScalingGroup.createLaunchConfiguration(id)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Launch Configuration: [${lc}]")
+    return lc
+  }
+
+  def createLoadBalancer(id: String): String = {
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(id)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Load Balancer: [${elb}]")
+    return elb
+  }
+
+  def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String) {
+    val asg = AutoScalingGroup.createAutoScalingGroup(id, launchConfigName, loadBalancerName)
+    println(s"[ProjectActor.Messages.ConfigureEC2] Done - Project: [$id], EC2 Auto-Scaling Group: [${asg}]")
+  }
+
+  def createCluster(id: String) {
+    val cluster = EC2ContainerService.createCluster(id)
+    println(s"[ProjectActor.Messages.ConfigureECS] Done - Project: [$id], ECS Cluster: [${cluster}]")
   }
 
 }

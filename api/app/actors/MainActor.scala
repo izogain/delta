@@ -19,12 +19,14 @@ object MainActor {
 
   object Messages {
 
+    case class Deploy(projectId: String)
     case class Configure(projectId: String)
 
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
+
     
     case class UserCreated(id: String)
   }
@@ -45,8 +47,8 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
     case msg @ MainActor.Messages.Configure(projectId) => withVerboseErrorHandler(msg) {
       val actor = upsertProjectActor(projectId)
-      actor ! ProjectActor.Messages.ConfigureECS(projectId) // One-time ECS setup
-      actor ! ProjectActor.Messages.ConfigureEC2(projectId) // One-time EC2 setup
+      actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
+      actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
     }
 
     case m @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(m) {
