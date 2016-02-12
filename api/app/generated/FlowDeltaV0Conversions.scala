@@ -135,6 +135,8 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapDeltaUserSummary: Column[Map[String, _root_.io.flow.delta.v0.models.UserSummary]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.UserSummary]] }
     implicit val columnToSeqDeltaUsernamePassword: Column[Seq[_root_.io.flow.delta.v0.models.UsernamePassword]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.UsernamePassword]] }
     implicit val columnToMapDeltaUsernamePassword: Column[Map[String, _root_.io.flow.delta.v0.models.UsernamePassword]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.UsernamePassword]] }
+    implicit val columnToSeqDeltaVersion: Column[Seq[_root_.io.flow.delta.v0.models.Version]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Version]] }
+    implicit val columnToMapDeltaVersion: Column[Map[String, _root_.io.flow.delta.v0.models.Version]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Version]] }
     implicit val columnToSeqDeltaItemSummary: Column[Seq[_root_.io.flow.delta.v0.models.ItemSummary]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.ItemSummary]] }
     implicit val columnToMapDeltaItemSummary: Column[Map[String, _root_.io.flow.delta.v0.models.ItemSummary]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.ItemSummary]] }
 
