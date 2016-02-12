@@ -58,12 +58,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
 
     val projectErrors = ProjectsDao.findById(Authorization.All, project.id) match {
       case None => Seq("Project not found")
-      case Some(project) => {
-        MembershipsDao.isMember(project.organization.id, user) match  {
-          case false => Seq("User does not have access to this organization")
-          case true => Nil
-        }
-      }
+      case Some(project) => Nil
     }
 
     versionErrors ++ projectErrors

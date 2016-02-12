@@ -1,15 +1,12 @@
 package io.flow.delta.actors
 
-import io.flow.delta.aws._
 import io.flow.postgresql.Authorization
 import db.ProjectsDao
-import io.flow.delta.api.lib.EventLog
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
-import scala.concurrent.ExecutionContext
 
 object SupervisorActor {
 
@@ -24,25 +21,41 @@ object SupervisorActor {
 
 class SupervisorActor extends Actor with Util {
 
-  implicit val supervisorActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
-  private[this] var dataProject: Option[Project] = None
-
-  private[this] def log: EventLog = {
-    dataProject.map { EventLog.withSystemUser(_, "SupervisorActor") }.getOrElse {
-      sys.error("Cannot get log with empty data")
-    }
-  }
+  private[this] var supervisor: Option[Supervisor] = None
 
   def receive = {
 
-    case m @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
-      dataProject = ProjectsDao.findById(Authorization.All, id)
+    case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+      supervisor = ProjectsDao.findById(Authorization.All, id).map { Supervisor(_) }
     }
 
-    case msg @ SupervisorActor.Messages.PursueExpectedState => {
-      dataProject.foreach { project =>
-        println(s"Pursuing expected state for project: $project")
+    case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
+      supervisor.foreach { supervisor =>
+        println(s"Pursuing expected state for project: ${supervisor.project}")
+
+        supervisor.captureMasterSha.map { result =>
+          result match {
+            case true => {
+              println("==> New master sha created.")
+              // we found next step. abort supervision
+            }
+
+            case false => {
+              supervisor.tagIfNeeded.map { result =>
+                result match {
+                  case true => {
+                    println("New tag created")
+                  }
+                  case false => {
+                    println("==> No tag created - move on to next step")
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 

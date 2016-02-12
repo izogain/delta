@@ -1,8 +1,9 @@
 package io.flow.delta.actors
 
+import io.flow.delta.api.lib.Semver
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import io.flow.postgresql.Authorization
-import db.{ProjectsDao, ShasDao, TokensDao, UsersDao}
+import db.{ProjectsDao, TokensDao, UsersDao}
 import io.flow.delta.api.lib.{EventLog, GithubUtil, GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
@@ -23,7 +24,6 @@ object ProjectActor {
     case object ConfigureECS extends Message // One-time ECS setup
 
     case object CreateHooks extends Message
-    case object SyncGithub extends Message
   }
 
 }
@@ -138,22 +138,6 @@ class ProjectActor extends Actor with Util {
                   }
                 }
               }
-            }
-          }
-        }
-      }
-    }
-
-    /**
-      * Look up the sha for the master branch from github, and record
-      * it in the shas table.
-      */
-    case m @ ProjectActor.Messages.SyncGithub => withVerboseErrorHandler(m.toString) {
-      dataProject.foreach { project =>
-        dataRepo.foreach { repo =>
-          GithubHelper.apiClientFromUser(project.user.id).map { client =>
-            client.refs.getByRef(repo.owner, repo.project, "heads/master").map { master =>
-              ShasDao.upsertMaster(UsersDao.systemUser, project.id, master.`object`.sha)
             }
           }
         }

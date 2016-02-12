@@ -67,13 +67,13 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       actor ! ProjectActor.Messages.CreateHooks
       actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
       actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
-      actor ! ProjectActor.Messages.SyncGithub
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
     case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
       searchActor ! SearchActor.Messages.SyncProject(id)
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
     }
 
     case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
@@ -81,13 +81,12 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(id) ! ProjectActor.Messages.SyncGithub
-      searchActor ! SearchActor.Messages.SyncProject(id)
       upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
+      searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
     }
 
     case msg @ MainActor.Messages.ImageCreated(projectId) => withVerboseErrorHandler(msg) {

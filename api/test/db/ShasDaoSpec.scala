@@ -116,19 +116,7 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
         Seq("Project not found")
       )
     }
-
-    "validate user has access to the project's org" in {
-      val org = createOrganization()
-      val project = createProject(org)
-      val orgMember = createUser()
-      createMembership(createMembershipForm(org = org, user = orgMember))
-
-      ShasDao.validate(orgMember, createShaForm(project)) must be(Nil)
-      ShasDao.validate(createUser(), createShaForm(project)) must be(
-        Seq("User does not have access to this organization")
-      )
-    }
-
+ 
     "validate existing record" in {
       val form = createShaForm()
       val sha = createSha(form)
