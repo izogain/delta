@@ -51,7 +51,7 @@ class ProjectActor extends Actor with Util {
               TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
             } match {
               case None => {
-                Logger.warn("No oauth token for user[${project.user.id}]")
+                Logger.warn(s"No oauth token for user[${project.user.id}]")
               }
               case Some(token) => {
                 println(s"Create Hooks for project[${project.id}] user[${project.user.id}] token[$token]")
