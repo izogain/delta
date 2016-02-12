@@ -118,16 +118,23 @@
     },
 
     "state": {
-      "description": "Used to describe the actual state of a project in AWS. Specifically which versions are running and eventually what % of traffic each version is carrying",
+      "description": "Used to describe the actual state of a project in AWS. Specifically which versions are running",
       "fields": [
-        { "name": "version", "type": "string", "example": "0.0.1" },
+        { "name": "timestamp", "type": "date-time-iso8601", "example": "Date / time that this state was captured" },
+        { "name": "versions", "type": "[version]" }
+      ]
+    },
+    
+    "version": {
+      "fields": [
+        { "name": "name", "type": "string", "example": "0.0.1" },
         { "name": "instances", "type": "long", "description": "The number of instances running this version" }
       ]
     },
 
     "state_form": {
       "fields": [
-        { "name": "states", "type": "[state]" }
+        { "name": "versions", "type": "[version]" }
       ]
     },
     

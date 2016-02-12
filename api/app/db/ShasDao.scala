@@ -171,7 +171,7 @@ object ShasDao {
 
         Right(
           findById(Authorization.All, sha.id).getOrElse {
-            sys.error("Failed to create sha")
+            sys.error("Failed to update sha")
           }
         )
       }

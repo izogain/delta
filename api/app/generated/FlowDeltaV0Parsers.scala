@@ -568,20 +568,20 @@ package io.flow.delta.v0.anorm.parsers {
   object State {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      version = s"$prefix${sep}version",
-      instances = s"$prefix${sep}instances"
+      timestamp = s"$prefix${sep}timestamp",
+      versions = s"$prefix${sep}versions"
     )
 
     def parser(
-      version: String = "version",
-      instances: String = "instances"
+      timestamp: String = "timestamp",
+      versions: String = "versions"
     ): RowParser[io.flow.delta.v0.models.State] = {
-      SqlParser.str(version) ~
-      SqlParser.long(instances) map {
-        case version ~ instances => {
+      SqlParser.get[_root_.org.joda.time.DateTime](timestamp) ~
+      SqlParser.get[Seq[io.flow.delta.v0.models.Version]](versions) map {
+        case timestamp ~ versions => {
           io.flow.delta.v0.models.State(
-            version = version,
-            instances = instances
+            timestamp = timestamp,
+            versions = versions
           )
         }
       }
@@ -592,16 +592,16 @@ package io.flow.delta.v0.anorm.parsers {
   object StateForm {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      states = s"$prefix${sep}states"
+      versions = s"$prefix${sep}versions"
     )
 
     def parser(
-      states: String = "states"
+      versions: String = "versions"
     ): RowParser[io.flow.delta.v0.models.StateForm] = {
-      SqlParser.get[Seq[io.flow.delta.v0.models.State]](states) map {
-        case states => {
+      SqlParser.get[Seq[io.flow.delta.v0.models.Version]](versions) map {
+        case versions => {
           io.flow.delta.v0.models.StateForm(
-            states = states
+            versions = versions
           )
         }
       }
@@ -818,6 +818,30 @@ package io.flow.delta.v0.anorm.parsers {
           io.flow.delta.v0.models.UsernamePassword(
             username = username,
             password = password
+          )
+        }
+      }
+    }
+
+  }
+
+  object Version {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      name = s"$prefix${sep}name",
+      instances = s"$prefix${sep}instances"
+    )
+
+    def parser(
+      name: String = "name",
+      instances: String = "instances"
+    ): RowParser[io.flow.delta.v0.models.Version] = {
+      SqlParser.str(name) ~
+      SqlParser.long(instances) map {
+        case name ~ instances => {
+          io.flow.delta.v0.models.Version(
+            name = name,
+            instances = instances
           )
         }
       }
