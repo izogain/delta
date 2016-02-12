@@ -34,6 +34,19 @@ package io.flow.delta.v0.models {
     id: Long
   )
 
+  case class Image(
+    id: String,
+    project: io.flow.delta.v0.models.ProjectSummary,
+    name: String,
+    version: String
+  )
+
+  case class ImageForm(
+    project: io.flow.delta.v0.models.ProjectSummary,
+    name: String,
+    version: String
+  )
+
   /**
    * A denormalization of item content for search
    */
@@ -104,7 +117,8 @@ package io.flow.delta.v0.models {
   case class ProjectSummary(
     id: String,
     organization: io.flow.delta.v0.models.OrganizationSummary,
-    name: String
+    name: String,
+    uri: String
   ) extends ItemSummary
 
   case class Reference(
@@ -565,6 +579,56 @@ package io.flow.delta.v0.models {
       }
     }
 
+    implicit def jsonReadsDeltaImage: play.api.libs.json.Reads[Image] = {
+      (
+        (__ \ "id").read[String] and
+        (__ \ "project").read[io.flow.delta.v0.models.ProjectSummary] and
+        (__ \ "name").read[String] and
+        (__ \ "version").read[String]
+      )(Image.apply _)
+    }
+
+    def jsObjectImage(obj: io.flow.delta.v0.models.Image) = {
+      play.api.libs.json.Json.obj(
+        "id" -> play.api.libs.json.JsString(obj.id),
+        "project" -> jsObjectProjectSummary(obj.project),
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "version" -> play.api.libs.json.JsString(obj.version)
+      )
+    }
+
+    implicit def jsonWritesDeltaImage: play.api.libs.json.Writes[Image] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.Image] {
+        def writes(obj: io.flow.delta.v0.models.Image) = {
+          jsObjectImage(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaImageForm: play.api.libs.json.Reads[ImageForm] = {
+      (
+        (__ \ "project").read[io.flow.delta.v0.models.ProjectSummary] and
+        (__ \ "name").read[String] and
+        (__ \ "version").read[String]
+      )(ImageForm.apply _)
+    }
+
+    def jsObjectImageForm(obj: io.flow.delta.v0.models.ImageForm) = {
+      play.api.libs.json.Json.obj(
+        "project" -> jsObjectProjectSummary(obj.project),
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "version" -> play.api.libs.json.JsString(obj.version)
+      )
+    }
+
+    implicit def jsonWritesDeltaImageForm: play.api.libs.json.Writes[ImageForm] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.ImageForm] {
+        def writes(obj: io.flow.delta.v0.models.ImageForm) = {
+          jsObjectImageForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsDeltaItem: play.api.libs.json.Reads[Item] = {
       (
         (__ \ "id").read[String] and
@@ -795,7 +859,8 @@ package io.flow.delta.v0.models {
       (
         (__ \ "id").read[String] and
         (__ \ "organization").read[io.flow.delta.v0.models.OrganizationSummary] and
-        (__ \ "name").read[String]
+        (__ \ "name").read[String] and
+        (__ \ "uri").read[String]
       )(ProjectSummary.apply _)
     }
 
@@ -803,7 +868,8 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "organization" -> jsObjectOrganizationSummary(obj.organization),
-        "name" -> play.api.libs.json.JsString(obj.name)
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "uri" -> play.api.libs.json.JsString(obj.uri)
       )
     }
 
@@ -1230,6 +1296,8 @@ package io.flow.delta.v0 {
 
     def healthchecks: Healthchecks = Healthchecks
 
+    def images: Images = Images
+
     def items: Items = Items
 
     def memberships: Memberships = Memberships
@@ -1276,6 +1344,26 @@ package io.flow.delta.v0 {
         _executeRequest("GET", s"/_internal_/healthcheck").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.common.v0.models.Healthcheck", r, _.validate[io.flow.common.v0.models.Healthcheck])
           case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200")
+        }
+      }
+    }
+
+    object Images extends Images {
+      override def get(
+        name: _root_.scala.Option[String] = None,
+        limit: Long = 25,
+        offset: Long = 0
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]] = {
+        val queryParameters = Seq(
+          name.map("name" -> _),
+          Some("limit" -> limit.toString),
+          Some("offset" -> offset.toString)
+        ).flatten
+
+        _executeRequest("GET", s"/images", queryParameters = queryParameters).map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.Image]", r, _.validate[Seq[io.flow.delta.v0.models.Image]])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
         }
       }
     }
@@ -1850,6 +1938,7 @@ package io.flow.delta.v0 {
       def githubUsers: io.flow.delta.v0.GithubUsers
       def githubWebhooks: io.flow.delta.v0.GithubWebhooks
       def healthchecks: io.flow.delta.v0.Healthchecks
+      def images: io.flow.delta.v0.Images
       def items: io.flow.delta.v0.Items
       def memberships: io.flow.delta.v0.Memberships
       def organizations: io.flow.delta.v0.Organizations
@@ -1882,6 +1971,17 @@ package io.flow.delta.v0 {
 
   trait Healthchecks {
     def getHealthcheck()(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.common.v0.models.Healthcheck]
+  }
+
+  trait Images {
+    /**
+     * Returns a list of all matching images
+     */
+    def get(
+      name: _root_.scala.Option[String] = None,
+      limit: Long = 25,
+      offset: Long = 0
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]]
   }
 
   trait Items {

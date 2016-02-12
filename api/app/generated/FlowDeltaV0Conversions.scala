@@ -87,6 +87,10 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapDeltaGithubUserForm: Column[Map[String, _root_.io.flow.delta.v0.models.GithubUserForm]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.GithubUserForm]] }
     implicit val columnToSeqDeltaGithubWebhook: Column[Seq[_root_.io.flow.delta.v0.models.GithubWebhook]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.GithubWebhook]] }
     implicit val columnToMapDeltaGithubWebhook: Column[Map[String, _root_.io.flow.delta.v0.models.GithubWebhook]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.GithubWebhook]] }
+    implicit val columnToSeqDeltaImage: Column[Seq[_root_.io.flow.delta.v0.models.Image]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Image]] }
+    implicit val columnToMapDeltaImage: Column[Map[String, _root_.io.flow.delta.v0.models.Image]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Image]] }
+    implicit val columnToSeqDeltaImageForm: Column[Seq[_root_.io.flow.delta.v0.models.ImageForm]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.ImageForm]] }
+    implicit val columnToMapDeltaImageForm: Column[Map[String, _root_.io.flow.delta.v0.models.ImageForm]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.ImageForm]] }
     implicit val columnToSeqDeltaItem: Column[Seq[_root_.io.flow.delta.v0.models.Item]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Item]] }
     implicit val columnToMapDeltaItem: Column[Map[String, _root_.io.flow.delta.v0.models.Item]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Item]] }
     implicit val columnToSeqDeltaMembership: Column[Seq[_root_.io.flow.delta.v0.models.Membership]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Membership]] }

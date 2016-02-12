@@ -13,17 +13,23 @@ trait Factories {
     s"Z Test ${random.alpha(20)}"
   }
 
+  def makeUri(): String = {
+    s"http://otto.com"
+  }
+
   def makeKey(): String = {
     "z-test-${random.alphaNumeric(20)}"
   }
 
   def makeProjectSummary(
     id: String = idGenerator.randomId(),
-    name: String = makeName()
+    name: String = makeName(),
+    uri: String = makeUri()
   ) = ProjectSummary(
     id = id,
     organization = makeOrganizationSummary(),
-    name = name
+    name = name,
+    uri = uri
   )
 
   def makeOrganizationSummary(

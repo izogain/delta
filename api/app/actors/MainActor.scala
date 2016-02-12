@@ -29,6 +29,8 @@ object MainActor {
     case class ShaCreated(projectId: String, id: String)
     
     case class UserCreated(id: String)
+
+    case class ImageCreated(id: String)
   }
 }
 
