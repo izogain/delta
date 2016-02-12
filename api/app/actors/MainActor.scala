@@ -67,7 +67,6 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case m @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(m) {
-      upsertProjectActor(id) ! ProjectActor.Messages.CreateHooks  // TODO Remove after all our projects have webhooks
       upsertProjectActor(id) ! ProjectActor.Messages.Sync
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
