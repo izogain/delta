@@ -15,27 +15,44 @@ object EC2ContainerService {
   val createServiceDesiredCount = 1
   val maxScaleUpDesiredCount = 3
 
-  def getClusterName(projectName: String): String = s"$projectName-ecs-cluster"
+  /**
+  * Name creation helper functions
+  **/
+  def getClusterName(projectName: String): String = {
+    return s"$projectName-cluster"
+  }
 
-  def getContainerName(projectName: String): String = s"$projectName-ecs-container"
+  def getBaseName(imageName: String, imageVersion: String): String = {
+    return Seq(
+      s"${imageName.replaceAll("[/]","-")}", // flow/registry becomes flow-registry
+      s"${imageVersion.replaceAll("[.]","-")}" // 1.2.3 becomes 1-2-3
+    ).mkString("-")
+  }
 
-  def getTaskName(projectName: String): String = s"$projectName-ecs-task"
+  def getContainerName(imageName: String, imageVersion: String): String = {
+    return s"${getBaseName(imageName, imageVersion)}-container"
+  }
 
+  def getTaskName(imageName: String, imageVersion: String): String = {
+    return s"${getBaseName(imageName, imageVersion)}-task"
+  }
+
+  def getServiceName(imageName: String, imageVersion: String): String = {
+    return s"${getBaseName(imageName, imageVersion)}-service"
+  }
+
+  /**
+  * Functions that interact with AWS ECS
+  **/
   def createCluster(projectName: String): String = {
     val name = getClusterName(projectName)
     client.createCluster(new CreateClusterRequest().withClusterName(name))
     return name
   }
 
-  def getServiceName(id: String, projectName: String): String = {
-    val pattern = "(\\w+)/(\\w+):(.+)".r
-    val pattern(o, p, tag) = id
-    return s"$projectName-api-ecs-service-${tag.replaceAll("[.]","-")}"
-  }
-
-  def scaleUp(id: String, projectName: String) {
-    val service = getServiceName(id, projectName)
+  def scaleUp(imageName: String, imageVersion: String, projectName: String) {
     val cluster = getClusterName(projectName)
+    val service = getServiceName(imageName, imageVersion)
 
     client.updateService(
       new UpdateServiceRequest()
@@ -45,9 +62,9 @@ object EC2ContainerService {
     )
   }
 
-  def getServiceInfo(id: String, projectName: String): Service = {
-    val service = getServiceName(id, projectName)
+  def getServiceInfo(imageName: String, imageVersion: String, projectName: String): Service = {
     val cluster = getClusterName(projectName)
+    val service = getServiceName(imageName, imageVersion)
 
     // should only be one thing, since we are passing cluster and service
     client.describeServices(
@@ -57,9 +74,9 @@ object EC2ContainerService {
     ).getServices().asScala.head
   }
 
-  def registerTaskDefinition(id: String, projectName: String): String = {
-    val taskName = getTaskName(projectName)
-    val containerName = getContainerName(projectName)
+  def registerTaskDefinition(imageName: String, imageVersion: String, projectName: String): String = {
+    val taskName = getTaskName(imageName, imageVersion)
+    val containerName = getContainerName(imageName, imageVersion)
     val registryPorts = RegistryClient.ports(projectName)
 
     client.registerTaskDefinition(
@@ -69,7 +86,7 @@ object EC2ContainerService {
           Seq(
             new ContainerDefinition()
               .withName(containerName)
-              .withImage(id)
+              .withImage(imageName)
               .withMemory(containerMemory)
               .withPortMappings(
                 Seq(
@@ -86,10 +103,10 @@ object EC2ContainerService {
     return taskName
   }
 
-  def createService(id: String, projectName: String, taskDefinition: String): String = {
-    val serviceName = getServiceName(id, projectName)
+  def createService(imageName: String, imageVersion: String, projectName: String, taskDefinition: String): String = {
     val clusterName = getClusterName(projectName)
-    val containerName = getContainerName(projectName)
+    val serviceName = getServiceName(imageName, imageVersion)
+    val containerName = getContainerName(imageName, imageVersion)
     val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectName)
 
     return client.createService(
