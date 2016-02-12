@@ -17,7 +17,7 @@ private[db] case object Standards {
     query: Query,
     tableName: String,
     auth: Clause,
-    id: Option[String],
+    id: Option[String] = None, // TODO: Remove
     ids: Option[Seq[String]],
     orderBy: Option[String],
     limit: Long = 25,

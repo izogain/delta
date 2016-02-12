@@ -13,7 +13,7 @@ class TokensDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "setLatestByTag" in {
     val form = InternalTokenForm.UserCreated(createTokenForm())
-    val token1 = create(TokensDao.create(systemUser, form))
+    val token1 = rightOrErrors(TokensDao.create(systemUser, form))
 
     val token2 = TokensDao.setLatestByTag(systemUser, form)
     token1.id must not be(token2.id)

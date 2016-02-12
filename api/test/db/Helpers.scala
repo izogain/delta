@@ -24,7 +24,7 @@ trait Helpers {
     s"z-test-${UUID.randomUUID.toString.toLowerCase}"
   }
 
-  def create[T](result: Either[Seq[String], T]): T = {
+  def rightOrErrors[T](result: Either[Seq[String], T]): T = {
     result match {
       case Left(errors) => sys.error(errors.mkString(", "))
       case Right(obj) => obj
@@ -79,7 +79,7 @@ trait Helpers {
       sys.error("Could not find user that created org")
     }
 
-    create(ProjectsDao.create(user, form))
+    rightOrErrors(ProjectsDao.create(user, form))
   }
 
   def createProjectForm(
@@ -112,7 +112,7 @@ trait Helpers {
   def createUser(
     form: UserForm = createUserForm()
   ): User = {
-    create(UsersDao.create(None, form))
+    rightOrErrors(UsersDao.create(None, form))
   }
 
   def createUserForm(
@@ -144,7 +144,7 @@ trait Helpers {
   def createToken(
     form: TokenForm = createTokenForm()
   ): Token = {
-    create(TokensDao.create(systemUser, InternalTokenForm.UserCreated(form)))
+    rightOrErrors(TokensDao.create(systemUser, InternalTokenForm.UserCreated(form)))
   }
 
   def createTokenForm(
@@ -159,7 +159,7 @@ trait Helpers {
   def createMembership(
     form: MembershipForm = createMembershipForm()
   ): Membership = {
-    create(MembershipsDao.create(systemUser, form))
+    rightOrErrors(MembershipsDao.create(systemUser, form))
   }
 
   def createMembershipForm(
@@ -214,7 +214,7 @@ trait Helpers {
   def createSubscription(
     form: SubscriptionForm = createSubscriptionForm()
   ): Subscription = {
-    create(SubscriptionsDao.create(systemUser, form))
+    rightOrErrors(SubscriptionsDao.create(systemUser, form))
   }
 
   def createSubscriptionForm(
@@ -227,4 +227,21 @@ trait Helpers {
     )
   }
 
+  def createSha(
+    form: ShaForm = createShaForm(),
+    user: User = systemUser
+  ): Sha = {
+    rightOrErrors(ShasDao.create(user, form))
+  }
+
+  def createShaForm(
+    project: Project = createProject()
+  ) = {
+    ShaForm(
+      projectId = project.id,
+      branch = createTestKey(),
+      sha = createTestKey()
+    )
+  }
+  
 }
