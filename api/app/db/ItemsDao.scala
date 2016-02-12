@@ -44,21 +44,21 @@ object ItemsDao {
 
   private[this] def objectId(summary: ItemSummary): String = {
     summary match {
-      case ProjectSummary(id, org, name, url) => id
-      case ItemSummaryUndefinedType(name) => sys.error(s"Cannot get a id from ItemSummaryUndefinedType($name)")
+     case ProjectSummary(id, org, name, uri) => id
+     case ItemSummaryUndefinedType(name) => sys.error(s"Cannot get a id from ItemSummaryUndefinedType($name)")
     }
   }
 
   private[this] def organization(summary: ItemSummary): OrganizationSummary = {
     summary match {
-      case ProjectSummary(id, org, name, url) => org
+      case ProjectSummary(id, org, name, uri) => org
       case ItemSummaryUndefinedType(name) => sys.error(s"Cannot get a id from ItemSummaryUndefinedType($name)")
     }
   }
 
   private[this] def visibility(summary: ItemSummary): Visibility = {
     summary match {
-      case ProjectSummary(id, org, name, url) => {
+      case ProjectSummary(id, org, name, uri) => {
         ProjectsDao.findById(Authorization.All, id).map(_.visibility).getOrElse(Visibility.Private)
       }
       case ItemSummaryUndefinedType(name) => {

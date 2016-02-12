@@ -37,7 +37,7 @@ case class Urls(
 
   def itemSummary(summary: ItemSummary): String = {
     summary match {
-      case ProjectSummary(id, org, name, url) => project(id)
+      case ProjectSummary(id, org, name, uri) => project(id)
       case ItemSummaryUndefinedType(name) => "#"
     }
   }

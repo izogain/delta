@@ -13,6 +13,10 @@ trait Factories {
     s"Z Test ${random.alpha(20)}"
   }
 
+  def makeUri(): String = {
+    s"http://otto.com"
+  }
+
   def makeKey(): String = {
     "z-test-${random.alphaNumeric(20)}"
   }
