@@ -270,7 +270,7 @@
 
     "image_form" : {
       "fields": [
-        { "name": "project", "type": "project_summary" },
+        { "name": "project_id", "type": "string" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]

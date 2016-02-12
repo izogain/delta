@@ -42,7 +42,7 @@ package io.flow.delta.v0.models {
   )
 
   case class ImageForm(
-    project: io.flow.delta.v0.models.ProjectSummary,
+    projectId: String,
     name: String,
     version: String
   )
@@ -607,7 +607,7 @@ package io.flow.delta.v0.models {
 
     implicit def jsonReadsDeltaImageForm: play.api.libs.json.Reads[ImageForm] = {
       (
-        (__ \ "project").read[io.flow.delta.v0.models.ProjectSummary] and
+        (__ \ "project_id").read[String] and
         (__ \ "name").read[String] and
         (__ \ "version").read[String]
       )(ImageForm.apply _)
@@ -615,7 +615,7 @@ package io.flow.delta.v0.models {
 
     def jsObjectImageForm(obj: io.flow.delta.v0.models.ImageForm) = {
       play.api.libs.json.Json.obj(
-        "project" -> jsObjectProjectSummary(obj.project),
+        "project_id" -> play.api.libs.json.JsString(obj.projectId),
         "name" -> play.api.libs.json.JsString(obj.name),
         "version" -> play.api.libs.json.JsString(obj.version)
       )

@@ -2,13 +2,11 @@ package db
 
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models._
-import io.flow.delta.api.lib.GithubUtil
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
-import play.api.libs.json._
 
 object ImagesDao {
 
@@ -74,7 +72,7 @@ object ImagesDao {
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
-            'project_id -> form.project.id,
+            'project_id -> form.projectId,
             'name -> form.name.trim,
             'version -> form.version.trim,
             'updated_by_user_id -> createdBy.id
@@ -93,37 +91,24 @@ object ImagesDao {
     }
   }
 
-  def findById(auth: Authorization, id: String): Option[Image] = {
-    findAll(auth, id = Some(id), limit = 1).headOption
+  def findById(id: String): Option[Image] = {
+    findAll(Some(Seq(id)), limit = 1).headOption
   }
 
   def findAll(
-   auth: Authorization,
-   id: Option[String] = None,
-   ids: Option[Seq[String]] = None,
-   name: Option[String] = None,
-   orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
+   id: Option[Seq[String]] = None,
+   name: Option[Seq[String]] = None,
+   orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
    limit: Long = 25,
    offset: Long = 0
   ): Seq[Image] = {
-
     DB.withConnection { implicit c =>
-      Standards.query(
-        BaseQuery,
-        tableName = "images",
-        auth = Filters(auth).organizations("projects.organization_id", Some("projects.visibility")),
-        id = id,
-        ids = ids,
-        orderBy = orderBy.sql,
-        limit = limit,
-        offset = offset
-      ).
-        optionalText(
-          "images.name",
-          name,
-          columnFunctions = Seq(Query.Function.Lower),
-          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
-        ).
+      BaseQuery.
+        optionalIn("images.id", id).
+        optionalIn("images.name", name).
+        orderBy(orderBy.sql).
+        limit(limit).
+        offset(offset).
         as(
           io.flow.delta.v0.anorm.parsers.Image.parser().*
         )
