@@ -117,7 +117,7 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       val sha = createSha(form)
 
       ShasDao.validate(systemUser, form) must be(
-        Seq("Project already has a sha for this branch")
+        Seq("Project already has a hash for this branch")
       )
 
       ShasDao.validate(systemUser, form.copy(branch = createTestKey())) must be(Nil)
