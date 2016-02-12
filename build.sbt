@@ -41,7 +41,7 @@ lazy val api = project
       "io.flow" %% "lib-postgresql" % "0.0.20",
       "com.typesafe.play" %% "anorm" % "2.5.0",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
-      "com.amazonaws" % "aws-java-sdk" % "1.10.52"
+      "com.amazonaws" % "aws-java-sdk" % "1.10.52",
       "org.postgresql" % "postgresql" % "9.4.1207",
       "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
