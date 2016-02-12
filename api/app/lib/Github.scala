@@ -23,6 +23,23 @@ case class GithubUserData(
 
 object GithubHelper {
 
+  /**
+    * Looks up this user's oauth token, and if found, returns an instance of the github client.
+    */
+  def apiClientFromUser(userId: String): Option[GithubClient] = {
+    UsersDao.findById(userId).flatMap { u =>
+      TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
+    } match {
+      case None => {
+        Logger.warn(s"No oauth token for user[${userId}]")
+        None
+      }
+      case Some(token) => {
+        Some(apiClient(token))
+      }
+    }
+  }
+
   def apiClient(oauthToken: String): GithubClient = {
     new GithubClient(
       apiUrl = "https://api.github.com",
