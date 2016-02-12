@@ -7,12 +7,8 @@ import com.amazonaws.services.elasticloadbalancing.model._
 
 import collection.JavaConverters._
 
-object ElasticLoadBalancer {
+object ElasticLoadBalancer extends Settings {
   lazy val client = new AmazonElasticLoadBalancingClient()
-
-  // vals to be used
-  val elbSubnets = Seq("subnet-4a8ee313", "subnet-7d2f1547", "subnet-c99a0de2", "subnet-dc2961ab")
-  val elbSecurityGroups = Seq("sg-2ed73856")
 
   def getLoadBalancerName(id: String): String = s"$id-ecs-lb"
 
@@ -40,8 +36,8 @@ object ElasticLoadBalancer {
         new CreateLoadBalancerRequest()
           .withLoadBalancerName(name)
           .withListeners(elbListeners.asJava)
-          .withSubnets(elbSubnets.asJava)
-          .withSecurityGroups(elbSecurityGroups.asJava)
+          .withSubnets(subnets.asJava)
+          .withSecurityGroups(securityGroups.asJava)
       )
       println(s"Created Load Balancer: ${result.getDNSName}")
     } catch {
