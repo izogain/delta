@@ -12,8 +12,8 @@ object EC2ContainerService {
 
   val containerMemory = 500
   val serviceRole = "ecsServiceRole"
-  val createServiceDesiredCount = 1
-  val maxScaleUpDesiredCount = 3
+  val createServiceDesiredCount = 0 // create the service first without any task instances
+  val maxScaleUpDesiredCount = 3 // scale up...
 
   /**
   * Name creation helper functions
@@ -50,16 +50,35 @@ object EC2ContainerService {
     return name
   }
 
-  def scaleUp(imageName: String, imageVersion: String, projectName: String) {
+  def scaleUp(imageName: String, imageVersion: String, projectName: String, count: Int = maxScaleUpDesiredCount) {
     val cluster = getClusterName(projectName)
-    val service = getServiceName(imageName, imageVersion)
+    scaleDownRunningServices(cluster)
 
+    // Scale up the new service
+    val newService = getServiceName(imageName, imageVersion)
     client.updateService(
       new UpdateServiceRequest()
         .withCluster(cluster)
-        .withService(service)
-        .withDesiredCount(maxScaleUpDesiredCount)
+        .withService(newService)
+        .withDesiredCount(count)
     )
+  }
+
+  def scaleDownRunningServices(cluster: String) {
+    // As part of scaling up a new service, we need to scale down the old service
+    // Until traffic management gets better, set desired count of old service to 0
+    client.describeServices(
+      new DescribeServicesRequest()
+        .withCluster(cluster)
+    ).getServices().asScala.foreach{service =>
+      if (service.getRunningCount() > 0) {
+        client.updateService(
+          new UpdateServiceRequest()
+            .withCluster(cluster)
+            .withDesiredCount(0)
+        )
+      }
+    }
   }
 
   def getServiceInfo(imageName: String, imageVersion: String, projectName: String): Service = {

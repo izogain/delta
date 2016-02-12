@@ -65,13 +65,7 @@ class DeployImageActor extends Actor with Util {
         dataImage.foreach { image =>
           val taskDefinition = registerTaskDefinition(image)
           createService(image, taskDefinition)
-          self ! DeployImageActor.Messages.MonitorCreate
-        }
-    }
-
-    case msg @ DeployImageActor.Messages.MonitorCreate => withVerboseErrorHandler(msg.toString) {
-        dataImage.foreach { image =>
-          monitorCreatedCanary(image)
+          self ! DeployImageActor.Messages.ScaleUp
         }
     }
 
@@ -122,25 +116,6 @@ class DeployImageActor extends Actor with Util {
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
         self ! DeployImageActor.Messages.MonitorScaleUp
-      }
-    }
-  }
-
-  def monitorCreatedCanary(image: Image) {
-    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.version, image.project.name)
-    val running = ecsService.getRunningCount
-    val desired = ecsService.getDesiredCount
-    val pending = ecsService.getPendingCount
-
-    val status = ecsService.getStatus
-    if (running == desired) {
-      log.completed(s"Completed Deploying Canary - Image: ${image.id}, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Scaling up to max now.")
-      self ! DeployImageActor.Messages.ScaleUp
-    } else {
-      log.running(s"Still Deploying Canary - Image: ${image.id}, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
-
-      Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
-        self ! DeployImageActor.Messages.MonitorCreate
       }
     }
   }
