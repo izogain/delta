@@ -240,7 +240,7 @@ trait Helpers {
     ShaForm(
       projectId = project.id,
       branch = createTestKey(),
-      sha = createTestKey()
+      hash = createTestKey()
     )
   }
   
