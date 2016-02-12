@@ -25,6 +25,8 @@ class ProjectStatesDao(table: String, idPrefix: String) {
       join projects on ${table}.project_id = projects.id
   """)
 
+  private[this] val LookupIdQuery = s"select id from $table where project_id = {project_id}"
+
   private[this] val InsertQuery = s"""
     insert into $table
     (id, project_id, versions, timestamp, updated_by_user_id)
@@ -122,7 +124,17 @@ class ProjectStatesDao(table: String, idPrefix: String) {
   }
 
   def delete(deletedBy: User, project: Project) {
-    Delete.delete(table, deletedBy.id, project.id)
+    lookupId(project.id).map { id =>
+      Delete.delete(table, deletedBy.id, id)
+    }
+  }
+
+  private[this] def lookupId(projectId: String): Option[String] = {
+    DB.withConnection { implicit c =>
+      SQL(LookupIdQuery).on(
+        'project_id -> projectId
+      ).as(SqlParser.get[Option[String]]("id").single).headOption
+    }
   }
 
   def findByProjectId(auth: Authorization, projectId: String): Option[State] = {
