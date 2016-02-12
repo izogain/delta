@@ -1,6 +1,6 @@
 api
 ===
-project defining the REST API itself. See api/api.json for a full
+project defining the REST API itself. See spec/delta.json for a full
 description of the API.
 
 www
@@ -28,12 +28,12 @@ In one screen:
 
     $ sbt
     sbt> project api
-    sbt> run 9001
+    sbt> run 6111
 
 In another screen:
 
     $ sbt
     sbt> project www
-    sbt> run
+    sbt> run 6110
 
-Goto http://localhost:9000 in your browser
+Goto http://localhost:6110 in your browser
