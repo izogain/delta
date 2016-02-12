@@ -13,11 +13,12 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "create" in {
     val project = createProject()
-    val form = createShaForm(project).copy(branch = "master", hash = "foo")
+    val hash = createTestKey()
+    val form = createShaForm(project).copy(branch = "master", hash = hash)
     val sha = rightOrErrors(ShasDao.create(systemUser, form))
     sha.project.id must be(project.id)
     sha.branch must be("master")
-    sha.hash must be("foo")
+    sha.hash must be(hash)
   }
 
   "delete" in {
