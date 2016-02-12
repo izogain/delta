@@ -50,35 +50,45 @@ object AutoScalingGroup {
 
   def createLaunchConfiguration(id: String): String = {
     val name = getLaunchConfigurationName(id)
-    client.createLaunchConfiguration(
-      new CreateLaunchConfigurationRequest()
-        .withLaunchConfigurationName(name)
-        .withAssociatePublicIpAddress(false)
-        .withIamInstanceProfile(lcIamInstanceProfile)
-        .withBlockDeviceMappings(lcBlockDeviceMappings)
-        .withSecurityGroups(lcSecurityGroups)
-        .withKeyName(ec2KeyName)
-        .withImageId(lcImageId)
-        .withInstanceType(lcInstanceType)
-        .withUserData(encoder.encode(lcUserData(id).getBytes))
-    )
+    try {
+      client.createLaunchConfiguration(
+        new CreateLaunchConfigurationRequest()
+          .withLaunchConfigurationName(name)
+          .withAssociatePublicIpAddress(false)
+          .withIamInstanceProfile(lcIamInstanceProfile)
+          .withBlockDeviceMappings(lcBlockDeviceMappings)
+          .withSecurityGroups(lcSecurityGroups)
+          .withKeyName(ec2KeyName)
+          .withImageId(lcImageId)
+          .withInstanceType(lcInstanceType)
+          .withUserData(encoder.encode(lcUserData(id).getBytes))
+      )
+    } catch {
+      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
+    }
+
     return name
   }
 
   def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String): String = {
     val name = getAutoScalingGroupName(id)
-    client.createAutoScalingGroup(
-      new CreateAutoScalingGroupRequest()
-        .withAutoScalingGroupName(name)
-        .withLaunchConfigurationName(launchConfigName)
-        .withLoadBalancerNames(Seq(loadBalancerName).asJava)
-        .withVPCZoneIdentifier(asgSubnets)
-        .withNewInstancesProtectedFromScaleIn(false)
-        .withHealthCheckGracePeriod(asgHealthCheckGracePeriod)
-        .withMinSize(asgMinSize)
-        .withMaxSize(asgMaxSize)
-        .withDesiredCapacity(asgDesiredSize)
-    )
+    try {
+      client.createAutoScalingGroup(
+        new CreateAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withLaunchConfigurationName(launchConfigName)
+          .withLoadBalancerNames(Seq(loadBalancerName).asJava)
+          .withVPCZoneIdentifier(asgSubnets)
+          .withNewInstancesProtectedFromScaleIn(false)
+          .withHealthCheckGracePeriod(asgHealthCheckGracePeriod)
+          .withMinSize(asgMinSize)
+          .withMaxSize(asgMaxSize)
+          .withDesiredCapacity(asgDesiredSize)
+      )      
+    } catch {
+      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
+    }
+
     return name
   }
 
