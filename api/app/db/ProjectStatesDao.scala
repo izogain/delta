@@ -16,7 +16,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
 
   private[this] val BaseQuery = Query(s"""
     select ${table}.id,
-           ${table}.version::varchar,
+           ${table}.versions,
            ${table}.timestamp,
            projects.id as project_id,
            projects.id as project_name,
@@ -27,14 +27,14 @@ class ProjectStatesDao(table: String, idPrefix: String) {
 
   private[this] val InsertQuery = s"""
     insert into $table
-    (id, project_id, version, timestamp, updated_by_user_id)
+    (id, project_id, versions, timestamp, updated_by_user_id)
     values
-    ({id}, {project_id}, {version}::json, now(), {updated_by_user_id})
+    ({id}, {project_id}, {versions}::json, now(), {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = s"""
     update $table
-       set version = {version}::json,
+       set versions = {versions}::json,
            timestamp = now(),
            updated_by_user_id = {updated_by_user_id}
      where project_id = {project_id}
@@ -77,7 +77,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
           SQL(InsertQuery).on(
             'id -> id,
             'project_id -> project.id,
-            'version -> Json.toJson(sortedVersions).toString,
+            'versions -> Json.toJson(sortedVersions).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -99,7 +99,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'project_id -> project.id,
-            'version -> Json.toJson(sortedVersions).toString,
+            'versions -> Json.toJson(sortedVersions).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -130,7 +130,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
     auth: Authorization,
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
-    orderBy: OrderBy = OrderBy("-${table}.timestamp,-${table}.created_at"),
+    orderBy: OrderBy = OrderBy(s"-${table}.timestamp,-${table}.created_at"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[State] = {
