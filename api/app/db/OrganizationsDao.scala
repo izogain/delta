@@ -1,9 +1,9 @@
 package db
 
-import io.flow.delta.v0.models.{MembershipForm, Organization, OrganizationForm, Role}
-import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.play.util.{IdGenerator, Random, UrlKey}
 import io.flow.common.v0.models.User
+import io.flow.delta.v0.models.{MembershipForm, Organization, OrganizationForm, Role}
+import io.flow.postgresql.{Authorization, Query, Pager, OrderBy}
+import io.flow.play.util.UrlKey
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -37,7 +37,6 @@ object OrganizationsDao {
      where id = {id}
   """
 
-  private[this] val random = Random()
   private[this] val urlKey = UrlKey(minKeyLength = 3)
 
   private[db] def validate(
@@ -83,10 +82,8 @@ object OrganizationsDao {
   }
 
   private[this] def create(implicit c: java.sql.Connection, createdBy: User, form: OrganizationForm): String = {
-    val id = IdGenerator("org").randomId()
-
     SQL(InsertQuery).on(
-      'id -> id,
+      'id -> form.id.trim,
       'user_id -> createdBy.id,
       'updated_by_user_id -> createdBy.id
     ).execute()
@@ -94,12 +91,12 @@ object OrganizationsDao {
     MembershipsDao.create(
       c,
       createdBy,
-      id,
+      form.id.trim,
       createdBy.id,
       Role.Admin
     )
 
-    id
+    form.id.trim
   }
 
   def update(createdBy: User, organization: Organization, form: OrganizationForm): Either[Seq[String], Organization] = {
@@ -123,6 +120,12 @@ object OrganizationsDao {
   }
 
   def delete(deletedBy: User, organization: Organization) {
+    Pager.create { offset =>
+      MembershipsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
+    }.map { membership =>
+      println("DELETING MEMBRTSHIP: "+ membership)
+      MembershipsDao.delete(deletedBy, membership)
+    }.toSeq
     Delete.delete("organizations", deletedBy.id, organization.id)
   }
 
@@ -152,7 +155,7 @@ object OrganizationsDao {
       ).
         and(
           userId.map { id =>
-            "organizations.id in (select organization_id from memberships where deleted_at is null and user_id = {user_id})"
+            "organizations.id in (select organization_id from memberships where user_id = {user_id})"
           }
         ).bind("user_id", userId).
         as(

@@ -25,7 +25,7 @@ class MembershipsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     MembershipsDao.isMember(org.id, createUser()) must be(false)
     MembershipsDao.isMember(createOrganization().id, user) must be(false)
   }
-/*
+
   "findByOrganizationIdAndUserId" in {
     membership // Create the membership record
 
@@ -102,5 +102,5 @@ class MembershipsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       MembershipsDao.findAll(Authorization.All, id = Some(membership.id), organizationId = Some(UUID.randomUUID.toString)) must be(Nil)
     }
   }
- */
+
 }

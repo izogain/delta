@@ -146,7 +146,6 @@ object MembershipsDao {
       equals("memberships.organization_id", organizationId).
       equals("memberships.user_id", userId).
       optionalText("memberships.role", role.map(_.toString.toLowerCase)).
-      withDebugging().
       as(
         io.flow.delta.v0.anorm.parsers.Membership.parser().*
       )
