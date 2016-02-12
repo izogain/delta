@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-KEYS_REPO_DIR = "/web/keys"
+KEYS_REPO_DIR = File.expand_path(File.join(File.dirname(__FILE__), '/../../keys'))
 if !File.directory?(KEYS_REPO_DIR)
   puts "ERROR: Could not find keys repo. Expected at %s" % KEYS_REPO_DIR
   exit(1)
