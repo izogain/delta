@@ -65,8 +65,8 @@ case class TagIfNeeded(project: Project) extends Github {
                     }
                   }
                   case false => {
-                    val nextTag = tag.semver.next.toString
-                    createTag(nextTag, master)
+                    val nextTag = tag.semver.next
+                    createTag(nextTag.toString, master)
                   }
                 }
               }
@@ -119,8 +119,7 @@ case class TagIfNeeded(project: Project) extends Github {
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
-            println("ERRORS: " + r.unprocessableEntity)
-            SupervisorResult.Error("Error creating ref: ${r.message}", r)
+            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
           }
         }
       }

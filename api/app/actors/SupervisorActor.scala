@@ -67,15 +67,15 @@ class SupervisorActor extends Actor with Util with DataProject {
           case Success(result) => {
             result match {
               case SupervisorResult.Change(desc) => {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}: Changed $desc")
+                println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
                 SupervisorResult.Change(desc)
               }
               case SupervisorResult.NoChange(desc)=> {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}: No change: $desc")
+                println(s"==> Project[${project.id}] ${f.getClass.getName}[No change]: $desc")
                 run(project, functions.drop(1))
               }
               case SupervisorResult.Error(desc, ex)=> {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
+                println(s"==> Project[${project.id}] ${f.getClass.getName}[Error]: $desc")
                 ex.printStackTrace(System.err)
                 SupervisorResult.Error(desc, ex)
               }
