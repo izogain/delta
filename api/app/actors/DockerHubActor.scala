@@ -73,7 +73,7 @@ class DockerHubActor extends Actor with Util {
        for {
          tags <- client.tags.get(repo.owner, repo.project)
        } {
-         tags.map(tag => ImagesDao.create(MainActor.SystemUser, createImageForm(repo, tag)))
+         tags.foreach(tag => createImage(repo, tag))
        }
      }
    }
@@ -89,4 +89,19 @@ class DockerHubActor extends Actor with Util {
      tag.name
    )
  }
+
+  def createImage(repo: Repo, tag: Tag) = {
+    log.started(s"Creating image [${repo.owner}/${repo.project}:${tag.name}] if it does not already exist.")
+    val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, tag.name)
+    checkImageExists match {
+      case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] already exists, no image created.")
+      case None => {
+        val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(repo, tag))
+        imageCreate match {
+          case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:${tag.name}].")
+          case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] created.")
+        }
+      }
+    }
+  }
 }

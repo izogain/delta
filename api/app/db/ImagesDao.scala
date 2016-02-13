@@ -25,24 +25,6 @@ object ImagesDao {
     ({id}, {project_id}, {name}, {version}, {updated_by_user_id})
   """
 
-  private[this] val UpdateQuery = """
-    update images
-       set project_id = {project_id},
-           name = {name},
-           version = {version}
-           updated_by_user_id = {updated_by_user_id}
-     where id = {id}
-  """
-
-  def toSummary(project: Project): ProjectSummary = {
-    ProjectSummary(
-      id = project.id,
-      organization = OrganizationSummary(project.organization.id),
-      name = project.name,
-      uri = project.uri
-    )
-  }
-
   private[db] def validate(
     user: User,
     form: ImageForm,
@@ -54,20 +36,19 @@ object ImagesDao {
       Nil
     }
 
-    val veresionErrors = if (form.version.trim == "") {
+    val versionErrors = if (form.version.trim == "") {
       Seq("Version cannot be empty")
     } else {
       Nil
     }
 
-    nameErrors ++ veresionErrors
+    nameErrors ++ versionErrors
   }
 
   def create(createdBy: User, form: ImageForm): Either[Seq[String], Image] = {
     validate(createdBy, form) match {
       case Nil => {
-
-        val id = io.flow.play.util.IdGenerator("img").randomId()
+       val id = io.flow.play.util.IdGenerator("img").randomId()
 
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
@@ -95,9 +76,14 @@ object ImagesDao {
     findAll(Some(Seq(id)), limit = 1).headOption
   }
 
+  def findByNameAndVersion(name: String, version: String): Option[Image] = {
+    findAll(Some(Seq(name)), Some(Seq(version)), limit = 1).headOption
+  }
+
   def findAll(
    id: Option[Seq[String]] = None,
    name: Option[Seq[String]] = None,
+   version: Option[Seq[String]] = None,
    orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
    limit: Long = 25,
    offset: Long = 0
@@ -106,6 +92,7 @@ object ImagesDao {
       BaseQuery.
         optionalIn("images.id", id).
         optionalIn("images.name", name).
+        optionalIn("images.version", version).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).
