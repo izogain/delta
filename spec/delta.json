@@ -281,6 +281,15 @@
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]
+    },
+
+    "event": {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "action", "type": "string" },
+        { "name": "summary", "type": "string" },
+        { "name": "error", "type": "string", "required": false }
+      ]
     }
 
   },

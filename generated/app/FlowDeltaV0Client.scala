@@ -7,6 +7,13 @@ package io.flow.delta.v0.models {
 
   sealed trait ItemSummary
 
+  case class Event(
+    id: String,
+    action: String,
+    summary: String,
+    error: _root_.scala.Option[String] = None
+  )
+
   /**
    * Used to authenticate user based on the oauth code we receive from github
    */
@@ -494,6 +501,34 @@ package io.flow.delta.v0.models {
       new play.api.libs.json.Writes[io.flow.delta.v0.models.Visibility] {
         def writes(obj: io.flow.delta.v0.models.Visibility) = {
           jsonWritesDeltaVisibility(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaEvent: play.api.libs.json.Reads[Event] = {
+      (
+        (__ \ "id").read[String] and
+        (__ \ "action").read[String] and
+        (__ \ "summary").read[String] and
+        (__ \ "error").readNullable[String]
+      )(Event.apply _)
+    }
+
+    def jsObjectEvent(obj: io.flow.delta.v0.models.Event) = {
+      play.api.libs.json.Json.obj(
+        "id" -> play.api.libs.json.JsString(obj.id),
+        "action" -> play.api.libs.json.JsString(obj.action),
+        "summary" -> play.api.libs.json.JsString(obj.summary)
+      ) ++ (obj.error match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("error" -> play.api.libs.json.JsString(x))
+      })
+    }
+
+    implicit def jsonWritesDeltaEvent: play.api.libs.json.Writes[Event] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.Event] {
+        def writes(obj: io.flow.delta.v0.models.Event) = {
+          jsObjectEvent(obj)
         }
       }
     }

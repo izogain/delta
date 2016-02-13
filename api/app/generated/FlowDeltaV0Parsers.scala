@@ -57,6 +57,38 @@ package io.flow.delta.v0.anorm.parsers {
 
   }
 
+  object Event {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      action = s"$prefix${sep}action",
+      summary = s"$prefix${sep}summary",
+      error = s"$prefix${sep}error"
+    )
+
+    def parser(
+      id: String = "id",
+      action: String = "action",
+      summary: String = "summary",
+      error: String = "error"
+    ): RowParser[io.flow.delta.v0.models.Event] = {
+      SqlParser.str(id) ~
+      SqlParser.str(action) ~
+      SqlParser.str(summary) ~
+      SqlParser.str(error).? map {
+        case id ~ action ~ summary ~ error => {
+          io.flow.delta.v0.models.Event(
+            id = id,
+            action = action,
+            summary = summary,
+            error = error
+          )
+        }
+      }
+    }
+
+  }
+
   object GithubAuthenticationForm {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(

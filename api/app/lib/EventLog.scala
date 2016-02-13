@@ -58,7 +58,7 @@ case class EventLog(
     * the log.
     */
   def checkpoint(message: String) = {
-    println(format(s"running $message"))
+    println(format(s"checkpoint $message"))
   }
 
   /**
