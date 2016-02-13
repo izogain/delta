@@ -86,7 +86,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
     case msg @ MainActor.Messages.ImageCreated(projectId) => withVerboseErrorHandler(msg) {

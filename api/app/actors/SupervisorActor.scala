@@ -27,28 +27,46 @@ object SupervisorActor {
 }
 
 
-class SupervisorActor extends Actor with Util {
-
-  implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+trait DataProject {
 
   private[this] var dataProject: Option[Project] = None
+
+  /**
+    * Looks up the project with the specified ID, setting the local
+    * dataProject var to that project
+    */
+  def setDataProject(id: String) {
+    dataProject = ProjectsDao.findById(Authorization.All, id)
+    if (dataProject.isEmpty) {
+      Logger.warn("Could not find project with id[$id]")
+    }
+  }
+
+  /**
+    * Invokes the specified function w/ the current project, but only
+    * if we have a project set.
+    */
+  def withProject[T](f: Project => T) {
+    dataProject.map { f(_) }
+  }
+
+}
+
+class SupervisorActor extends Actor with Util with DataProject {
+
+  implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      dataProject = ProjectsDao.findById(Authorization.All, id)
+      setDataProject(id)
     }
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       println("SupervisorActor.Messages.PursueExpectedState")
-      dataProject match {
-        case None => {
-
-        }
-        case Some(project) => {
-          val result = run(project, SupervisorActor.All)
-          println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
-        }
+      withProject { project =>
+        val result = run(project, SupervisorActor.All)
+        println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
       }
     }
 
