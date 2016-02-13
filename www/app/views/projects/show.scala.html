@@ -41,17 +41,15 @@
       <table class="table">
 	<thead>
 	  <tr>
-	    <th>Timestamp</th>
-	    <th>Action</th>
-	    <th>Summary</th>
+	    <th>Timestamp (EST)</th>
+	    <th>Description</th>
 	    <th>Error</th>
 	  </tr>
 	</thead>
         @events.items.map { e =>
           <tr>
-            <td>@io.flow.play.util.DateHelper.longDateTime(e.createdAt)</td>
-            <td>@e.action.toString</td>
-            <td>@e.summary</td>
+            <td>@io.flow.delta.www.lib.DateHelper.consoleLongDateTime(e.createdAt)</td>
+            <td>@e.action.toString @e.summary</td>
             <td>
               @if(e.error.isEmpty) {
                 -
