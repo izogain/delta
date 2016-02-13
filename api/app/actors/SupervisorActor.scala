@@ -1,10 +1,11 @@
 package io.flow.delta.actors
 
+import akka.actor.Actor
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
 import play.libs.Akka
-import akka.actor.Actor
+import org.joda.time.DateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -53,8 +54,9 @@ class SupervisorActor extends Actor with Util with DataProject {
   private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
     functions.headOption match {
       case None => {
-        println(s"==> Project[${project.id}] No change: All functions returned without modification")
-        SupervisorResult.NoChange("All functions returned without modification")
+        val desc = "All functions returned without modification"
+        println(msg(project, desc))
+        SupervisorResult.NoChange(desc)
       }
       case Some(f) => {
         Try(
@@ -84,7 +86,7 @@ class SupervisorActor extends Actor with Util with DataProject {
 
           case Failure(ex) => {
             val desc = s"Unhandled Exception ${ex.getMessage}"
-            println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
+            println(msg(project, f, desc))
             ex.printStackTrace(System.err)
             SupervisorResult.Error(desc, ex)
           }
@@ -95,9 +97,14 @@ class SupervisorActor extends Actor with Util with DataProject {
 
   private[this] def msg(project: Project, f: Any, desc: String): String = {
     val name = f.getClass.getName
-    val idx = name.lastIndexOf(".")
-    val formattedName = name.substring(idx + 1)
-    s"==> Project[${project.id}] $formattedName: $desc"
+    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
+    val formattedName = name.substring(idx + 1).dropRight(1) // Remove trailing $
+    msg(project, s"$formattedName: $desc")
+  }
+
+  private[this] def msg(project: Project, desc: String): String = {
+    val ts = new DateTime()
+    s"==> $ts ${project.id}: $desc"
   }
 
 }
