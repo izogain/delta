@@ -67,15 +67,15 @@ class SupervisorActor extends Actor with Util with DataProject {
           case Success(result) => {
             result match {
               case SupervisorResult.Change(desc) => {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
+                println(msg(project, f, desc))
                 SupervisorResult.Change(desc)
               }
               case SupervisorResult.NoChange(desc)=> {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}[No change]: $desc")
+                println(msg(project, f, s"No change: $desc"))
                 run(project, functions.drop(1))
               }
               case SupervisorResult.Error(desc, ex)=> {
-                println(s"==> Project[${project.id}] ${f.getClass.getName}[Error]: $desc")
+                println(msg(project, f, s"Error: $desc"))
                 ex.printStackTrace(System.err)
                 SupervisorResult.Error(desc, ex)
               }
@@ -91,6 +91,13 @@ class SupervisorActor extends Actor with Util with DataProject {
         }
       }
     }
+  }
+
+  private[this] def msg(project: Project, f: Any, desc: String): String = {
+    val name = f.getClass.getName
+    val idx = name.lastIndexOf(".")
+    val formattedName = name.substring(idx + 1)
+    s"==> Project[${project.id}] $formattedName: $desc"
   }
 
 }
