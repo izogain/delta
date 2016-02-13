@@ -1,7 +1,5 @@
 package io.flow.delta.actors
 
-import io.flow.postgresql.Authorization
-import db.ProjectsDao
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
@@ -26,29 +24,21 @@ object SupervisorActor {
 
 }
 
-
-class SupervisorActor extends Actor with Util {
+class SupervisorActor extends Actor with Util with DataProject {
 
   implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
-
-  private[this] var dataProject: Option[Project] = None
 
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      dataProject = ProjectsDao.findById(Authorization.All, id)
+      setDataProject(id)
     }
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       println("SupervisorActor.Messages.PursueExpectedState")
-      dataProject match {
-        case None => {
-
-        }
-        case Some(project) => {
-          val result = run(project, SupervisorActor.All)
-          println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
-        }
+      withProject { project =>
+        val result = run(project, SupervisorActor.All)
+        println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
       }
     }
 
