@@ -72,7 +72,7 @@ class DockerHubActor extends Actor with Util {
      dataRepo.foreach { repo =>
        for {
          tags <- client.tags.get(repo.owner, repo.project)
-       } {
+       } yield {
          tags.foreach(tag => createImage(repo, tag))
        }
      }
