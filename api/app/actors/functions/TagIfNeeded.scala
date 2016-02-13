@@ -66,7 +66,7 @@ case class TagIfNeeded(project: Project) extends Github {
                   }
                   case false => {
                     val nextTag = tag.semver.next
-                    createTag(nextTag.toString, master)
+                    createTag(nextTag.label, master)
                   }
                 }
               }
@@ -89,6 +89,9 @@ case class TagIfNeeded(project: Project) extends Github {
   ) (
       implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
+    println(s"createTag($name, $sha)")
+    assert(Semver.isSemver(name), s"Tag[$name] must be in semver format")
+
     withGithubClient(project.user.id) { client =>
       client.tags.postGitAndTags(
         repo.owner,
@@ -104,7 +107,7 @@ case class TagIfNeeded(project: Project) extends Github {
           )
         )
       ).flatMap { githubTag =>
-        println(s"GithubTag tag[${githubTag.tag}] is at sha[${githubTag.`object`.sha}]")
+        println(s"GithubTag: $githubTag")
 
         client.refs.post(
           repo.owner,
