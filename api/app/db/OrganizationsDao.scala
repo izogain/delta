@@ -123,7 +123,6 @@ object OrganizationsDao {
     Pager.create { offset =>
       MembershipsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
     }.map { membership =>
-      println("DELETING MEMBRTSHIP: "+ membership)
       MembershipsDao.delete(deletedBy, membership)
     }.toSeq
     Delete.delete("organizations", deletedBy.id, organization.id)
