@@ -84,7 +84,7 @@ object SettingsDao {
     DB.withConnection { implicit c =>
       SQL(LookupIdQuery).on(
         'project_id -> projectId
-      ).as(SqlParser.get[Option[String]]("id").single).headOption
+      ).as(SqlParser.get[String]("id").*).toList.headOption
     }
   }
 
