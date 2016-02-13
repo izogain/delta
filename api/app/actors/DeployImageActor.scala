@@ -98,7 +98,7 @@ class DeployImageActor extends Actor with Util with DataProject with EventLog {
     if (running == desired) {
       log.completed(s"Deploying Scaling Up - Image: ${image.id}, Service: $status, Running: $running, Pending: $pending, Desired: $desired.")
     } else {
-      log.running(s"Still Scaling Up - Image: ${image.id}, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
+      log.checkpoint(s"Still Scaling Up - Image: ${image.id}, Service: $status, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
       Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
         self ! DeployImageActor.Messages.MonitorScaleUp

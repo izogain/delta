@@ -24,10 +24,18 @@ case class EventLog(
   prefix: String
 ) {
 
+  /**
+    * Indicates a start event. Should be followed by a completed event
+    * when the function is complete.
+    */
   def started(message: String) = {
     println(format(s"started $message"))
   }
 
+  /**
+    * Indicates completion. If there was an error, include the
+    * exception. If no exception, we assume successful completion.
+    */
   def completed(message: String, error: Option[Throwable] = None) = {
     error match {
       case None => {
@@ -42,15 +50,21 @@ case class EventLog(
     }
   }
 
-  def running(message: String) = {
+  /**
+    * Records a checkpoint - main purpose is to communicate that
+    * progress is being made. We intend to build functions that detect
+    * failure based on no activity written to the log. So long running
+    * functions should periodically checkpoint to track progress in
+    * the log.
+    */
+  def checkpoint(message: String) = {
     println(format(s"running $message"))
   }
 
-  private[this] def format(message: String): String = {
-    val ts = new DateTime()
-    s"[$ts] ${project.id} $message"
-  }
-
+  /**
+    * Wraps the execution of a function with a started and completed
+    * entry in the log. Catches and handles errors as well.
+    */
   def run(
     message: String
   ) (
@@ -68,5 +82,9 @@ case class EventLog(
     }
   }
 
+  private[this] def format(message: String): String = {
+    val ts = new DateTime()
+    s"[$ts] ${project.id} $message"
+  }
 }
 
