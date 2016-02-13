@@ -28,8 +28,8 @@ class Tags @javax.inject.Inject() (
         TagsDao.findAll(
           authorization(request),
           ids = optionals(id),
-          name = name,
           projectId = project,
+          name = name,
           limit = limit,
           offset = offset
         )
