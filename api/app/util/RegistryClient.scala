@@ -11,11 +11,10 @@ import java.util.concurrent.TimeUnit
 
 object RegistryClient {
 
-  lazy val token = Authorization.Basic("admin") // cheating for now
-  lazy val registryApiHost = current.configuration.getString("registry.api.host").get
-  lazy val client = new Client(registryApiHost, auth = Some(token))
-
-  private[this] val projectPorts = scala.collection.mutable.Map[String, Port]()
+  val token = Authorization.Basic("admin") // cheating for now
+  val registryApiHost = current.configuration.getString("registry.api.host").get
+  val client = new Client(registryApiHost, auth = Some(token))
+  val projectPorts = scala.collection.mutable.Map[String, Port]()
 
   def ports(id: String): Port = {
     upsertProjectPorts(id)
