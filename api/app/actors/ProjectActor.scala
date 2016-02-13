@@ -70,7 +70,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   def createLaunchConfiguration(repo: Repo): String = {
     log.started("EC2 auto scaling group launch configuration")
     val lc = AutoScalingGroup.createLaunchConfiguration(repo.awsName)
-    log.completed("EC2 auto scaling group launch configuration: [$lc]")
+    log.completed(s"EC2 auto scaling group launch configuration: [$lc]")
     return lc
   }
 
