@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.ShasDao
+import db.{ShasDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
@@ -53,7 +53,10 @@ case class TagIfNeeded(project: Project) extends Github {
       case Some(master) => {
         withGithubClient(project.user.id) { client =>
           client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
-            latest(tags) match {
+            val localTags = toTags(tags)
+            persist(localTags)
+
+            localTags.headOption match {
               case None => {
                 createTag(InitialTag, master)
               }
@@ -113,6 +116,7 @@ case class TagIfNeeded(project: Project) extends Github {
             sha = sha
           )
         ).map { githubRef =>
+          TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
@@ -124,17 +128,26 @@ case class TagIfNeeded(project: Project) extends Github {
   }
 
   /**
-    * Given a list of tag summaries from github, returns the latest
-    * semver tag along with its sha
+    * Ensures that all of these tags are in our local db
     */
-  private[this] def latest(tags: Seq[TagSummary]): Option[Tag] = {
+  private[this] def persist(tags: Seq[Tag]) = {
+    tags.foreach { tag =>
+      TagsDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
+    }
+  }
+
+  /**
+    * Given a list of tag summaries from github, selects out the tags
+    * that are semver, sorts them, and maps to our internal Tag class
+    * instances
+    */
+  private[this] def toTags(tags: Seq[TagSummary]): Seq[Tag] = {
     tags.
       flatMap { t =>
         Semver.parse(t.name).map( semvar => Tag(semvar, t.commit.sha) )
       }.
       sortBy { _.semver }.
-      reverse.
-      headOption
+      reverse
   }
 
 }

@@ -90,10 +90,8 @@ object ShasDao {
   }
 
   def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
-    println("create ...")
     validate(createdBy, form) match {
       case Nil => {
-        println("create ... valiated")
         val id = io.flow.play.util.IdGenerator("sha").randomId()
 
         DB.withConnection { implicit c =>
@@ -115,7 +113,6 @@ object ShasDao {
         )
       }
       case errors => {
-        println(s"create ... $errors")
         Left(errors)
       }
     }
@@ -139,17 +136,14 @@ object ShasDao {
 
     findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
       case None => {
-        println("CREATING")
         create(createdBy, form) match {
           case Left(errors) => {
-            println(errors.mkString(", "))
             sys.error(errors.mkString(", "))
           }
           case Right(sha) => sha
         }
       }
       case Some(existing) => {
-        println("updating")
         existing.hash == hash match {
           case true => existing
           case false => {

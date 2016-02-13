@@ -29,6 +29,9 @@ object MainActor {
     case class ShaCreated(projectId: String, id: String)
     case class ShaUpdated(projectId: String, id: String)
 
+    case class TagCreated(projectId: String, id: String)
+    case class TagUpdated(projectId: String, id: String)
+
     case class UserCreated(id: String)
 
     case class ImageCreated(id: String)
@@ -65,6 +68,11 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
     case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
       val actor = upsertProjectActor(id)
+
+      // TODO: should we do this inside Project Actor every time it
+      // received the data object? Would allow us to make sure things
+      // are setup every time the actor starts (vs. just on project
+      // creation)
       actor ! ProjectActor.Messages.CreateHooks
       actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
       actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
@@ -91,6 +99,14 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ShaUpdated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    }
+
+    case msg @ MainActor.Messages.TagCreated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    }
+
+    case msg @ MainActor.Messages.TagUpdated(projectId, id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 

@@ -244,5 +244,22 @@ trait Helpers {
       hash = createTestKey()
     )
   }
+
+  def createTag(
+    form: TagForm = createTagForm(),
+    user: User = systemUser
+  ): Tag = {
+    rightOrErrors(TagsDao.create(user, form))
+  }
+
+  def createTagForm(
+    project: Project = createProject()
+  ) = {
+    TagForm(
+      projectId = project.id,
+      name = "0.0.1",
+      hash = UUID.randomUUID.toString().replaceAll("-", "")
+    )
+  }
   
 }

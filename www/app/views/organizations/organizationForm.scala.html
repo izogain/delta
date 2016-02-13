@@ -4,7 +4,9 @@
 
 <fieldset>
 
-    @helper.inputText(
+  <input type="hidden" name="return_url" value='@form("return_url").value'/>
+
+  @helper.inputText(
         form("id"),
         '_label -> "Id",
         '_error -> form.error("id")
