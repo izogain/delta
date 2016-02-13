@@ -1,14 +1,13 @@
 package io.flow.delta.actors.functions
 
+import db.ShasDao
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
-
-import io.flow.delta.api.lib.Semver
-import io.flow.github.v0.Client 
-import io.flow.github.v0.models.TagSummary
+import io.flow.delta.api.lib.{Email, Semver}
+import io.flow.github.v0.models.{TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
-import db.{ProjectsDao, ShasDao, UsersDao}
-import io.flow.delta.api.lib.{EventLog, GithubUtil, GithubHelper, Repo}
+import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
+import org.joda.time.DateTime
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -91,7 +90,21 @@ case class TagIfNeeded(project: Project) extends Github {
       implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
     withGithubClient(project.user.id) { client =>
-      Future {
+      client.tags.postGitAndTags(
+        repo.owner,
+        repo.project,
+        TagForm(
+          tag = name,
+          message = s"Delta automated tag $name",
+          `object` = sha,
+          tagger = Tagger(
+            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
+            email = Email.fromEmail,
+            date = new DateTime()
+          )
+        )
+      ).map { result =>
+        println("RESULT: " + result)
         SupervisorResult.Change(s"Created tag $name for sha[$sha]")
       }
     }

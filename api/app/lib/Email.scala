@@ -16,8 +16,8 @@ object Email {
     SubjectPrefix + " " + subject
   }
 
-  private[this] val fromEmail = DefaultConfig.requiredString("mail.default.from.email")
-  private[this] val fromName = Name(
+  val fromEmail = DefaultConfig.requiredString("mail.default.from.email")
+  val fromName = Name(
     Some(DefaultConfig.requiredString("mail.default.from.name.first")),
     Some(DefaultConfig.requiredString("mail.default.from.name.last"))
   )
