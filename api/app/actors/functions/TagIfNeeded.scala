@@ -56,7 +56,7 @@ case class TagIfNeeded(project: Project) extends Github {
             val localTags = toTags(tags)
             persist(localTags)
 
-            localTags.headOption match {
+            localTags.reverse.headOption match {
               case None => {
                 createTag(InitialTag, master)
               }
@@ -146,8 +146,7 @@ case class TagIfNeeded(project: Project) extends Github {
       flatMap { t =>
         Semver.parse(t.name).map( semvar => Tag(semvar, t.commit.sha) )
       }.
-      sortBy { _.semver }.
-      reverse
+      sortBy { _.semver }
   }
 
 }
