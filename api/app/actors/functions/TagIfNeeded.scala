@@ -53,21 +53,21 @@ case class TagIfNeeded(project: Project) extends Github {
 
       case Some(master) => {
         withGithubClient(project.user.id) { client =>
-          client.tags.getTags(repo.owner, repo.project).map { tags =>
+          client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
             latest(tags) match {
               case None => {
                 createTag(InitialTag, master)
-                SupervisorResult.Change(s"Creating initial tag $InitialTag for sha[$master]")
               }
               case Some(tag) => {
                 Some(tag.sha) == master match {
                   case true => {
-                    SupervisorResult.NoChange(s"Latest tag[${tag.semver}] already points to master[${master}]")
+                    Future {
+                      SupervisorResult.NoChange(s"Latest tag[${tag.semver}] already points to master[${master}]")
+                    }
                   }
                   case false => {
                     val nextTag = tag.semver.next.toString
                     createTag(nextTag, master)
-                    SupervisorResult.Change(s"Creating tag $nextTag for sha[$master]")
                   }
                 }
               }
@@ -85,18 +85,14 @@ case class TagIfNeeded(project: Project) extends Github {
     * @param name e.g. 0.0.2
     * @param sha e.g. ff731cfdad6e5b05ec40535fd7db03c91bbcb8ff
     */
-  private[this] def createTag(name: String, sha: String) {
-    println(s"createTag($name, $sha)")
-  }
-
-  def getClient(): Option[Client] = {
-    GithubHelper.apiClientFromUser(project.user.id) match {
-      case None => {
-        Logger.warn(s"Could not get github client for user[${project.user.id}]")
-        None
-      }
-      case Some(client) => {
-        Some(client)
+  private[this] def createTag(
+    name: String, sha: String
+  ) (
+      implicit ec: scala.concurrent.ExecutionContext
+  ): Future[SupervisorResult] = {
+    withGithubClient(project.user.id) { client =>
+      Future {
+        SupervisorResult.Change(s"Created tag $name for sha[$sha]")
       }
     }
   }
