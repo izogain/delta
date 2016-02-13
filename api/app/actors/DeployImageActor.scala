@@ -2,7 +2,6 @@ package io.flow.delta.actors
 
 import io.flow.delta.aws.EC2ContainerService
 import db.{ImagesDao,ProjectsDao}
-import io.flow.delta.api.lib.EventLog
 import io.flow.delta.v0.models.{Image,Project}
 import io.flow.play.actors.Util
 import io.flow.postgresql.Authorization
@@ -27,36 +26,23 @@ object DeployImageActor {
 
 }
 
-class DeployImageActor extends Actor with Util {
+class DeployImageActor extends Actor with Util with DataProject with EventLog {
 
   implicit val imageActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("image-actor-context")
 
-  private[this] var dataProject: Option[Project] = None
   private[this] var dataImage: Option[Image] = None
 
-  private[this] def log: EventLog = {
-    dataProject.map { EventLog.withSystemUser(_, "DeployImageActor.Messages.Monitor") }.getOrElse {
-      sys.error("Cannot get log with empty data")
-    }
-  }
+  override val logPrefix = "DeployImageActor"
 
   def receive = {
     case msg @ DeployImageActor.Messages.Data(imageId: String) => withVerboseErrorHandler(msg.toString) {
       ImagesDao.findById(imageId) match {
         case None => {
           dataImage = None
-          dataProject = None
         }
         case Some(image) => {
           dataImage = Some(image)
-          ProjectsDao.findById(Authorization.All, image.project.id) match {
-            case None => {
-              dataProject = None
-            }
-            case Some(project) => {
-              dataProject = Some(project)
-            }
-          }
+          setDataProject(image.project.id)
         }
       }
     }

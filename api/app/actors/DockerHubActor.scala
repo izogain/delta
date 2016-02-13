@@ -1,14 +1,12 @@
 package io.flow.delta.actors
 
-
-import db.{ProjectsDao, ImagesDao}
-import io.flow.delta.api.lib.{GithubUtil, EventLog, Repo}
+import db.ImagesDao
+import io.flow.delta.api.lib.Repo
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.Client
 import io.flow.docker.registry.v0.models.Tag
 import io.flow.play.actors.Util
 import akka.actor.Actor
-import io.flow.postgresql.Authorization
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
@@ -27,53 +25,28 @@ object DockerHubActor {
 
 }
 
-class DockerHubActor extends Actor with Util {
+class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
-  private[this] var dataProject: Option[Project] = None
-  private[this] var dataRepo: Option[Repo] = None
-  private[this] var projectId: String = _
   private[this] val client = new Client
 
-  private[this] def log: EventLog = {
-    dataProject.map {
-      EventLog.withSystemUser(_, "DockerHubActor")
-    }.getOrElse {
-      sys.error("Cannot get log with empty data")
-    }
-  }
+  override val logPrefix = "DockerHubActor"
 
   def receive = {
 
     case m @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(m.toString) {
-      this.projectId = projectId
-      ProjectsDao.findById(Authorization.All, projectId) match {
-        case None => {
-          dataProject = None
-          dataRepo = None
-        }
-        case Some(project) => {
-          dataProject = Some(project)
-          dataRepo = GithubUtil.parseUri(project.uri) match {
-            case Left(error) => {
-              Logger.warn(s"Project id[${project.id}] name[${project.name}]: $error")
-              None
-            }
-            case Right(repo) => {
-              Some(repo)
-            }
-          }
-        }
-      }
+      setDataProject(projectId)
     }
 
    case m @ DockerHubActor.Messages.SyncImages => withVerboseErrorHandler(m) {
-     dataRepo.foreach { repo =>
-       for {
-         tags <- client.tags.get(repo.owner, repo.project)
-       } yield {
-         tags.foreach(tag => createImage(repo, tag))
+     withProject { project =>
+       withRepo { repo =>
+         for {
+           tags <- client.tags.get(repo.owner, repo.project)
+         } yield {
+           tags.foreach(tag => createImage(project.id, repo, tag))
+         }
        }
      }
    }
@@ -82,7 +55,7 @@ class DockerHubActor extends Actor with Util {
  }
 
 
- def createImageForm(repo: Repo, tag: Tag): ImageForm = {
+ def createImageForm(projectId: String, repo: Repo, tag: Tag): ImageForm = {
    ImageForm(
      projectId,
      repo.project,
@@ -90,13 +63,18 @@ class DockerHubActor extends Actor with Util {
    )
  }
 
-  def createImage(repo: Repo, tag: Tag) = {
+  // This method doesn't actually create the docker image - just syncs
+  // an image in the database and thus will execute quickly with no
+  // external dependencies. I'm not sure it's worth logging anything
+  // here - but we do need to think about how to build the docker
+  // image.
+  def createImage(projectId: String, repo: Repo, tag: Tag) = {
     log.started(s"Creating image [${repo.owner}/${repo.project}:${tag.name}] if it does not already exist.")
     val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, tag.name)
     checkImageExists match {
       case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] already exists, no image created.")
       case None => {
-        val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(repo, tag))
+        val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, tag))
         imageCreate match {
           case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:${tag.name}].")
           case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] created.")
