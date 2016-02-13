@@ -4,7 +4,7 @@ import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.play.util.UrlKey
-import io.flow.postgresql.{Authorization, Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
@@ -169,7 +169,20 @@ object ProjectsDao {
   }
 
   def delete(deletedBy: User, project: Project) {
+    Pager.create { offset =>
+      ShasDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
+    }.foreach { sha =>
+      ShasDao.delete(deletedBy, sha)
+    }
+
+    Pager.create { offset =>
+      TagsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
+    }.foreach { tag =>
+      TagsDao.delete(deletedBy, tag)
+    }
+
     Delete.delete("projects", deletedBy.id, project.id)
+
     MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
   }
 
