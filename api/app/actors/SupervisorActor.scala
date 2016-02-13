@@ -7,6 +7,8 @@ import io.flow.play.actors.Util
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object SupervisorActor {
 
@@ -17,48 +19,65 @@ object SupervisorActor {
     case object PursueExpectedState extends Message
   }
 
+  val All = Seq(
+    functions.SyncMasterSha,
+    functions.TagIfNeeded
+  )
+
 }
+
 
 class SupervisorActor extends Actor with Util {
 
   implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
-  private[this] var supervisor: Option[Supervisor] = None
+  private[this] var dataProject: Option[Project] = None
 
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      supervisor = ProjectsDao.findById(Authorization.All, id).map { Supervisor(_) }
+      dataProject = ProjectsDao.findById(Authorization.All, id)
     }
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
-      supervisor.foreach { supervisor =>
-        println(s"Pursuing expected state for project: ${supervisor.project}")
+      println("SupervisorActor.Messages.PursueExpectedState")
+      dataProject match {
+        case None => {
 
-        supervisor.captureMasterSha.map { result =>
-          result match {
-            case true => {
-              println("==> New master sha created.")
-              // we found next step. abort supervision
-            }
-
-            case false => {
-              supervisor.tagIfNeeded.map { result =>
-                result match {
-                  case true => {
-                    println("New tag created")
-                  }
-                  case false => {
-                    println("==> No tag created - move on to next step")
-                  }
-                }
-              }
-            }
-          }
+        }
+        case Some(project) => {
+          val result = run(project, SupervisorActor.All)
+          println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
         }
       }
     }
 
+  }
+
+  /**
+    * Sequentially runs through the list of functions. If any of the
+    * functions returns a SupervisorResult.Changed, returns that
+    * instance. Otherwise will return Unchanged at the end of all the
+    * functions.
+    */
+  private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
+    functions.headOption match {
+      case None => {
+        SupervisorResult.NoChange("All functions returned without modification")
+      }
+      case Some(f) => {
+        val result = Await.result(f.run(project), Duration(5, "seconds"))
+        result match {
+          case SupervisorResult.Change(desc) => {
+            SupervisorResult.Change(desc)
+          }
+          case SupervisorResult.NoChange(desc)=> {
+            // Run next function
+            run(project, functions.drop(1))
+          }
+        }
+      }
+    }
   }
 
 }
