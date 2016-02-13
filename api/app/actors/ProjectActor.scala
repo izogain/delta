@@ -41,10 +41,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
-      withRepo { repo =>
-        val lc = createLaunchConfiguration(repo)
-        val elb = createLoadBalancer(repo)
-        createAutoScalingGroup(repo, lc, elb)
+      withProject { project =>
+        withRepo { repo =>
+          val lc = createLaunchConfiguration(repo)
+          val elb = createLoadBalancer(repo, project)
+          createAutoScalingGroup(repo, lc, elb)
+        }
       }
     }
 
@@ -74,9 +76,9 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     return lc
   }
 
-  def createLoadBalancer(repo: Repo): String = {
+  def createLoadBalancer(repo: Repo, project: Project): String = {
     log.started("EC2 load balancer")
-    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(repo.awsName)
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(repo.awsName, project.name)
     log.completed(s"EC2 Load Balancer: [$elb]")
     return elb
   }
@@ -90,7 +92,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   def createCluster(repo: Repo) {
     log.started("ECS Cluster")
     val cluster = EC2ContainerService.createCluster(repo.awsName)
-    log.completed("ECS Cluster: [$cluster]")
+    log.completed(s"ECS Cluster: [$cluster]")
   }
 
 

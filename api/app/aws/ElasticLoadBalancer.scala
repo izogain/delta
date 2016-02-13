@@ -12,11 +12,11 @@ object ElasticLoadBalancer extends Settings {
 
   def getLoadBalancerName(id: String): String = s"$id-ecs-lb"
 
-  def createLoadBalancerAndHealthCheck(id: String): String = {
+  def createLoadBalancerAndHealthCheck(id: String, projectName: String): String = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
     val name = getLoadBalancerName(id)
-    val externalPort = RegistryClient.ports(id).external
+    val externalPort = RegistryClient.ports(projectName).external
     createLoadBalancer(name, externalPort)
     configureHealthCheck(name, externalPort)
     return name
