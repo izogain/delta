@@ -1,7 +1,5 @@
 package io.flow.delta.actors
 
-import io.flow.postgresql.Authorization
-import db.ProjectsDao
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
@@ -23,32 +21,6 @@ object SupervisorActor {
     functions.SyncMasterSha,
     functions.TagIfNeeded
   )
-
-}
-
-
-trait DataProject {
-
-  private[this] var dataProject: Option[Project] = None
-
-  /**
-    * Looks up the project with the specified ID, setting the local
-    * dataProject var to that project
-    */
-  def setDataProject(id: String) {
-    dataProject = ProjectsDao.findById(Authorization.All, id)
-    if (dataProject.isEmpty) {
-      Logger.warn("Could not find project with id[$id]")
-    }
-  }
-
-  /**
-    * Invokes the specified function w/ the current project, but only
-    * if we have a project set.
-    */
-  def withProject[T](f: Project => T) {
-    dataProject.map { f(_) }
-  }
 
 }
 
