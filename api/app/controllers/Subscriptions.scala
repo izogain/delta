@@ -2,7 +2,6 @@ package controllers
 
 import db.{SubscriptionsDao, UsersDao}
 import io.flow.play.clients.UserTokensClient
-import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.{Publication, Subscription, SubscriptionForm}
@@ -16,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @javax.inject.Singleton
 class Subscriptions @javax.inject.Inject() (
   val userTokensClient: UserTokensClient
-) extends Controller with IdentifiedRestController {
+) extends Controller with BaseIdentifiedRestController {
 
   /**
    * If we find an 'identifier' query string parameter, use that to
@@ -51,21 +50,25 @@ class Subscriptions @javax.inject.Inject() (
     userId: Option[String],
     identifier: Option[String],
     publication: Option[Publication],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        SubscriptionsDao.findAll(
-          ids = optionals(id),
-          userId = userId,
-          identifier = identifier,
-          publication = publication,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          SubscriptionsDao.findAll(
+            ids = optionals(id),
+            userId = userId,
+            identifier = identifier,
+            publication = publication,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

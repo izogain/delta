@@ -1538,12 +1538,14 @@ package io.flow.delta.v0 {
         id: _root_.scala.Option[Seq[String]] = None,
         projectId: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-events.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Event]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -1604,12 +1606,14 @@ package io.flow.delta.v0 {
       override def get(
         name: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "lower(images.name)"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]] = {
         val queryParameters = Seq(
           name.map("name" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten
 
         _executeRequest("GET", s"/images", queryParameters = queryParameters).map {
@@ -1647,14 +1651,16 @@ package io.flow.delta.v0 {
         userId: _root_.scala.Option[String] = None,
         role: _root_.scala.Option[io.flow.delta.v0.models.Role] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-memberships.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Membership]] = {
         val queryParameters = Seq(
           organization.map("organization" -> _),
           userId.map("user_id" -> _),
           role.map("role" -> _.toString),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -1707,12 +1713,14 @@ package io.flow.delta.v0 {
         id: _root_.scala.Option[Seq[String]] = None,
         userId: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "organizations.id"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Organization]] = {
         val queryParameters = Seq(
           userId.map("user_id" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -1779,13 +1787,15 @@ package io.flow.delta.v0 {
         organization: _root_.scala.Option[String] = None,
         name: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "projects.id"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Project]] = {
         val queryParameters = Seq(
           organization.map("organization" -> _),
           name.map("name" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -1922,14 +1932,16 @@ package io.flow.delta.v0 {
         branch: _root_.scala.Option[String] = None,
         hash: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-sha.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Sha]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
           branch.map("branch" -> _),
           hash.map("hash" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -1970,14 +1982,16 @@ package io.flow.delta.v0 {
         identifier: _root_.scala.Option[String] = None,
         publication: _root_.scala.Option[io.flow.delta.v0.models.Publication] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-subscriptions.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Subscription]] = {
         val queryParameters = Seq(
           userId.map("user_id" -> _),
           identifier.map("identifier" -> _),
           publication.map("publication" -> _.toString),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -2040,13 +2054,15 @@ package io.flow.delta.v0 {
         projectId: _root_.scala.Option[String] = None,
         name: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-tags.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Tag]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
           name.map("name" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -2085,12 +2101,14 @@ package io.flow.delta.v0 {
         id: _root_.scala.Option[Seq[String]] = None,
         userId: _root_.scala.Option[String] = None,
         limit: Long = 25,
-        offset: Long = 0
+        offset: Long = 0,
+        sort: String = "-tokens.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Token]] = {
         val queryParameters = Seq(
           userId.map("user_id" -> _),
           Some("limit" -> limit.toString),
-          Some("offset" -> offset.toString)
+          Some("offset" -> offset.toString),
+          Some("sort" -> sort)
         ).flatten ++
           id.getOrElse(Nil).map("id" -> _)
 
@@ -2305,7 +2323,8 @@ package io.flow.delta.v0 {
       id: _root_.scala.Option[Seq[String]] = None,
       projectId: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-events.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Event]]
 
     def getById(
@@ -2342,7 +2361,8 @@ package io.flow.delta.v0 {
     def get(
       name: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "lower(images.name)"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]]
   }
 
@@ -2367,7 +2387,8 @@ package io.flow.delta.v0 {
       userId: _root_.scala.Option[String] = None,
       role: _root_.scala.Option[io.flow.delta.v0.models.Role] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-memberships.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Membership]]
 
     def getById(
@@ -2391,7 +2412,8 @@ package io.flow.delta.v0 {
       id: _root_.scala.Option[Seq[String]] = None,
       userId: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "organizations.id"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Organization]]
 
     /**
@@ -2430,7 +2452,8 @@ package io.flow.delta.v0 {
       organization: _root_.scala.Option[String] = None,
       name: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "projects.id"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Project]]
 
     /**
@@ -2496,7 +2519,8 @@ package io.flow.delta.v0 {
       branch: _root_.scala.Option[String] = None,
       hash: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-sha.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Sha]]
 
     def getById(
@@ -2518,7 +2542,8 @@ package io.flow.delta.v0 {
       identifier: _root_.scala.Option[String] = None,
       publication: _root_.scala.Option[io.flow.delta.v0.models.Publication] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-subscriptions.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Subscription]]
 
     /**
@@ -2548,7 +2573,8 @@ package io.flow.delta.v0 {
       projectId: _root_.scala.Option[String] = None,
       name: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-tags.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Tag]]
 
     def getById(
@@ -2565,7 +2591,8 @@ package io.flow.delta.v0 {
       id: _root_.scala.Option[Seq[String]] = None,
       userId: _root_.scala.Option[String] = None,
       limit: Long = 25,
-      offset: Long = 0
+      offset: Long = 0,
+      sort: String = "-tokens.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Token]]
 
     /**

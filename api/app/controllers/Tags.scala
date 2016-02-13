@@ -20,21 +20,25 @@ class Tags @javax.inject.Inject() (
     id: Option[Seq[String]],
     project: Option[String],
     name: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        TagsDao.findAll(
-          authorization(request),
-          ids = optionals(id),
-          projectId = project,
-          name = name,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          TagsDao.findAll(
+            authorization(request),
+            ids = optionals(id),
+            projectId = project,
+            name = name,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

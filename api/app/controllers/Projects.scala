@@ -19,21 +19,25 @@ class Projects @javax.inject.Inject() (
     id: Option[Seq[String]],
     organization: Option[String],
     name: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        ProjectsDao.findAll(
-          authorization(request),
-          ids = optionals(id),
-          name = name,
-          organizationId = organization,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          ProjectsDao.findAll(
+            authorization(request),
+            ids = optionals(id),
+            name = name,
+            organizationId = organization,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

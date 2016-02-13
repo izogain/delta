@@ -21,22 +21,26 @@ class Shas @javax.inject.Inject() (
     project: Option[String],
     branch: Option[String],
     hash: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        ShasDao.findAll(
-          authorization(request),
-          ids = optionals(id),
-          projectId = project,
-          branch = branch,
-          hash = hash,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          ShasDao.findAll(
+            authorization(request),
+            ids = optionals(id),
+            projectId = project,
+            branch = branch,
+            hash = hash,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

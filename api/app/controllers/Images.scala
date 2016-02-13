@@ -16,8 +16,9 @@ class Images @javax.inject.Inject() (
 
   def get(
     name: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = TODO
 
 }

@@ -18,20 +18,24 @@ class Organizations @javax.inject.Inject() (
   def get(
     id: Option[Seq[String]],
     userId: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        OrganizationsDao.findAll(
-          authorization(request),
-          ids = optionals(id),
-          userId = userId,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          OrganizationsDao.findAll(
+            authorization(request),
+            ids = optionals(id),
+            userId = userId,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

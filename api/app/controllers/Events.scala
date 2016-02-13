@@ -17,19 +17,23 @@ class Events @javax.inject.Inject() (
   def get(
     id: Option[Seq[String]],
     project: Option[String],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        EventsDao.findAll(
-          ids = optionals(id),
-          projectId = project,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          EventsDao.findAll(
+            ids = optionals(id),
+            projectId = project,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>
