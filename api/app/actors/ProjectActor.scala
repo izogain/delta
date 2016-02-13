@@ -33,10 +33,6 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
-  private[this] val HookName = "web"
-  private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
-
   def receive = {
 
     case m @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
@@ -62,54 +58,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     case m @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(m.toString) {
       withProject { project =>
         withRepo { repo =>
-          println(s"Create Hooks for project[${project.id}] repo[$repo]")
-          UsersDao.findById(project.user.id).flatMap { u =>
-            TokensDao.getCleartextGithubOauthTokenByUserId(u.id)
-          } match {
-            case None => {
-              Logger.warn(s"No oauth token for user[${project.user.id}]")
-            }
-            case Some(token) => {
-              println(s"Create Hooks for project[${project.id}] user[${project.user.id}] token[$token]")
-              val client = GithubHelper.apiClient(token)
-
-              client.hooks.get(repo.owner, repo.project).map { hooks =>
-                val targetUrl = HookBaseUrl + project.id
-                println(s"Got back from call to get targetUrl[$targetUrl]")
-
-                hooks.foreach { hook =>
-                  println(s"hook id[${hook.id}] url[${hook.url}]")
-                }
-                hooks.find(_.config.url == Some(targetUrl)) match {
-                  case Some(hook) => {
-                    println("  - existing hook found: " + hook.id)
-                    println("  - existing hook events: " + hook.events)
-                  }
-                  case None => {
-                    println("  - hook not found. Creating")
-                    println(s"  - HookEvents: ${HookEvents}")
-                    client.hooks.post(
-                      owner = repo.owner,
-                      repo = repo.project,
-                      name = HookName,
-                      config = io.flow.github.v0.models.HookConfig(
-                        url = Some(targetUrl),
-                        contentType = Some("json")
-                      ),
-                      events = HookEvents,
-                      active = true
-                    )
-                  }.map { hook =>
-                    println("  - hook created: " + hook)
-                  }.recover {
-                    case e: Throwable => {
-                      Logger.error("Project[${project.id}] Error creating hook: " + e)
-                    }
-                  }
-                }
-              }
-            }
-          }
+          createHooks(project, repo)
         }
       }
     }
@@ -144,4 +93,46 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     log.completed("ECS Cluster: [$cluster]")
   }
 
+
+  private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
+  private[this] val HookName = "web"
+  private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
+
+  private[this] def createHooks(project: Project, repo: Repo) {
+    GithubHelper.apiClientFromUser(project.user.id) match {
+      case None => {
+        Logger.warn(s"Could not create github client for user[${project.user.id}]")
+      }
+      case Some(client) => {
+        client.hooks.get(repo.owner, repo.project).map { hooks =>
+          val targetUrl = HookBaseUrl + project.id
+
+          hooks.find(_.config.url == Some(targetUrl)) match {
+            case Some(hook) => {
+              // No-op hook exists
+            }
+            case None => {
+              client.hooks.post(
+                owner = repo.owner,
+                repo = repo.project,
+                name = HookName,
+                config = io.flow.github.v0.models.HookConfig(
+                  url = Some(targetUrl),
+                  contentType = Some("json")
+                ),
+                events = HookEvents,
+                active = true
+              )
+            }.map { hook =>
+              Logger.info("Creating githib webhook for project[${project.id}]: $hook")
+            }.recover {
+              case e: Throwable => {
+                Logger.error("Project[${project.id}] Error creating hook: " + e)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
