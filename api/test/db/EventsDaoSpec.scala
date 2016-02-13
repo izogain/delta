@@ -1,5 +1,6 @@
 package db
 
+import io.flow.delta.v0.models.EventAction
 import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
@@ -13,11 +14,11 @@ class EventsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "create" in {
     val project = createProject()
-    val id = EventsDao.create(systemUser, project.id, "started", "test", ex = None)
+    val id = EventsDao.create(systemUser, project.id, EventAction.Started, "test", ex = None)
     val event = EventsDao.findById(id).getOrElse {
       sys.error("Failed to create event")
     }
-    event.action must be("started")
+    event.action must be(EventAction.Started)
     event.summary must be("test")
     event.error must be(None)
   }
@@ -50,12 +51,13 @@ class EventsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
     val event1 = createEvent(project1)
     val event2 = createEvent(project2)
+    val ids = Seq(event1.id, event2.id)
 
-    EventsDao.findAll(projectId = Some(project1.id)).map(_.id).sorted must be(
+    EventsDao.findAll(ids = Some(ids), projectId = Some(project1.id)).map(_.id).sorted must be(
       Seq(event1.id)
     )
 
-    EventsDao.findAll(projectId = Some(project2.id)).map(_.id).sorted must be(
+    EventsDao.findAll(ids = Some(ids), projectId = Some(project2.id)).map(_.id).sorted must be(
       Seq(event2.id)
     )
 

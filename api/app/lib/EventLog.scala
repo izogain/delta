@@ -1,7 +1,7 @@
 package io.flow.delta.api.lib
 
 import db.{EventsDao, UsersDao}
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.{EventAction, Project}
 import io.flow.common.v0.models.User
 import java.io.{PrintWriter, StringWriter}
 import org.joda.time.DateTime
@@ -30,7 +30,7 @@ case class EventLog(
     */
   def started(message: String) = {
     println(format(s"started $message"))
-    EventsDao.create(user, project.id, "started", message, ex = None)
+    EventsDao.create(user, project.id, EventAction.Started, message, ex = None)
   }
 
   /**
@@ -41,7 +41,7 @@ case class EventLog(
     error match {
       case None => {
         println(format(s"completed $message"))
-        EventsDao.create(user, project.id, "completed", message, ex = None)
+        EventsDao.create(user, project.id, EventAction.Completed, message, ex = None)
       }
       case Some(ex) => {
         // this works much better
@@ -49,7 +49,7 @@ case class EventLog(
         ex.printStackTrace(new PrintWriter(sw))
         println(format(s"error $message: ${ex.getMessage}\n\n$sw"))
 
-        EventsDao.create(user, project.id, "error", message, ex = Some(ex))
+        EventsDao.create(user, project.id, EventAction.Completed, message, ex = Some(ex))
       }
     }
   }
@@ -63,7 +63,7 @@ case class EventLog(
     */
   def checkpoint(message: String) = {
     println(format(s"checkpoint $message"))
-    EventsDao.create(user, project.id, "checkpoint", message, ex = None)
+    EventsDao.create(user, project.id, EventAction.Checkpoint, message, ex = None)
   }
 
   /**

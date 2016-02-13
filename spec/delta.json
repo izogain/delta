@@ -40,6 +40,14 @@
 	{ "name": "public" },
 	{ "name": "private" }
       ]
+    },
+
+    "event_action": {
+      "values": [
+	{ "name": "started" },
+	{ "name": "checkpoint" },
+	{ "name": "completed" }
+      ]
     }
 
   },
@@ -286,7 +294,7 @@
     "event": {
       "fields": [
         { "name": "id", "type": "string" },
-        { "name": "action", "type": "string" },
+        { "name": "action", "type": "event_action" },
         { "name": "summary", "type": "string" },
         { "name": "error", "type": "string", "required": false }
       ]

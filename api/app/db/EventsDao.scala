@@ -1,7 +1,7 @@
 package db
 
 import anorm._
-import io.flow.delta.v0.models.Event
+import io.flow.delta.v0.models.{Event, EventAction}
 import io.flow.delta.actors.MainActor
 import io.flow.postgresql.{Query, OrderBy}
 import io.flow.common.v0.models.User
@@ -30,7 +30,12 @@ object EventsDao {
   /**
     * Create an event, returning its id
     */
-  def create(createdBy: User, projectId: String, action: String, summary: String, ex: Option[Throwable]): String = {
+  def create(createdBy: User, projectId: String, action: EventAction, summary: String, ex: Option[Throwable]): String = {
+    action match {
+      case EventAction.UNDEFINED(_) => sys.error(s"Invalid action: $action")
+      case _ => {}
+    }
+
     val error = ex.map { e =>
       val sw = new StringWriter
       e.printStackTrace(new PrintWriter(sw))
@@ -43,7 +48,7 @@ object EventsDao {
       SQL(InsertQuery).on(
         'id -> id,
         'project_id -> projectId,
-        'action -> action.trim,
+        'action -> action.toString,
         'summary -> summary.trim,
         'error -> error,
         'updated_by_user_id -> createdBy.id
