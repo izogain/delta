@@ -8,7 +8,7 @@ GET     /projects/github/:org                   controllers.ProjectsController.g
 POST    /projects/github/:org/post              controllers.ProjectsController.postGithubOrg(org: String, name: String, repositoriesPage: Int ?= 0)
 GET     /projects/create                        controllers.ProjectsController.create()
 POST    /projects/postCreate                    controllers.ProjectsController.postCreate()
-GET     /projects/:id                           controllers.ProjectsController.show(id: String)
+GET     /projects/:id                           controllers.ProjectsController.show(id: String, eventsPage: Int ?= 0)
 GET     /projects/:id/edit                      controllers.ProjectsController.edit(id: String)
 POST    /projects/:id/postEdit                  controllers.ProjectsController.postEdit(id: String)
 POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
