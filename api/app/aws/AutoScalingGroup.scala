@@ -1,5 +1,7 @@
 package io.flow.delta.aws
 
+import io.flow.play.util.DefaultConfig
+
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
 import com.amazonaws.services.autoscaling.model._
 
@@ -81,12 +83,16 @@ object AutoScalingGroup extends Settings {
   }
 
   def lcUserData(id: String): String = {
+    val ecsClusterName = EC2ContainerService.getClusterName(id)
+    val dockerHubToken = DefaultConfig.requiredString("dockerhub.delta.auth.token")
+    val dockerHubEmail = DefaultConfig.requiredString("dockerhub.delta.auth.email")
+
     return Seq(
       """#!/bin/bash""",
       """echo 'OPTIONS="-e env=production"' > /etc/sysconfig/docker""",
-      s"""echo 'ECS_CLUSTER=${EC2ContainerService.getClusterName(id)}' >> /etc/ecs/ecs.config""",
+      s"""echo 'ECS_CLUSTER=${ecsClusterName}' >> /etc/ecs/ecs.config""",
       """echo 'ECS_ENGINE_AUTH_TYPE=dockercfg' >> /etc/ecs/ecs.config""",
-      """echo 'ECS_ENGINE_AUTH_DATA={"https://index.docker.io/v1/":{"auth":"Zmxvd2F3c2RvY2tlcjozNGRoNTlKMzlvSUdvUDRFbDlqeA==","email":"flow-aws-docker@flow.io"}}' >> /etc/ecs/ecs.config"""
+      s"""echo 'ECS_ENGINE_AUTH_DATA={"https://index.docker.io/v1/":{"auth":"${dockerHubToken}","email":"${dockerHubEmail}"}}' >> /etc/ecs/ecs.config"""
     ).mkString("\n")
   }
 
