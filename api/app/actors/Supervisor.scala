@@ -8,6 +8,7 @@ sealed trait SupervisorResult
 object SupervisorResult {
   case class NoChange(description: String) extends SupervisorResult
   case class Change(description: String) extends SupervisorResult
+  case class Error(description: String, ex: Throwable) extends SupervisorResult
 }
 
 trait SupervisorFunction {

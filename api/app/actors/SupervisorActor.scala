@@ -35,8 +35,8 @@ class SupervisorActor extends Actor with Util with DataProject {
     }
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
-      println("SupervisorActor.Messages.PursueExpectedState")
       withProject { project =>
+        println(s"SupervisorActor.Messages.PursueExpectedState Starting for Project[${project.id}]")
         run(project, SupervisorActor.All)
       }
     }
@@ -52,19 +52,24 @@ class SupervisorActor extends Actor with Util with DataProject {
   private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
     functions.headOption match {
       case None => {
-        println(s"==> No change: All functions returned without modification")
+        println(s"==> Project[${project.id}] No change: All functions returned without modification")
         SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
         val result = Await.result(f.run(project), Duration(5, "seconds"))
         result match {
           case SupervisorResult.Change(desc) => {
-            println(s"==> ${f.getClass.getName}: Changed $desc")
+            println(s"==> Project[${project.id}] ${f.getClass.getName}: Changed $desc")
             SupervisorResult.Change(desc)
           }
           case SupervisorResult.NoChange(desc)=> {
-            println(s"==> ${f.getClass.getName}: No change: $desc")
+            println(s"==> Project[${project.id}] ${f.getClass.getName}: No change: $desc")
             run(project, functions.drop(1))
+          }
+          case SupervisorResult.Error(desc, ex)=> {
+            println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
+            ex.printStackTrace(System.err)
+            SupervisorResult.Error(desc, ex)
           }
         }
       }

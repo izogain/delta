@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import db.ShasDao
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
-import io.flow.github.v0.models.{TagForm, Tagger, TagSummary}
+import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
@@ -103,9 +103,26 @@ case class TagIfNeeded(project: Project) extends Github {
             date = new DateTime()
           )
         )
-      ).map { result =>
-        println("RESULT: " + result)
-        SupervisorResult.Change(s"Created tag $name for sha[$sha]")
+      ).flatMap { githubTag =>
+        println(s"GithubTag tag[${githubTag.tag}] is at sha[${githubTag.`object`.sha}]")
+
+        client.refs.post(
+          repo.owner,
+          repo.project,
+          RefForm(
+            ref = s"refs/heads/$name",
+            sha = sha
+          )
+        ).map { githubRef =>
+          println("GithubRef: " + githubRef)
+
+          SupervisorResult.Change(s"Created tag $name for sha[$sha]")
+        }.recover {
+          case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
+            println("ERRORS: " + r.unprocessableEntity)
+            SupervisorResult.Error("Error creating ref: ${r.message}", r)
+          }
+        }
       }
     }
   }
