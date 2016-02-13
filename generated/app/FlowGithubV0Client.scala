@@ -24,6 +24,12 @@ package io.flow.github.v0.models {
     downloadUrl: String
   )
 
+  case class Error(
+    resource: String,
+    field: String,
+    code: String
+  )
+
   case class GithubObject(
     `type`: String,
     sha: String,
@@ -57,6 +63,11 @@ package io.flow.github.v0.models {
     `object`: io.flow.github.v0.models.GithubObject
   )
 
+  case class RefForm(
+    ref: String,
+    sha: String
+  )
+
   case class Repository(
     id: Long,
     owner: io.flow.github.v0.models.User,
@@ -77,6 +88,14 @@ package io.flow.github.v0.models {
     `object`: io.flow.github.v0.models.GithubObject
   )
 
+  case class TagForm(
+    tag: String,
+    message: String,
+    `object`: String,
+    `type`: String = "commit",
+    tagger: io.flow.github.v0.models.Tagger
+  )
+
   case class TagSummary(
     name: String,
     commit: io.flow.github.v0.models.Commit
@@ -86,6 +105,11 @@ package io.flow.github.v0.models {
     name: String,
     email: String,
     date: _root_.org.joda.time.DateTime
+  )
+
+  case class UnprocessableEntity(
+    message: String,
+    errors: _root_.scala.Option[Seq[io.flow.github.v0.models.Error]] = None
   )
 
   case class User(
@@ -521,6 +545,30 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubError: play.api.libs.json.Reads[Error] = {
+      (
+        (__ \ "resource").read[String] and
+        (__ \ "field").read[String] and
+        (__ \ "code").read[String]
+      )(Error.apply _)
+    }
+
+    def jsObjectError(obj: io.flow.github.v0.models.Error) = {
+      play.api.libs.json.Json.obj(
+        "resource" -> play.api.libs.json.JsString(obj.resource),
+        "field" -> play.api.libs.json.JsString(obj.field),
+        "code" -> play.api.libs.json.JsString(obj.code)
+      )
+    }
+
+    implicit def jsonWritesGithubError: play.api.libs.json.Writes[Error] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Error] {
+        def writes(obj: io.flow.github.v0.models.Error) = {
+          jsObjectError(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubGithubObject: play.api.libs.json.Reads[GithubObject] = {
       (
         (__ \ "type").read[String] and
@@ -633,6 +681,28 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubRefForm: play.api.libs.json.Reads[RefForm] = {
+      (
+        (__ \ "ref").read[String] and
+        (__ \ "sha").read[String]
+      )(RefForm.apply _)
+    }
+
+    def jsObjectRefForm(obj: io.flow.github.v0.models.RefForm) = {
+      play.api.libs.json.Json.obj(
+        "ref" -> play.api.libs.json.JsString(obj.ref),
+        "sha" -> play.api.libs.json.JsString(obj.sha)
+      )
+    }
+
+    implicit def jsonWritesGithubRefForm: play.api.libs.json.Writes[RefForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.RefForm] {
+        def writes(obj: io.flow.github.v0.models.RefForm) = {
+          jsObjectRefForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubRepository: play.api.libs.json.Reads[Repository] = {
       (
         (__ \ "id").read[Long] and
@@ -699,6 +769,34 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubTagForm: play.api.libs.json.Reads[TagForm] = {
+      (
+        (__ \ "tag").read[String] and
+        (__ \ "message").read[String] and
+        (__ \ "object").read[String] and
+        (__ \ "type").read[String] and
+        (__ \ "tagger").read[io.flow.github.v0.models.Tagger]
+      )(TagForm.apply _)
+    }
+
+    def jsObjectTagForm(obj: io.flow.github.v0.models.TagForm) = {
+      play.api.libs.json.Json.obj(
+        "tag" -> play.api.libs.json.JsString(obj.tag),
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "object" -> play.api.libs.json.JsString(obj.`object`),
+        "type" -> play.api.libs.json.JsString(obj.`type`),
+        "tagger" -> jsObjectTagger(obj.tagger)
+      )
+    }
+
+    implicit def jsonWritesGithubTagForm: play.api.libs.json.Writes[TagForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TagForm] {
+        def writes(obj: io.flow.github.v0.models.TagForm) = {
+          jsObjectTagForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubTagSummary: play.api.libs.json.Reads[TagSummary] = {
       (
         (__ \ "name").read[String] and
@@ -741,6 +839,30 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Tagger] {
         def writes(obj: io.flow.github.v0.models.Tagger) = {
           jsObjectTagger(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubUnprocessableEntity: play.api.libs.json.Reads[UnprocessableEntity] = {
+      (
+        (__ \ "message").read[String] and
+        (__ \ "errors").readNullable[Seq[io.flow.github.v0.models.Error]]
+      )(UnprocessableEntity.apply _)
+    }
+
+    def jsObjectUnprocessableEntity(obj: io.flow.github.v0.models.UnprocessableEntity) = {
+      play.api.libs.json.Json.obj(
+        "message" -> play.api.libs.json.JsString(obj.message)
+      ) ++ (obj.errors match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("errors" -> play.api.libs.json.Json.toJson(x))
+      })
+    }
+
+    implicit def jsonWritesGithubUnprocessableEntity: play.api.libs.json.Writes[UnprocessableEntity] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.UnprocessableEntity] {
+        def writes(obj: io.flow.github.v0.models.UnprocessableEntity) = {
+          jsObjectUnprocessableEntity(obj)
         }
       }
     }
@@ -1021,7 +1143,8 @@ package io.flow.github.v0 {
         _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/hooks", body = Some(payload)).map {
           case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Hook", r, _.validate[io.flow.github.v0.models.Hook])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
-          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404")
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
         }
       }
 
@@ -1059,6 +1182,21 @@ package io.flow.github.v0 {
           case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Ref", r, _.validate[io.flow.github.v0.models.Ref])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def post(
+        owner: String,
+        repo: String,
+        refForm: io.flow.github.v0.models.RefForm
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref] = {
+        val payload = play.api.libs.json.Json.toJson(refForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/refs", body = Some(payload)).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Ref", r, _.validate[io.flow.github.v0.models.Ref])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
         }
       }
     }
@@ -1126,7 +1264,7 @@ package io.flow.github.v0 {
     }
 
     object Tags extends Tags {
-      override def get(
+      override def getTags(
         owner: String,
         repo: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]] = {
@@ -1137,7 +1275,7 @@ package io.flow.github.v0 {
         }
       }
 
-      override def getBySha(
+      override def getTagsBySha(
         owner: String,
         repo: String,
         sha: String
@@ -1146,6 +1284,21 @@ package io.flow.github.v0 {
           case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def postGitAndTags(
+        owner: String,
+        repo: String,
+        tagForm: io.flow.github.v0.models.TagForm
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag] = {
+        val payload = play.api.libs.json.Json.toJson(tagForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/tags", body = Some(payload)).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
         }
       }
     }
@@ -1325,6 +1478,12 @@ package io.flow.github.v0 {
       repo: String,
       ref: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref]
+
+    def post(
+      owner: String,
+      repo: String,
+      refForm: io.flow.github.v0.models.RefForm
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref]
   }
 
   trait Repositories {
@@ -1358,15 +1517,21 @@ package io.flow.github.v0 {
   }
 
   trait Tags {
-    def get(
+    def getTags(
       owner: String,
       repo: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]]
 
-    def getBySha(
+    def getTagsBySha(
       owner: String,
       repo: String,
       sha: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
+
+    def postGitAndTags(
+      owner: String,
+      repo: String,
+      tagForm: io.flow.github.v0.models.TagForm
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
   }
 
@@ -1383,6 +1548,13 @@ package io.flow.github.v0 {
     import io.flow.github.v0.models.json._
 
     case class UnitResponse(status: Int) extends Exception(s"HTTP $status")
+
+    case class UnprocessableEntityResponse(
+      response: play.api.libs.ws.WSResponse,
+      message: Option[String] = None
+    ) extends Exception(message.getOrElse(response.status + ": " + response.body)){
+      lazy val unprocessableEntity = _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.UnprocessableEntity", response, _.validate[io.flow.github.v0.models.UnprocessableEntity])
+    }
 
     case class FailedRequest(responseCode: Int, message: String, requestUri: Option[_root_.java.net.URI] = None) extends Exception(s"HTTP $responseCode: $message")
 

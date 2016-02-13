@@ -176,6 +176,8 @@ object ShasDao {
           ).execute()
         }
 
+        MainActor.ref ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
+
         Right(
           findById(Authorization.All, sha.id).getOrElse {
             sys.error("Failed to update sha")

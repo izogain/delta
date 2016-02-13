@@ -1,12 +1,14 @@
 package io.flow.delta.actors
 
+import akka.actor.Actor
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
 import play.libs.Akka
-import akka.actor.Actor
+import org.joda.time.DateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
@@ -35,10 +37,9 @@ class SupervisorActor extends Actor with Util with DataProject {
     }
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
-      println("SupervisorActor.Messages.PursueExpectedState")
       withProject { project =>
-        val result = run(project, SupervisorActor.All)
-        println("SupervisorActor.Messages.PursueExpectedState RESULT: " + result)
+        println(s"SupervisorActor.Messages.PursueExpectedState Starting for Project[${project.id}]")
+        run(project, SupervisorActor.All)
       }
     }
 
@@ -46,28 +47,64 @@ class SupervisorActor extends Actor with Util with DataProject {
 
   /**
     * Sequentially runs through the list of functions. If any of the
-    * functions returns a SupervisorResult.Changed, returns that
-    * instance. Otherwise will return Unchanged at the end of all the
-    * functions.
+    * functions returns a SupervisorResult.Changed or
+    * SupervisorResult.Error, returns that result. Otherwise will
+    * return Unchanged at the end of all the functions.
     */
   private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
     functions.headOption match {
       case None => {
-        SupervisorResult.NoChange("All functions returned without modification")
+        val desc = "All functions returned without modification"
+        println(msg(project, desc))
+        SupervisorResult.NoChange(desc)
       }
       case Some(f) => {
-        val result = Await.result(f.run(project), Duration(5, "seconds"))
-        result match {
-          case SupervisorResult.Change(desc) => {
-            SupervisorResult.Change(desc)
+        Try(
+          // TODO: Remove the await
+          Await.result(
+            f.run(project),
+            Duration(5, "seconds")
+          )
+        ) match {
+          case Success(result) => {
+            result match {
+              case SupervisorResult.Change(desc) => {
+                println(msg(project, f, desc))
+                SupervisorResult.Change(desc)
+              }
+              case SupervisorResult.NoChange(desc)=> {
+                println(msg(project, f, s"No change: $desc"))
+                run(project, functions.drop(1))
+              }
+              case SupervisorResult.Error(desc, ex)=> {
+                println(msg(project, f, s"Error: $desc"))
+                ex.printStackTrace(System.err)
+                SupervisorResult.Error(desc, ex)
+              }
+            }
           }
-          case SupervisorResult.NoChange(desc)=> {
-            // Run next function
-            run(project, functions.drop(1))
+
+          case Failure(ex) => {
+            val desc = s"Unhandled Exception ${ex.getMessage}"
+            println(msg(project, f, desc))
+            ex.printStackTrace(System.err)
+            SupervisorResult.Error(desc, ex)
           }
         }
       }
     }
+  }
+
+  private[this] def msg(project: Project, f: Any, desc: String): String = {
+    val name = f.getClass.getName
+    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
+    val formattedName = name.substring(idx + 1).dropRight(1) // Remove trailing $
+    msg(project, s"$formattedName: $desc")
+  }
+
+  private[this] def msg(project: Project, desc: String): String = {
+    val ts = new DateTime()
+    s"==> $ts ${project.id}: $desc"
   }
 
 }

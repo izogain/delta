@@ -27,6 +27,7 @@ object MainActor {
     case class ProjectSync(id: String)
 
     case class ShaCreated(projectId: String, id: String)
+    case class ShaUpdated(projectId: String, id: String)
 
     case class UserCreated(id: String)
 
@@ -86,6 +87,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    }
+
+    case msg @ MainActor.Messages.ShaUpdated(projectId, id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 

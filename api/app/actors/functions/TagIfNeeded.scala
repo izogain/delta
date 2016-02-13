@@ -1,14 +1,13 @@
 package io.flow.delta.actors.functions
 
+import db.ShasDao
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
-
-import io.flow.delta.api.lib.Semver
-import io.flow.github.v0.Client 
-import io.flow.github.v0.models.TagSummary
+import io.flow.delta.api.lib.{Email, Semver}
+import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
-import db.{ProjectsDao, ShasDao, UsersDao}
-import io.flow.delta.api.lib.{EventLog, GithubUtil, GithubHelper, Repo}
+import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
+import org.joda.time.DateTime
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -53,21 +52,20 @@ case class TagIfNeeded(project: Project) extends Github {
 
       case Some(master) => {
         withGithubClient(project.user.id) { client =>
-          client.tags.get(repo.owner, repo.project).map { tags =>
+          client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
             latest(tags) match {
               case None => {
                 createTag(InitialTag, master)
-                SupervisorResult.Change(s"Creating initial tag $InitialTag for sha[$master]")
               }
               case Some(tag) => {
-                Some(tag.sha) == master match {
+                tag.sha == master match {
                   case true => {
-                    SupervisorResult.NoChange(s"Latest tag[${tag.semver}] already points to master[${master}]")
+                    Future {
+                      SupervisorResult.NoChange(s"Latest tag[${tag.semver.label}] already points to master[${master}]")
+                    }
                   }
                   case false => {
-                    val nextTag = tag.semver.next.toString
-                    createTag(nextTag, master)
-                    SupervisorResult.Change(s"Creating tag $nextTag for sha[$master]")
+                    createTag(tag.semver.next.label, master)
                   }
                 }
               }
@@ -78,18 +76,49 @@ case class TagIfNeeded(project: Project) extends Github {
     }
   }
 
-  private[this] def createTag(name: String, sha: String) {
-    println(s"createTag($name, $sha)")
-  }
+  /**
+    * This method actually creates a new tag with the given name,
+    * pointing to the specified sha.
+    * 
+    * @param name e.g. 0.0.2
+    * @param sha e.g. ff731cfdad6e5b05ec40535fd7db03c91bbcb8ff
+    */
+  private[this] def createTag(
+    name: String, sha: String
+  ) (
+      implicit ec: scala.concurrent.ExecutionContext
+  ): Future[SupervisorResult] = {
+    assert(Semver.isSemver(name), s"Tag[$name] must be in semver format")
 
-  def getClient(): Option[Client] = {
-    GithubHelper.apiClientFromUser(project.user.id) match {
-      case None => {
-        Logger.warn(s"Could not get github client for user[${project.user.id}]")
-        None
-      }
-      case Some(client) => {
-        Some(client)
+    withGithubClient(project.user.id) { client =>
+      client.tags.postGitAndTags(
+        repo.owner,
+        repo.project,
+        TagForm(
+          tag = name,
+          message = s"Delta automated tag $name",
+          `object` = sha,
+          tagger = Tagger(
+            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
+            email = Email.fromEmail,
+            date = new DateTime()
+          )
+        )
+      ).flatMap { githubTag =>
+        client.refs.post(
+          repo.owner,
+          repo.project,
+          RefForm(
+            ref = s"refs/tags/$name",
+            sha = sha
+          )
+        ).map { githubRef =>
+          SupervisorResult.Change(s"Created tag $name for sha[$sha]")
+        }.recover {
+          case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
+            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
+          }
+        }
       }
     }
   }
