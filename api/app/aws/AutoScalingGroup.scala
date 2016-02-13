@@ -42,7 +42,7 @@ object AutoScalingGroup extends Settings {
       client.createLaunchConfiguration(
         new CreateLaunchConfigurationRequest()
           .withLaunchConfigurationName(name)
-          .withAssociatePublicIpAddress(false)
+          .withAssociatePublicIpAddress(true)
           .withIamInstanceProfile(launchConfigIamInstanceProfile)
           .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
           .withSecurityGroups(securityGroups.asJava)
