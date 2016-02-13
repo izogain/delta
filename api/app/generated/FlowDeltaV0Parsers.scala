@@ -73,6 +73,7 @@ package io.flow.delta.v0.anorm.parsers {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       id = s"$prefix${sep}id",
+      createdAt = s"$prefix${sep}created_at",
       action = s"$prefix${sep}action",
       summary = s"$prefix${sep}summary",
       error = s"$prefix${sep}error"
@@ -80,17 +81,20 @@ package io.flow.delta.v0.anorm.parsers {
 
     def parser(
       id: String = "id",
+      createdAt: String = "created_at",
       action: String = "action",
       summary: String = "summary",
       error: String = "error"
     ): RowParser[io.flow.delta.v0.models.Event] = {
       SqlParser.str(id) ~
+      SqlParser.get[_root_.org.joda.time.DateTime](createdAt) ~
       io.flow.delta.v0.anorm.parsers.EventAction.parser(action) ~
       SqlParser.str(summary) ~
       SqlParser.str(error).? map {
-        case id ~ action ~ summary ~ error => {
+        case id ~ createdAt ~ action ~ summary ~ error => {
           io.flow.delta.v0.models.Event(
             id = id,
+            createdAt = createdAt,
             action = action,
             summary = summary,
             error = error
