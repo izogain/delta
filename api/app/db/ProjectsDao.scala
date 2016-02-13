@@ -3,6 +3,7 @@ package db
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
 import io.flow.delta.api.lib.GithubUtil
+import io.flow.play.util.UrlKey
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
@@ -40,6 +41,8 @@ object ProjectsDao {
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
   """
+
+  private[this] val urlKey = UrlKey(minKeyLength = 3)
 
   def toSummary(project: Project): ProjectSummary = {
     ProjectSummary(
@@ -105,7 +108,7 @@ object ProjectsDao {
           sys.error("Could not find organization with id[${form.organization}]")
         }
         
-        val id = io.flow.play.util.IdGenerator("prj").randomId()
+        val id = urlKey.generate(form.name.trim)
 
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
