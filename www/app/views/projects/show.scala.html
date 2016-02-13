@@ -63,6 +63,18 @@
         }
       </table>
     </div>
+
+    @if(events.hasPrevious || events.hasNext) {
+      <ul class="pager">
+        @if(events.hasPrevious) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page - 1)">Previous</a></li>
+        }
+        @if(events.hasNext) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+
   }
 
   
