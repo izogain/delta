@@ -181,6 +181,8 @@ object ProjectsDao {
       TagsDao.delete(deletedBy, tag)
     }
 
+    SettingsDao.deleteByProjectId(deletedBy, project.id)
+
     Delete.delete("projects", deletedBy.id, project.id)
 
     MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)

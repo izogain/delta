@@ -119,6 +119,10 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapDeltaReference: Column[Map[String, _root_.io.flow.delta.v0.models.Reference]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Reference]] }
     implicit val columnToSeqDeltaRepository: Column[Seq[_root_.io.flow.delta.v0.models.Repository]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Repository]] }
     implicit val columnToMapDeltaRepository: Column[Map[String, _root_.io.flow.delta.v0.models.Repository]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Repository]] }
+    implicit val columnToSeqDeltaSettings: Column[Seq[_root_.io.flow.delta.v0.models.Settings]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Settings]] }
+    implicit val columnToMapDeltaSettings: Column[Map[String, _root_.io.flow.delta.v0.models.Settings]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Settings]] }
+    implicit val columnToSeqDeltaSettingsForm: Column[Seq[_root_.io.flow.delta.v0.models.SettingsForm]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.SettingsForm]] }
+    implicit val columnToMapDeltaSettingsForm: Column[Map[String, _root_.io.flow.delta.v0.models.SettingsForm]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.SettingsForm]] }
     implicit val columnToSeqDeltaSha: Column[Seq[_root_.io.flow.delta.v0.models.Sha]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Sha]] }
     implicit val columnToMapDeltaSha: Column[Map[String, _root_.io.flow.delta.v0.models.Sha]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Sha]] }
     implicit val columnToSeqDeltaState: Column[Seq[_root_.io.flow.delta.v0.models.State]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.State]] }

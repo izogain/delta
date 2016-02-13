@@ -27,6 +27,8 @@ GET        /projects/:id                    controllers.Projects.getById(id: Str
 POST       /projects                        controllers.Projects.post()
 PUT        /projects/:id                    controllers.Projects.putById(id: String)
 DELETE     /projects/:id                    controllers.Projects.deleteById(id: String)
+GET        /projects/:id/settings           controllers.Projects.getSettingsById(id: String)
+PUT        /projects/:id/settings           controllers.Projects.putSettingsById(id: String)
 GET        /projects/:id/state/latest       controllers.Projects.getStateAndLatestById(id: String)
 GET        /projects/:id/state/expected     controllers.Projects.getStateAndExpectedById(id: String)
 POST       /projects/:id/state/expected     controllers.Projects.postStateAndExpectedById(id: String)

@@ -139,6 +139,17 @@ package io.flow.delta.v0.models {
     uri: String
   )
 
+  /**
+   * Project level settings / configuration
+   */
+  case class Settings(
+    autoTag: Boolean = true
+  )
+
+  case class SettingsForm(
+    autoTag: _root_.scala.Option[Boolean] = None
+  )
+
   case class Sha(
     id: String,
     project: io.flow.delta.v0.models.ProjectSummary,
@@ -1039,6 +1050,43 @@ package io.flow.delta.v0.models {
       }
     }
 
+    implicit def jsonReadsDeltaSettings: play.api.libs.json.Reads[Settings] = {
+      (__ \ "auto_tag").read[Boolean].map { x => new Settings(autoTag = x) }
+    }
+
+    def jsObjectSettings(obj: io.flow.delta.v0.models.Settings) = {
+      play.api.libs.json.Json.obj(
+        "auto_tag" -> play.api.libs.json.JsBoolean(obj.autoTag)
+      )
+    }
+
+    implicit def jsonWritesDeltaSettings: play.api.libs.json.Writes[Settings] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.Settings] {
+        def writes(obj: io.flow.delta.v0.models.Settings) = {
+          jsObjectSettings(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaSettingsForm: play.api.libs.json.Reads[SettingsForm] = {
+      (__ \ "auto_tag").readNullable[Boolean].map { x => new SettingsForm(autoTag = x) }
+    }
+
+    def jsObjectSettingsForm(obj: io.flow.delta.v0.models.SettingsForm) = {
+      (obj.autoTag match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("auto_tag" -> play.api.libs.json.JsBoolean(x))
+      })
+    }
+
+    implicit def jsonWritesDeltaSettingsForm: play.api.libs.json.Writes[SettingsForm] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.SettingsForm] {
+        def writes(obj: io.flow.delta.v0.models.SettingsForm) = {
+          jsObjectSettingsForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsDeltaSha: play.api.libs.json.Reads[Sha] = {
       (
         (__ \ "id").read[String] and
@@ -1855,6 +1903,31 @@ package io.flow.delta.v0 {
         }
       }
 
+      override def getSettingsById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings] = {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/settings").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.delta.v0.models.Settings", r, _.validate[io.flow.delta.v0.models.Settings])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
+
+      override def putSettingsById(
+        id: String,
+        settingsForm: io.flow.delta.v0.models.SettingsForm
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings] = {
+        val payload = play.api.libs.json.Json.toJson(settingsForm)
+
+        _executeRequest("PUT", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/settings", body = Some(payload)).map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.delta.v0.models.Settings", r, _.validate[io.flow.delta.v0.models.Settings])
+          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
+        }
+      }
+
       override def getStateAndLatestById(
         id: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.ProjectState] = {
@@ -2481,6 +2554,15 @@ package io.flow.delta.v0 {
     def deleteById(
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit]
+
+    def getSettingsById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings]
+
+    def putSettingsById(
+      id: String,
+      settingsForm: io.flow.delta.v0.models.SettingsForm
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings]
 
     def getStateAndLatestById(
       id: String
