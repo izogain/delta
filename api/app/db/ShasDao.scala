@@ -24,6 +24,8 @@ case class ShaForm(
 
 object ShasDao {
 
+  private[this] val Master = "master"
+
   private[this] val BaseQuery = Query(s"""
     select shas.id,
            shas.branch,
@@ -71,12 +73,7 @@ object ShasDao {
 
     val projectErrors = ProjectsDao.findById(Authorization.All, form.projectId) match {
       case None => Seq("Project not found")
-      case Some(project) => {
-        MembershipsDao.isMember(project.organization.id, user) match  {
-          case false => Seq("User does not have access to this organization")
-          case true => Nil
-        }
-      }
+      case Some(project) => Nil
     }
 
     val existingErrors = findByProjectIdAndBranch(Authorization.All, form.projectId, form.branch) match {
@@ -93,9 +90,10 @@ object ShasDao {
   }
 
   def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
+    println("create ...")
     validate(createdBy, form) match {
       case Nil => {
-
+        println("create ... valiated")
         val id = io.flow.play.util.IdGenerator("sha").randomId()
 
         DB.withConnection { implicit c =>
@@ -116,7 +114,10 @@ object ShasDao {
           }
         )
       }
-      case errors => Left(errors)
+      case errors => {
+        println(s"create ... $errors")
+        Left(errors)
+      }
     }
   }
 
@@ -126,7 +127,7 @@ object ShasDao {
     * sha.
     */
   def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
-    upsertBranch(createdBy, projectId, "master", hash)
+    upsertBranch(createdBy, projectId, Master, hash)
   }
 
   private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
@@ -138,12 +139,17 @@ object ShasDao {
 
     findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
       case None => {
+        println("CREATING")
         create(createdBy, form) match {
-          case Left(errors) => sys.error(errors.mkString(", "))
+          case Left(errors) => {
+            println(errors.mkString(", "))
+            sys.error(errors.mkString(", "))
+          }
           case Right(sha) => sha
         }
       }
       case Some(existing) => {
+        println("updating")
         existing.hash == hash match {
           case true => existing
           case false => {
@@ -182,6 +188,10 @@ object ShasDao {
 
   def delete(deletedBy: User, sha: Sha) {
     Delete.delete("shas", deletedBy.id, sha.id)
+  }
+
+  def findByProjectIdAndMaster(auth: Authorization, projectId: String): Option[Sha] = {
+    findByProjectIdAndBranch(auth, projectId, Master)
   }
 
   def findByProjectIdAndBranch(auth: Authorization, projectId: String, branch: String): Option[Sha] = {

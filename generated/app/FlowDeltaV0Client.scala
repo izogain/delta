@@ -133,15 +133,15 @@ package io.flow.delta.v0.models {
 
   /**
    * Used to describe the actual state of a project in AWS. Specifically which
-   * versions are running and eventually what % of traffic each version is carrying
+   * versions are running
    */
   case class State(
-    version: String,
-    instances: Long
+    timestamp: _root_.org.joda.time.DateTime,
+    versions: Seq[io.flow.delta.v0.models.Version]
   )
 
   case class StateForm(
-    states: Seq[io.flow.delta.v0.models.State]
+    versions: Seq[io.flow.delta.v0.models.Version]
   )
 
   /**
@@ -191,6 +191,11 @@ package io.flow.delta.v0.models {
   case class UsernamePassword(
     username: String,
     password: _root_.scala.Option[String] = None
+  )
+
+  case class Version(
+    name: String,
+    instances: Long
   )
 
   /**
@@ -917,15 +922,15 @@ package io.flow.delta.v0.models {
 
     implicit def jsonReadsDeltaState: play.api.libs.json.Reads[State] = {
       (
-        (__ \ "version").read[String] and
-        (__ \ "instances").read[Long]
+        (__ \ "timestamp").read[_root_.org.joda.time.DateTime] and
+        (__ \ "versions").read[Seq[io.flow.delta.v0.models.Version]]
       )(State.apply _)
     }
 
     def jsObjectState(obj: io.flow.delta.v0.models.State) = {
       play.api.libs.json.Json.obj(
-        "version" -> play.api.libs.json.JsString(obj.version),
-        "instances" -> play.api.libs.json.JsNumber(obj.instances)
+        "timestamp" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.timestamp)),
+        "versions" -> play.api.libs.json.Json.toJson(obj.versions)
       )
     }
 
@@ -938,12 +943,12 @@ package io.flow.delta.v0.models {
     }
 
     implicit def jsonReadsDeltaStateForm: play.api.libs.json.Reads[StateForm] = {
-      (__ \ "states").read[Seq[io.flow.delta.v0.models.State]].map { x => new StateForm(states = x) }
+      (__ \ "versions").read[Seq[io.flow.delta.v0.models.Version]].map { x => new StateForm(versions = x) }
     }
 
     def jsObjectStateForm(obj: io.flow.delta.v0.models.StateForm) = {
       play.api.libs.json.Json.obj(
-        "states" -> play.api.libs.json.Json.toJson(obj.states)
+        "versions" -> play.api.libs.json.Json.toJson(obj.versions)
       )
     }
 
@@ -1154,6 +1159,28 @@ package io.flow.delta.v0.models {
       new play.api.libs.json.Writes[io.flow.delta.v0.models.UsernamePassword] {
         def writes(obj: io.flow.delta.v0.models.UsernamePassword) = {
           jsObjectUsernamePassword(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDeltaVersion: play.api.libs.json.Reads[Version] = {
+      (
+        (__ \ "name").read[String] and
+        (__ \ "instances").read[Long]
+      )(Version.apply _)
+    }
+
+    def jsObjectVersion(obj: io.flow.delta.v0.models.Version) = {
+      play.api.libs.json.Json.obj(
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "instances" -> play.api.libs.json.JsNumber(obj.instances)
+      )
+    }
+
+    implicit def jsonWritesDeltaVersion: play.api.libs.json.Writes[Version] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.Version] {
+        def writes(obj: io.flow.delta.v0.models.Version) = {
+          jsObjectVersion(obj)
         }
       }
     }
