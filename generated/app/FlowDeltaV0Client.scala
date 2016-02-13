@@ -1933,7 +1933,7 @@ package io.flow.delta.v0 {
         hash: _root_.scala.Option[String] = None,
         limit: Long = 25,
         offset: Long = 0,
-        sort: String = "-sha.created_at"
+        sort: String = "-shas.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Sha]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
@@ -2520,7 +2520,7 @@ package io.flow.delta.v0 {
       hash: _root_.scala.Option[String] = None,
       limit: Long = 25,
       offset: Long = 0,
-      sort: String = "-sha.created_at"
+      sort: String = "-shas.created_at"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Sha]]
 
     def getById(
