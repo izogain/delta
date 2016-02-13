@@ -46,9 +46,9 @@ class SupervisorActor extends Actor with Util with DataProject {
 
   /**
     * Sequentially runs through the list of functions. If any of the
-    * functions returns a SupervisorResult.Changed, returns that
-    * instance. Otherwise will return Unchanged at the end of all the
-    * functions.
+    * functions returns a SupervisorResult.Changed or
+    * SupervisorResult.Error, returns that result. Otherwise will
+    * return Unchanged at the end of all the functions.
     */
   private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
     functions.headOption match {
