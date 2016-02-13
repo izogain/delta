@@ -98,7 +98,7 @@ case class TagIfNeeded(project: Project) extends Github {
     SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id).autoTag match {
       case false => {
         Future {
-          SupervisorResult.NoChange("Project autoTag setting is disabled - no tag was created")
+          SupervisorResult.NoChange(s"Project autoTag setting is disabled - no tag was created. Note that master '$sha' is ahead of latest tag")
         }
       }
 
