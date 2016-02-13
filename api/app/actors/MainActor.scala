@@ -30,6 +30,7 @@ object MainActor {
     case class ShaUpdated(projectId: String, id: String)
 
     case class TagCreated(projectId: String, id: String)
+    case class TagUpdated(projectId: String, id: String)
 
     case class UserCreated(id: String)
 
@@ -102,6 +103,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.TagCreated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    }
+
+    case msg @ MainActor.Messages.TagUpdated(projectId, id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
