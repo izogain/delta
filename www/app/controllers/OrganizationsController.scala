@@ -63,11 +63,16 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def create() = Identified { implicit request =>
+  def create(returnUrl: Option[String]) = Identified { implicit request =>
     Ok(
       views.html.organizations.create(
         uiData(request),
-        OrganizationsController.uiForm
+        OrganizationsController.uiForm.fill(
+          OrganizationsController.UiForm(
+            id = "",
+            returnUrl = returnUrl
+          )
+        )
       )
     )
   }
@@ -82,7 +87,16 @@ class OrganizationsController @javax.inject.Inject() (
 
       uiForm => {
         deltaClient(request).organizations.post(uiForm.organizationForm).map { organization =>
-          Redirect(routes.OrganizationsController.show(organization.id)).flashing("success" -> "Organization created")
+          val url = uiForm.returnUrl match {
+            case None => {
+              routes.OrganizationsController.show(organization.id).path
+            }
+            case Some(u) => {
+              assert(u.startsWith("/"), s"Redirect URL[$u] must start with /")
+              u
+            }
+          }
+          Redirect(url).flashing("success" -> "Organization created")
         }.recover {
           case response: io.flow.delta.v0.errors.ErrorsResponse => {
             Ok(views.html.organizations.create(uiData(request), boundForm, response.errors.map(_.message)))
@@ -101,7 +115,8 @@ class OrganizationsController @javax.inject.Inject() (
             organization,
             OrganizationsController.uiForm.fill(
               OrganizationsController.UiForm(
-                id = organization.id
+                id = organization.id,
+                returnUrl = None
               )
             )
           )
@@ -149,7 +164,8 @@ class OrganizationsController @javax.inject.Inject() (
 object OrganizationsController {
 
   case class UiForm(
-    id: String
+    id: String,
+    returnUrl: Option[String]
   ) {
 
     val organizationForm = OrganizationForm(
@@ -160,7 +176,8 @@ object OrganizationsController {
 
   private val uiForm = Form(
     mapping(
-      "id" -> nonEmptyText
+      "id" -> nonEmptyText,
+      "return_url" -> optional(text)
     )(UiForm.apply)(UiForm.unapply)
   )
 

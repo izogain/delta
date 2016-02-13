@@ -34,7 +34,7 @@ GET     /tokens/:id/show                        controllers.TokensController.sho
 POST    /tokens/:id/postDelete                  controllers.TokensController.postDelete(id: String)
 
 GET     /organizations                          controllers.OrganizationsController.index(page: Int ?= 0)
-GET     /organizations/create                   controllers.OrganizationsController.create()
+GET     /organizations/create                   controllers.OrganizationsController.create(return_url: Option[String] ?= None)
 POST    /organizations/postCreate               controllers.OrganizationsController.postCreate()
 GET     /organizations/:id                      controllers.OrganizationsController.show(id: String, projectsPage: Int ?= 0)
 GET     /organizations/:id/edit                 controllers.OrganizationsController.edit(id: String)

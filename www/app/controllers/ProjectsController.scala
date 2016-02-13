@@ -59,7 +59,8 @@ class ProjectsController @javax.inject.Inject() (
     } yield {
       orgs match {
         case Nil => {
-          Redirect(routes.OrganizationsController.index()).flashing("warning" -> "Add a new org before adding a project")
+          Redirect(routes.OrganizationsController.create(return_url = Some(request.path))).
+            flashing("warning" -> "Add a new org before adding a project")
         }
         case one :: Nil => {
           Redirect(routes.ProjectsController.githubOrg(one.id))
