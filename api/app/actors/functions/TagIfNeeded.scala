@@ -53,7 +53,7 @@ case class TagIfNeeded(project: Project) extends Github {
 
       case Some(master) => {
         withGithubClient(project.user.id) { client =>
-          client.tags.get(repo.owner, repo.project).map { tags =>
+          client.tags.getTags(repo.owner, repo.project).map { tags =>
             latest(tags) match {
               case None => {
                 createTag(InitialTag, master)
@@ -78,6 +78,13 @@ case class TagIfNeeded(project: Project) extends Github {
     }
   }
 
+  /**
+    * This method actually creates a new tag with the given name,
+    * pointing to the specified sha.
+    * 
+    * @param name e.g. 0.0.2
+    * @param sha e.g. ff731cfdad6e5b05ec40535fd7db03c91bbcb8ff
+    */
   private[this] def createTag(name: String, sha: String) {
     println(s"createTag($name, $sha)")
   }

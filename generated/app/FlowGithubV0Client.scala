@@ -77,6 +77,14 @@ package io.flow.github.v0.models {
     `object`: io.flow.github.v0.models.GithubObject
   )
 
+  case class TagForm(
+    tag: String,
+    message: String,
+    `object`: String,
+    `type`: String = "commit",
+    tagger: io.flow.github.v0.models.Tagger
+  )
+
   case class TagSummary(
     name: String,
     commit: io.flow.github.v0.models.Commit
@@ -699,6 +707,34 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubTagForm: play.api.libs.json.Reads[TagForm] = {
+      (
+        (__ \ "tag").read[String] and
+        (__ \ "message").read[String] and
+        (__ \ "object").read[String] and
+        (__ \ "type").read[String] and
+        (__ \ "tagger").read[io.flow.github.v0.models.Tagger]
+      )(TagForm.apply _)
+    }
+
+    def jsObjectTagForm(obj: io.flow.github.v0.models.TagForm) = {
+      play.api.libs.json.Json.obj(
+        "tag" -> play.api.libs.json.JsString(obj.tag),
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "object" -> play.api.libs.json.JsString(obj.`object`),
+        "type" -> play.api.libs.json.JsString(obj.`type`),
+        "tagger" -> jsObjectTagger(obj.tagger)
+      )
+    }
+
+    implicit def jsonWritesGithubTagForm: play.api.libs.json.Writes[TagForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TagForm] {
+        def writes(obj: io.flow.github.v0.models.TagForm) = {
+          jsObjectTagForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubTagSummary: play.api.libs.json.Reads[TagSummary] = {
       (
         (__ \ "name").read[String] and
@@ -1126,7 +1162,7 @@ package io.flow.github.v0 {
     }
 
     object Tags extends Tags {
-      override def get(
+      override def getTags(
         owner: String,
         repo: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]] = {
@@ -1137,7 +1173,7 @@ package io.flow.github.v0 {
         }
       }
 
-      override def getBySha(
+      override def getTagsBySha(
         owner: String,
         repo: String,
         sha: String
@@ -1146,6 +1182,20 @@ package io.flow.github.v0 {
           case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def postGitAndTags(
+        owner: String,
+        repo: String,
+        tagForm: io.flow.github.v0.models.TagForm
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag] = {
+        val payload = play.api.libs.json.Json.toJson(tagForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/tags", body = Some(payload)).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404")
         }
       }
     }
@@ -1358,15 +1408,21 @@ package io.flow.github.v0 {
   }
 
   trait Tags {
-    def get(
+    def getTags(
       owner: String,
       repo: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.TagSummary]]
 
-    def getBySha(
+    def getTagsBySha(
       owner: String,
       repo: String,
       sha: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
+
+    def postGitAndTags(
+      owner: String,
+      repo: String,
+      tagForm: io.flow.github.v0.models.TagForm
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
   }
 
