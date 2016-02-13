@@ -1,20 +1,13 @@
 package db
 
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary}
+import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Sha}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
-
-case class Sha(
-  id: String,
-  project: ProjectSummary,
-  branch: String,
-  hash: String
-)
 
 case class ShaForm(
   projectId: String,
@@ -28,6 +21,7 @@ object ShasDao {
 
   private[this] val BaseQuery = Query(s"""
     select shas.id,
+           shas.created_at,
            shas.branch,
            shas.hash,
            projects.id as project_id,
@@ -204,6 +198,7 @@ object ShasDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     branch: Option[String] = None,
+    hash: Option[String] = None,
     orderBy: OrderBy = OrderBy("lower(shas.branch), shas.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -226,25 +221,15 @@ object ShasDao {
           columnFunctions = Seq(Query.Function.Lower),
           valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
         ).
+        optionalText(
+          "shas.hash",
+          hash,
+          columnFunctions = Seq(Query.Function.Lower),
+          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
+        ).
         as(
-          parser().*
+          io.flow.delta.v0.anorm.parsers.Sha.parser().*
         )
-    }
-  }
-
-  private[this] def parser(): RowParser[Sha] = {
-    SqlParser.str("id") ~
-    io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix("project") ~
-    SqlParser.str("branch") ~
-    SqlParser.str("hash") map {
-      case id ~ project ~ branch ~ hash => {
-        Sha(
-          id = id,
-          project = project,
-          branch = branch,
-          hash = hash
-        )
-      }
     }
   }
 

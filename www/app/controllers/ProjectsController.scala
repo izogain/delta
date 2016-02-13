@@ -40,13 +40,32 @@ class ProjectsController @javax.inject.Inject() (
     }
   }
 
-  def show(id: String) = Identified.async { implicit request =>
+  def show(id: String, eventsPage: Int) = Identified.async { implicit request =>
     withProject(request, id) { project =>
-      Future {
+      for {
+        events <- deltaClient(request).events.get(
+          projectId = Some(project.id),
+          limit = Pagination.DefaultLimit+1,
+          offset = eventsPage * Pagination.DefaultLimit
+        )
+        tags <- deltaClient(request).tags.get(
+          projectId = Some(id),
+          sort = "-tags.created_at",
+          limit = 1
+        )
+        shas <- deltaClient(request).shas.get(
+          projectId = Some(id),
+          branch = Some("master"),
+          limit = 1
+        )
+      } yield {
         Ok(
           views.html.projects.show(
             uiData(request),
-            project
+            project,
+            shas.headOption.map(_.hash),
+            tags.headOption,
+            PaginatedCollection(eventsPage, events)
           )
         )
       }

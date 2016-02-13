@@ -22,22 +22,26 @@ class Memberships @javax.inject.Inject() (
     organization: Option[String],
     userId: Option[String],
     role: Option[Role],
-    limit: Long = 25,
-    offset: Long = 0
+    limit: Long,
+    offset: Long,
+    sort: String
   ) = Identified { request =>
-    Ok(
-      Json.toJson(
-        MembershipsDao.findAll(
-          authorization(request),
-          ids = optionals(id),
-          organizationId = organization,
-          userId = userId,
-          role = role,
-          limit = limit,
-          offset = offset
+    withOrderBy(sort) { orderBy =>
+      Ok(
+        Json.toJson(
+          MembershipsDao.findAll(
+            authorization(request),
+            ids = optionals(id),
+            organizationId = organization,
+            userId = userId,
+            role = role,
+            limit = limit,
+            offset = offset,
+            orderBy = orderBy
+          )
         )
       )
-    )
+    }
   }
 
   def getById(id: String) = Identified { request =>

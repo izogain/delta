@@ -1,13 +1,29 @@
 package controllers
 
 import db.{OrganizationsDao, ProjectsDao, UsersDao}
-import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.{Organization, Project}
 import io.flow.common.v0.models.User
+import io.flow.common.v0.models.json._
+import io.flow.delta.v0.models.{Organization, Project}
+import io.flow.play.util.Validation
+import io.flow.postgresql.{Authorization, OrderBy}
+import play.api.libs.json.Json
 import play.api.mvc.{Result, Results}
 
 trait Helpers {
 
+  def withOrderBy(sort: String)(
+    f: OrderBy => Result
+  ) = {
+    OrderBy.parse(sort) match {
+      case Left(errors) => {
+        Results.UnprocessableEntity(Json.toJson(Validation.invalidSort(errors)))
+      }
+      case Right(orderBy) => {
+        f(orderBy)
+      }
+    }
+  }
+  
   def withOrganization(user: User, id: String)(
     f: Organization => Result
   ) = {

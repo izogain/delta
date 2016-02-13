@@ -73,6 +73,7 @@ package io.flow.delta.v0.anorm.parsers {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       id = s"$prefix${sep}id",
+      createdAt = s"$prefix${sep}created_at",
       action = s"$prefix${sep}action",
       summary = s"$prefix${sep}summary",
       error = s"$prefix${sep}error"
@@ -80,17 +81,20 @@ package io.flow.delta.v0.anorm.parsers {
 
     def parser(
       id: String = "id",
+      createdAt: String = "created_at",
       action: String = "action",
       summary: String = "summary",
       error: String = "error"
     ): RowParser[io.flow.delta.v0.models.Event] = {
       SqlParser.str(id) ~
+      SqlParser.get[_root_.org.joda.time.DateTime](createdAt) ~
       io.flow.delta.v0.anorm.parsers.EventAction.parser(action) ~
       SqlParser.str(summary) ~
       SqlParser.str(error).? map {
-        case id ~ action ~ summary ~ error => {
+        case id ~ createdAt ~ action ~ summary ~ error => {
           io.flow.delta.v0.models.Event(
             id = id,
+            createdAt = createdAt,
             action = action,
             summary = summary,
             error = error
@@ -609,6 +613,42 @@ package io.flow.delta.v0.anorm.parsers {
 
   }
 
+  object Sha {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      projectPrefix = s"$prefix${sep}project",
+      createdAt = s"$prefix${sep}created_at",
+      branch = s"$prefix${sep}branch",
+      hash = s"$prefix${sep}hash"
+    )
+
+    def parser(
+      id: String = "id",
+      projectPrefix: String = "project",
+      createdAt: String = "created_at",
+      branch: String = "branch",
+      hash: String = "hash"
+    ): RowParser[io.flow.delta.v0.models.Sha] = {
+      SqlParser.str(id) ~
+      io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix(projectPrefix) ~
+      SqlParser.get[_root_.org.joda.time.DateTime](createdAt) ~
+      SqlParser.str(branch) ~
+      SqlParser.str(hash) map {
+        case id ~ project ~ createdAt ~ branch ~ hash => {
+          io.flow.delta.v0.models.Sha(
+            id = id,
+            project = project,
+            createdAt = createdAt,
+            branch = branch,
+            hash = hash
+          )
+        }
+      }
+    }
+
+  }
+
   object State {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
@@ -698,6 +738,42 @@ package io.flow.delta.v0.anorm.parsers {
           io.flow.delta.v0.models.SubscriptionForm(
             userId = userId,
             publication = publication
+          )
+        }
+      }
+    }
+
+  }
+
+  object Tag {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      projectPrefix = s"$prefix${sep}project",
+      createdAt = s"$prefix${sep}created_at",
+      name = s"$prefix${sep}name",
+      hash = s"$prefix${sep}hash"
+    )
+
+    def parser(
+      id: String = "id",
+      projectPrefix: String = "project",
+      createdAt: String = "created_at",
+      name: String = "name",
+      hash: String = "hash"
+    ): RowParser[io.flow.delta.v0.models.Tag] = {
+      SqlParser.str(id) ~
+      io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix(projectPrefix) ~
+      SqlParser.get[_root_.org.joda.time.DateTime](createdAt) ~
+      SqlParser.str(name) ~
+      SqlParser.str(hash) map {
+        case id ~ project ~ createdAt ~ name ~ hash => {
+          io.flow.delta.v0.models.Tag(
+            id = id,
+            project = project,
+            createdAt = createdAt,
+            name = name,
+            hash = hash
           )
         }
       }

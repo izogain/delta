@@ -2,20 +2,13 @@ package db
 
 import io.flow.delta.actors.MainActor
 import io.flow.delta.api.lib.Semver
-import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary}
+import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Tag}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
-
-case class Tag(
-  id: String,
-  project: ProjectSummary,
-  name: String,
-  hash: String
-)
 
 case class TagForm(
   projectId: String,
@@ -27,6 +20,7 @@ object TagsDao {
 
   private[this] val BaseQuery = Query(s"""
     select tags.id,
+           tags.created_at,
            tags.name,
            tags.hash,
            projects.id as project_id,
@@ -216,24 +210,8 @@ object TagsDao {
           valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
         ).
         as(
-          parser().*
+          io.flow.delta.v0.anorm.parsers.Tag.parser().*
         )
-    }
-  }
-
-  private[this] def parser(): RowParser[Tag] = {
-    SqlParser.str("id") ~
-    io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix("project") ~
-    SqlParser.str("name") ~
-    SqlParser.str("hash") map {
-      case id ~ project ~ name ~ hash => {
-        Tag(
-          id = id,
-          project = project,
-          name = name,
-          hash = hash
-        )
-      }
     }
   }
 

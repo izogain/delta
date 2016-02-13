@@ -14,6 +14,7 @@ object EventsDao {
 
   private[this] val BaseQuery = Query(s"""
     select events.id,
+           events.created_at,
            events.action,
            events.summary,
            events.error

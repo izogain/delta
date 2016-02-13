@@ -294,9 +294,30 @@
     "event": {
       "fields": [
         { "name": "id", "type": "string" },
+        { "name": "created_at", "type": "date-time-iso8601" },
         { "name": "action", "type": "event_action" },
         { "name": "summary", "type": "string" },
         { "name": "error", "type": "string", "required": false }
+      ]
+    },
+
+    "sha": {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "project", "type": "project_summary" },
+        { "name": "created_at", "type": "date-time-iso8601" },
+        { "name": "branch", "type": "string" },
+        { "name": "hash", "type": "string" }
+      ]
+    },
+
+    "tag": {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "project", "type": "project_summary" },
+        { "name": "created_at", "type": "date-time-iso8601" },
+        { "name": "name", "type": "string" },
+        { "name": "hash", "type": "string" }
       ]
     }
 
@@ -394,8 +415,9 @@
 	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
 	    { "name": "organization", "type": "string", "description": "Filter to resolvers belongs to the organization with this key", "required": false },
             { "name": "name", "type": "string", "description": "Find project with this name. Case in-sensitive. Exact match", "required": false },
-	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "projects.id" }            
           ],
           "responses": {
             "200": { "type": "[project]" },
@@ -498,8 +520,9 @@
           "parameters": [
 	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "user_id", "type": "string", "description": "Find organizations that this user has access to", "required": false },
-	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "organizations.id" }
           ],
           "responses": {
             "200": { "type": "[organization]" },
@@ -563,8 +586,9 @@
             { "name": "organization", "type": "string", "required": false, "description": "Filter to organization with this key. Case insensitive" },
             { "name": "user_id", "type": "string", "required": false },
             { "name": "role", "type": "role", "required": false },
-            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-memberships.created_at" }
           ],
           "responses": {
             "200": { "type": "[membership]" },
@@ -615,7 +639,7 @@
 	    { "name": "name", "type": "string", "required": false, "description": "Optionally filter by repo name. Case in-sensitive. Exact match" },
 	    { "name": "organization_id", "type": "string", "required": false, "description": "If specified, we enable additional filtering by this organization (see existing_project parameter)." },
 	    { "name": "existing_project", "type": "boolean", "required": false, "description": "Optionally filter by repositories that are either already mapped to existing projects or not. Requires organization_id parameter to also be specified." },
-	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
+	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
 	    { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
           ],
           "responses": {
@@ -637,8 +661,9 @@
             { "name": "user_id", "type": "string", "description": "Find subscriptions for this user.", "required": false },
 	    { "name": "identifier", "type": "string", "description": "Find subscriptions associated with this user identifier. Exact match", "required": false },
             { "name": "publication", "type": "publication", "description": "Find subscriptions for this publication.", "required": false },
-            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-subscriptions.created_at" }
           ],
           "responses": {
             "200": { "type": "[subscription]" },
@@ -694,7 +719,7 @@
           "description": "Returns a list of all matching items",
           "parameters": [
 	    { "name": "q", "type": "string", "required": false, "description": "Actual search query" },
-	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
+	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
 	    { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
           ],
           "responses": {
@@ -712,8 +737,9 @@
 	  "parameters": [
 	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "user_id", "type": "string", "description": "Find tokens for this user.", "required": false },
-            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-tokens.created_at" }
 	  ],
           "responses": {
             "200": { "type": "[token]" },
@@ -777,8 +803,9 @@
           "description": "Returns a list of all matching images",
           "parameters": [
             { "name": "name", "type": "string", "required": false, "description": "Optionally filter by repo name. Case in-sensitive. Exact match" },
-            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 0, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "lower(images.name)" }
           ],
           "responses": {
             "200": { "type": "[image]" },
@@ -786,7 +813,123 @@
           }
         }
       ]
+    },
+
+    "tag": {
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+            { "name": "project_id", "type": "string", "description": "Find tags for this project.", "required": false },
+            { "name": "name", "type": "string", "description": "Find tags with this name.", "required": false, "example": "0.0.1" },
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-tags.created_at" }
+	  ],
+          "responses": {
+            "200": { "type": "[tag]" },
+            "401": { "type": "unit" }
+          }
+	},
+
+	{
+	  "method": "GET",
+	  "path": "/:id",
+          "responses": {
+            "200": { "type": "tag" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+	},
+
+        {
+          "method": "DELETE",
+	  "path": "/:id",
+	  "responses": {
+            "204": { "type": "unit" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+
+        }
+        
+      ]
+    },
+
+    "sha": {
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+            { "name": "project_id", "type": "string", "description": "Find shas for this project.", "required": false },
+            { "name": "branch", "type": "string", "description": "Find shas for this branch.", "required": false, "example": "master" },
+            { "name": "hash", "type": "string", "description": "Find shas for this hash.", "required": false, "example": "master" },
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-shas.created_at" }
+	  ],
+          "responses": {
+            "200": { "type": "[sha]" },
+            "401": { "type": "unit" }
+          }
+	},
+
+	{
+	  "method": "GET",
+	  "path": "/:id",
+          "responses": {
+            "200": { "type": "sha" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+	},
+
+        {
+          "method": "DELETE",
+	  "path": "/:id",
+	  "responses": {
+            "204": { "type": "unit" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+
+        }
+        
+      ]
+    },
+
+    "event": {
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+            { "name": "project_id", "type": "string", "description": "Find events for this project.", "required": false },
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-events.created_at" }
+	  ],
+          "responses": {
+            "200": { "type": "[event]" },
+            "401": { "type": "unit" }
+          }
+	},
+
+	{
+	  "method": "GET",
+	  "path": "/:id",
+          "responses": {
+            "200": { "type": "event" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        }
+        
+      ]
     }
+
   }
 
 }

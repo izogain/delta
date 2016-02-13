@@ -1,6 +1,9 @@
 @(
   data: io.flow.delta.www.lib.UiData,
-  project: io.flow.delta.v0.models.Project
+  project: io.flow.delta.v0.models.Project,
+  masterHash: Option[String],
+  latestTag: Option[io.flow.delta.v0.models.Tag],
+  events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(project.name))) {
@@ -20,6 +23,59 @@
     <li>Visbility: @project.visibility.toString</li>
     <li>SCMS: @project.scms.toString</li>
     <li>URI: <a href="@project.uri">@project.uri</a></li>
+    <li>Master Sha: @masterHash.getOrElse("-")</li>
+    <li>Latest Tag:
+      @if(latestTag.isEmpty) {
+        -
+      } else {
+        @latestTag.get.name [@latestTag.get.hash]
+      }
+    </li>
   </ul>
 
+  <h3>Events</h3>
+  @if(events.isEmpty) {
+    <em>No events</em>
+  } else {
+    <div class="table-responsive">
+      <table class="table">
+	<thead>
+	  <tr>
+	    <th>Timestamp</th>
+	    <th>Action</th>
+	    <th>Summary</th>
+	    <th>Error</th>
+	  </tr>
+	</thead>
+        @events.items.map { e =>
+          <tr>
+            <td>@io.flow.play.util.DateHelper.longDateTime(e.createdAt)</td>
+            <td>@e.action.toString</td>
+            <td>@e.summary</td>
+            <td>
+              @if(e.error.isEmpty) {
+                -
+              } else {
+                <div>@io.flow.delta.lib.Text.truncate(e.error.get)</div>
+              }
+            </td>
+          </tr>
+        }
+      </table>
+    </div>
+
+    @if(events.hasPrevious || events.hasNext) {
+      <ul class="pager">
+        @if(events.hasPrevious) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page - 1)">Previous</a></li>
+        }
+        @if(events.hasNext) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+
+  }
+
+  
 }
