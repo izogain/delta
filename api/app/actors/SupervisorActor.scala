@@ -7,6 +7,7 @@ import play.libs.Akka
 import akka.actor.Actor
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
@@ -56,17 +57,33 @@ class SupervisorActor extends Actor with Util with DataProject {
         SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
-        val result = Await.result(f.run(project), Duration(5, "seconds"))
-        result match {
-          case SupervisorResult.Change(desc) => {
-            println(s"==> Project[${project.id}] ${f.getClass.getName}: Changed $desc")
-            SupervisorResult.Change(desc)
+        Try(
+          // TODO: Remove the await
+          Await.result(
+            f.run(project),
+            Duration(5, "seconds")
+          )
+        ) match {
+          case Success(result) => {
+            result match {
+              case SupervisorResult.Change(desc) => {
+                println(s"==> Project[${project.id}] ${f.getClass.getName}: Changed $desc")
+                SupervisorResult.Change(desc)
+              }
+              case SupervisorResult.NoChange(desc)=> {
+                println(s"==> Project[${project.id}] ${f.getClass.getName}: No change: $desc")
+                run(project, functions.drop(1))
+              }
+              case SupervisorResult.Error(desc, ex)=> {
+                println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
+                ex.printStackTrace(System.err)
+                SupervisorResult.Error(desc, ex)
+              }
+            }
           }
-          case SupervisorResult.NoChange(desc)=> {
-            println(s"==> Project[${project.id}] ${f.getClass.getName}: No change: $desc")
-            run(project, functions.drop(1))
-          }
-          case SupervisorResult.Error(desc, ex)=> {
+
+          case Failure(ex) => {
+            val desc = s"Unhandled Exception ${ex.getMessage}"
             println(s"==> Project[${project.id}] ${f.getClass.getName}: $desc")
             ex.printStackTrace(System.err)
             SupervisorResult.Error(desc, ex)
