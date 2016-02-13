@@ -40,6 +40,14 @@
 	{ "name": "public" },
 	{ "name": "private" }
       ]
+    },
+
+    "event_action": {
+      "values": [
+	{ "name": "started" },
+	{ "name": "checkpoint" },
+	{ "name": "completed" }
+      ]
     }
 
   },
@@ -280,6 +288,15 @@
         { "name": "project_id", "type": "string" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
+      ]
+    },
+
+    "event": {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "action", "type": "event_action" },
+        { "name": "summary", "type": "string" },
+        { "name": "error", "type": "string", "required": false }
       ]
     }
 

@@ -261,5 +261,17 @@ trait Helpers {
       hash = UUID.randomUUID.toString().replaceAll("-", "")
     )
   }
+
+  def createEvent(
+    project: Project = createProject(),
+    action: EventAction = EventAction.Started,
+    summary: String = "test",
+    ex: Option[Throwable] = None
+  ): Event = {
+    val id = EventsDao.create(systemUser, project.id, action, summary, ex)
+    EventsDao.findById(id).getOrElse {
+      sys.error("Failed to create event")
+    }
+  }
   
 }

@@ -71,6 +71,8 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapUUID: Column[Map[String, _root_.java.util.UUID]] = parser { _.as[Map[String, _root_.java.util.UUID]] }
 
     import io.flow.delta.v0.models.json._
+    implicit val columnToSeqDeltaEventAction: Column[Seq[_root_.io.flow.delta.v0.models.EventAction]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.EventAction]] }
+    implicit val columnToMapDeltaEventAction: Column[Map[String, _root_.io.flow.delta.v0.models.EventAction]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.EventAction]] }
     implicit val columnToSeqDeltaPublication: Column[Seq[_root_.io.flow.delta.v0.models.Publication]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Publication]] }
     implicit val columnToMapDeltaPublication: Column[Map[String, _root_.io.flow.delta.v0.models.Publication]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Publication]] }
     implicit val columnToSeqDeltaRole: Column[Seq[_root_.io.flow.delta.v0.models.Role]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Role]] }
@@ -79,6 +81,8 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapDeltaScms: Column[Map[String, _root_.io.flow.delta.v0.models.Scms]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Scms]] }
     implicit val columnToSeqDeltaVisibility: Column[Seq[_root_.io.flow.delta.v0.models.Visibility]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Visibility]] }
     implicit val columnToMapDeltaVisibility: Column[Map[String, _root_.io.flow.delta.v0.models.Visibility]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Visibility]] }
+    implicit val columnToSeqDeltaEvent: Column[Seq[_root_.io.flow.delta.v0.models.Event]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Event]] }
+    implicit val columnToMapDeltaEvent: Column[Map[String, _root_.io.flow.delta.v0.models.Event]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Event]] }
     implicit val columnToSeqDeltaGithubAuthenticationForm: Column[Seq[_root_.io.flow.delta.v0.models.GithubAuthenticationForm]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.GithubAuthenticationForm]] }
     implicit val columnToMapDeltaGithubAuthenticationForm: Column[Map[String, _root_.io.flow.delta.v0.models.GithubAuthenticationForm]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.GithubAuthenticationForm]] }
     implicit val columnToSeqDeltaGithubUser: Column[Seq[_root_.io.flow.delta.v0.models.GithubUser]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.GithubUser]] }

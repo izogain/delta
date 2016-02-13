@@ -9,6 +9,18 @@ package io.flow.delta.v0.anorm.parsers {
 
   import io.flow.delta.v0.anorm.conversions.Json._
 
+  object EventAction {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
+
+    def parser(name: String = "event_action"): RowParser[io.flow.delta.v0.models.EventAction] = {
+      SqlParser.str(name) map {
+        case value => io.flow.delta.v0.models.EventAction(value)
+      }
+    }
+
+  }
+
   object Publication {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
@@ -52,6 +64,38 @@ package io.flow.delta.v0.anorm.parsers {
     def parser(name: String = "visibility"): RowParser[io.flow.delta.v0.models.Visibility] = {
       SqlParser.str(name) map {
         case value => io.flow.delta.v0.models.Visibility(value)
+      }
+    }
+
+  }
+
+  object Event {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      action = s"$prefix${sep}action",
+      summary = s"$prefix${sep}summary",
+      error = s"$prefix${sep}error"
+    )
+
+    def parser(
+      id: String = "id",
+      action: String = "action",
+      summary: String = "summary",
+      error: String = "error"
+    ): RowParser[io.flow.delta.v0.models.Event] = {
+      SqlParser.str(id) ~
+      io.flow.delta.v0.anorm.parsers.EventAction.parser(action) ~
+      SqlParser.str(summary) ~
+      SqlParser.str(error).? map {
+        case id ~ action ~ summary ~ error => {
+          io.flow.delta.v0.models.Event(
+            id = id,
+            action = action,
+            summary = summary,
+            error = error
+          )
+        }
       }
     }
 

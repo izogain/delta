@@ -5,7 +5,6 @@ import io.flow.delta.v0.models.Project
 import io.flow.play.actors.Util
 import play.api.Logger
 import play.libs.Akka
-import org.joda.time.DateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -26,7 +25,9 @@ object SupervisorActor {
 
 }
 
-class SupervisorActor extends Actor with Util with DataProject {
+class SupervisorActor extends Actor with Util with DataProject with EventLog {
+
+  override val logPrefix = "Supervisor"
 
   implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
@@ -38,8 +39,9 @@ class SupervisorActor extends Actor with Util with DataProject {
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        println(s"SupervisorActor.Messages.PursueExpectedState Starting for Project[${project.id}]")
-        run(project, SupervisorActor.All)
+        log.run("PursueExpectedState") {
+          run(project, SupervisorActor.All)
+        }
       }
     }
 
@@ -51,14 +53,13 @@ class SupervisorActor extends Actor with Util with DataProject {
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Unchanged at the end of all the functions.
     */
-  private[this] def run(project: Project, functions: Seq[SupervisorFunction]): SupervisorResult = {
+  private[this] def run(project: Project, functions: Seq[SupervisorFunction]) {
     functions.headOption match {
       case None => {
-        val desc = "All functions returned without modification"
-        println(msg(project, desc))
-        SupervisorResult.NoChange(desc)
+        SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
+        log.started(format(f))
         Try(
           // TODO: Remove the await
           Await.result(
@@ -69,42 +70,39 @@ class SupervisorActor extends Actor with Util with DataProject {
           case Success(result) => {
             result match {
               case SupervisorResult.Change(desc) => {
-                println(msg(project, f, desc))
-                SupervisorResult.Change(desc)
+                log.completed(format(f, desc))
               }
               case SupervisorResult.NoChange(desc)=> {
-                println(msg(project, f, s"No change: $desc"))
+                log.completed(format(f, s"No change: $desc"))
                 run(project, functions.drop(1))
               }
               case SupervisorResult.Error(desc, ex)=> {
-                println(msg(project, f, s"Error: $desc"))
-                ex.printStackTrace(System.err)
-                SupervisorResult.Error(desc, ex)
+                log.completed(format(f, s"Error: $desc"), Some(ex))
               }
             }
           }
 
           case Failure(ex) => {
-            val desc = s"Unhandled Exception ${ex.getMessage}"
-            println(msg(project, f, desc))
-            ex.printStackTrace(System.err)
-            SupervisorResult.Error(desc, ex)
+            log.completed(format(f, s"Unhandled Exception ${ex.getMessage}"), Some(ex))
           }
         }
       }
     }
   }
 
-  private[this] def msg(project: Project, f: Any, desc: String): String = {
-    val name = f.getClass.getName
-    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
-    val formattedName = name.substring(idx + 1).dropRight(1) // Remove trailing $
-    msg(project, s"$formattedName: $desc")
+  /**
+    * Prepend the description with the class name of the
+    * function. This lets us have automatic messages like
+    * "TagIfNeeded: xxx"
+    */
+  private[this] def format(f: Any, desc: String): String = {
+    format(f) + ": " + desc
   }
 
-  private[this] def msg(project: Project, desc: String): String = {
-    val ts = new DateTime()
-    s"==> $ts ${project.id}: $desc"
+  private[this] def format(f: Any): String = {
+    val name = f.getClass.getName
+    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
+    name.substring(idx + 1).dropRight(1) // Remove trailing $
   }
 
 }
