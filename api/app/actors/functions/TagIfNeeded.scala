@@ -58,10 +58,10 @@ case class TagIfNeeded(project: Project) extends Github {
                 createTag(InitialTag, master)
               }
               case Some(tag) => {
-                Some(tag.sha) == master match {
+                tag.sha == master match {
                   case true => {
                     Future {
-                      SupervisorResult.NoChange(s"Latest tag[${tag.semver}] already points to master[${master}]")
+                      SupervisorResult.NoChange(s"Latest tag[${tag.semver.label}] already points to master[${master}]")
                     }
                   }
                   case false => {
@@ -105,8 +105,6 @@ case class TagIfNeeded(project: Project) extends Github {
           )
         )
       ).flatMap { githubTag =>
-        println(s"GithubTag: $githubTag")
-
         client.refs.post(
           repo.owner,
           repo.project,
@@ -115,8 +113,6 @@ case class TagIfNeeded(project: Project) extends Github {
             sha = sha
           )
         ).map { githubRef =>
-          println("GithubRef: " + githubRef)
-
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
