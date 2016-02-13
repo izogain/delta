@@ -1,6 +1,7 @@
 package db
 
 import io.flow.delta.actors.MainActor
+import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.common.v0.models.User
@@ -12,12 +13,14 @@ import play.api.libs.json._
 case class Tag(
   id: String,
   project: ProjectSummary,
-  name: String
+  name: String,
+  hash: String
 )
 
 case class TagForm(
   projectId: String,
-  name: String
+  name: String,
+  hash: String
 )
 
 object TagsDao {
@@ -25,6 +28,7 @@ object TagsDao {
   private[this] val BaseQuery = Query(s"""
     select tags.id,
            tags.name,
+           tags.hash,
            projects.id as project_id,
            projects.id as project_name,
            projects.uri as project_uri,
@@ -35,17 +39,36 @@ object TagsDao {
 
   private[this] val InsertQuery = """
     insert into tags
-    (id, project_id, name, updated_by_user_id)
+    (id, project_id, name, hash, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {hash}, {updated_by_user_id})
+  """
+
+  private[this] val UpdateQuery = """
+    update tags
+       set project_id = {project_id},
+           name = {name},
+           hash = {hash},
+           updated_by_user_id = {updated_by_user_id}
+     where id = {id}
   """
 
   private[db] def validate(
     user: User,
-    form: TagForm
+    form: TagForm,
+    existing: Option[Tag] = None
   ): Seq[String] = {
     val nameErrors = if (form.name.trim == "") {
       Seq("Name cannot be empty")
+    } else {
+      Semver.isSemver(form.name.trim) match {
+        case true => Nil
+        case false => Seq("Name must match semver pattern (e.g. 0.1.2)")
+      }
+    }
+
+    val hashErrors = if (form.hash.trim == "") {
+      Seq("Hash cannot be empty")
     } else {
       Nil
     }
@@ -57,10 +80,44 @@ object TagsDao {
 
     val existingErrors = findByProjectIdAndName(Authorization.All, form.projectId, form.name) match {
       case None => Nil
-      case Some(found) => Seq("Project already has a tag with this name")
+      case Some(found) => {
+        existing.map(_.id) == Some(found.id) match {
+          case true => Nil
+          case false => Seq("Project already has a tag with this name")
+        }
+      }
     }
 
-    nameErrors ++ projectErrors ++ existingErrors
+    nameErrors ++ hashErrors ++ projectErrors ++ existingErrors
+  }
+
+  /**
+    * If the tag exists, updates the hash to match (if
+    * necessary). Otherwise creates the tag.
+    */
+  def upsert(createdBy: User, projectId: String, tag: String, hash: String): Tag = {
+    val form = TagForm(
+      projectId = projectId,
+      name = tag,
+      hash = hash
+    )
+    findByProjectIdAndName(Authorization.All, projectId, tag) match {
+      case None => {
+        create(createdBy, form) match {
+          case Left(errors) => sys.error(errors.mkString(", "))
+          case Right(tag) => tag
+        }
+      }
+      case Some(existing) => {
+        existing.hash == hash match {
+          case true => existing
+          case false => update(createdBy, existing, form) match {
+            case Left(errors) => sys.error(errors.mkString(", "))
+            case Right(tag) => tag
+          }
+        }
+      }
+    }
   }
 
   def create(createdBy: User, form: TagForm): Either[Seq[String], Tag] = {
@@ -73,6 +130,7 @@ object TagsDao {
             'id -> id,
             'project_id -> form.projectId,
             'name -> form.name.trim,
+            'hash -> form.hash.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -81,6 +139,33 @@ object TagsDao {
 
         Right(
           findById(Authorization.All, id).getOrElse {
+            sys.error("Failed to create tag")
+          }
+        )
+      }
+      case errors => {
+        Left(errors)
+      }
+    }
+  }
+
+  private[this] def update(createdBy: User, tag: Tag, form: TagForm): Either[Seq[String], Tag] = {
+    validate(createdBy, form, Some(tag)) match {
+      case Nil => {
+        DB.withConnection { implicit c =>
+          SQL(UpdateQuery).on(
+            'id -> tag.id,
+            'project_id -> form.projectId,
+            'name -> form.name.trim,
+            'hash -> form.hash.trim,
+            'updated_by_user_id -> createdBy.id
+          ).execute()
+        }
+
+        MainActor.ref ! MainActor.Messages.TagUpdated(form.projectId, tag.id)
+
+        Right(
+          findById(Authorization.All, tag.id).getOrElse {
             sys.error("Failed to create tag")
           }
         )
@@ -139,12 +224,14 @@ object TagsDao {
   private[this] def parser(): RowParser[Tag] = {
     SqlParser.str("id") ~
     io.flow.delta.v0.anorm.parsers.ProjectSummary.parserWithPrefix("project") ~
-    SqlParser.str("name") map {
-      case id ~ project ~ name => {
+    SqlParser.str("name") ~
+    SqlParser.str("hash") map {
+      case id ~ project ~ name ~ hash => {
         Tag(
           id = id,
           project = project,
-          name = name
+          name = name,
+          hash = hash
         )
       }
     }
