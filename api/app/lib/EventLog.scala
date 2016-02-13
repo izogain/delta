@@ -1,6 +1,6 @@
 package io.flow.delta.api.lib
 
-import db.UsersDao
+import db.{EventsDao, UsersDao}
 import io.flow.delta.v0.models.Project
 import io.flow.common.v0.models.User
 import java.io.{PrintWriter, StringWriter}
@@ -30,6 +30,7 @@ case class EventLog(
     */
   def started(message: String) = {
     println(format(s"started $message"))
+    EventsDao.create(user, project.id, "started", message, ex = None)
   }
 
   /**
@@ -40,12 +41,15 @@ case class EventLog(
     error match {
       case None => {
         println(format(s"completed $message"))
+        EventsDao.create(user, project.id, "completed", message, ex = None)
       }
       case Some(ex) => {
         // this works much better
         val sw = new StringWriter
         ex.printStackTrace(new PrintWriter(sw))
         println(format(s"error $message: ${ex.getMessage}\n\n$sw"))
+
+        EventsDao.create(user, project.id, "error", message, ex = Some(ex))
       }
     }
   }
@@ -59,6 +63,7 @@ case class EventLog(
     */
   def checkpoint(message: String) = {
     println(format(s"checkpoint $message"))
+    EventsDao.create(user, project.id, "checkpoint", message, ex = None)
   }
 
   /**
