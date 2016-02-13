@@ -125,6 +125,19 @@
       ]
     },
 
+    "settings": {
+      "description": "Project level settings / configuration",
+      "fields": [
+	{ "name": "auto_tag", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" }
+      ]
+    },
+    
+    "settings_form": {
+      "fields": [
+	{ "name": "auto_tag", "type": "boolean", "required": false }
+      ]
+    },
+
     "state": {
       "description": "Used to describe the actual state of a project in AWS. Specifically which versions are running",
       "fields": [
@@ -469,6 +482,27 @@
           }
         },
 
+        {
+          "method": "GET",
+          "path": "/:id/settings",
+          "responses": {
+            "200": { "type": "settings" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+
+        {
+          "method": "PUT",
+          "path": "/:id/settings",
+          "body": { "type": "settings_form" },
+          "responses": {
+            "200": { "type": "settings" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+        
         {
           "method": "GET",
           "path": "/:id/state/latest",

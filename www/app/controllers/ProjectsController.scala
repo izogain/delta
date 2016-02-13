@@ -1,7 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{Organization, Project, ProjectForm, Scms, Visibility}
+import io.flow.delta.v0.models.{Organization, Project, ProjectForm, Scms, SettingsForm, Visibility}
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.common.v0.models.User
 import io.flow.play.clients.UserTokensClient
@@ -43,6 +43,7 @@ class ProjectsController @javax.inject.Inject() (
   def show(id: String, eventsPage: Int) = Identified.async { implicit request =>
     withProject(request, id) { project =>
       for {
+        settings <- deltaClient(request).projects.getSettingsById(id)
         events <- deltaClient(request).events.get(
           projectId = Some(project.id),
           limit = Pagination.DefaultLimit+1,
@@ -63,6 +64,7 @@ class ProjectsController @javax.inject.Inject() (
           views.html.projects.show(
             uiData(request),
             project,
+            settings,
             shas.headOption.map(_.hash),
             tags.headOption,
             PaginatedCollection(eventsPage, events)
@@ -251,6 +253,20 @@ class ProjectsController @javax.inject.Inject() (
     }.recover {
       case UnitResponse(404) => {
         Redirect(routes.ProjectsController.index()).flashing("warning" -> s"Project not found")
+      }
+    }
+  }
+
+  /**
+   * Toggle the autoTag setting
+   */
+  def postSettingsAutoTag(id: String) = Identified.async { implicit request =>
+    deltaClient(request).projects.getSettingsById(id).flatMap { settings =>
+      deltaClient(request).projects.putSettingsById(
+        id,
+        SettingsForm(autoTag = Some(!settings.autoTag))
+      ).map { _ =>
+        Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Auto tag updated")
       }
     }
   }

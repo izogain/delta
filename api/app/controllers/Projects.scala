@@ -1,10 +1,11 @@
 package controllers
 
-import db.ProjectsDao
+import db.{ProjectsDao, SettingsDao}
+import io.flow.postgresql.Authorization
+import io.flow.delta.v0.models.{Project, ProjectForm, SettingsForm}
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation
-import io.flow.delta.v0.models.{Project, ProjectForm}
 import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.json._
 import play.api.mvc._
@@ -46,30 +47,34 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def post() = Identified(parse.json) { request =>
-    request.body.validate[ProjectForm] match {
-      case e: JsError => {
-        UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
-      }
-      case s: JsSuccess[ProjectForm] => {
-        ProjectsDao.create(request.user, s.get) match {
-          case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
-          case Right(project) => Created(Json.toJson(project))
+  def post() = Identified { request =>
+    JsValue.sync(request.contentType, request.body) { js =>
+      js.validate[ProjectForm] match {
+        case e: JsError => {
+          UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
+        }
+        case s: JsSuccess[ProjectForm] => {
+          ProjectsDao.create(request.user, s.get) match {
+            case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
+            case Right(project) => Created(Json.toJson(project))
+          }
         }
       }
     }
   }
 
-  def putById(id: String) = Identified(parse.json) { request =>
+  def putById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      request.body.validate[ProjectForm] match {
-        case e: JsError => {
-          UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
-        }
-        case s: JsSuccess[ProjectForm] => {
-          ProjectsDao.update(request.user, project, s.get) match {
-            case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
-            case Right(updated) => Ok(Json.toJson(updated))
+      JsValue.sync(request.contentType, request.body) { js =>
+        js.validate[ProjectForm] match {
+          case e: JsError => {
+            UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
+          }
+          case s: JsSuccess[ProjectForm] => {
+            ProjectsDao.update(request.user, project, s.get) match {
+              case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
+              case Right(updated) => Ok(Json.toJson(updated))
+            }
           }
         }
       }
@@ -82,8 +87,37 @@ class Projects @javax.inject.Inject() (
       NoContent
     }
   }
+ 
+  def getSettingsById(id: String) = Identified { request =>
+    withProject(request.user, id) { project =>
+      Ok(
+        Json.toJson(
+          SettingsDao.findByProjectIdOrDefault(Authorization.User(request.user.id), project.id)
+        )
+      )
+    }
+  }
 
-  def getStateAndLatestById(id: String) = TODO
+  def putSettingsById(id: String) = Identified { request =>
+    withProject(request.user, id) { project =>
+      JsValue.sync(request.contentType, request.body) { js =>
+        js.validate[SettingsForm] match {
+          case e: JsError => {
+            UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
+          }
+          case s: JsSuccess[SettingsForm] => {
+            Ok(
+              Json.toJson(
+                SettingsDao.upsert(request.user, project.id, s.get)
+              )
+            )
+          }
+        }
+      }
+    }
+  }
+
+ def getStateAndLatestById(id: String) = TODO
   def getStateAndExpectedById(id: String) = TODO
   def postStateAndExpectedById(id: String) = TODO
   def getStateAndActualById(id: String) = TODO

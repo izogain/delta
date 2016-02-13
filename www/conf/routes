@@ -12,6 +12,7 @@ GET     /projects/:id                           controllers.ProjectsController.s
 GET     /projects/:id/edit                      controllers.ProjectsController.edit(id: String)
 POST    /projects/:id/postEdit                  controllers.ProjectsController.postEdit(id: String)
 POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
+POST    /projects/:id/settings/autoTag          controllers.ProjectsController.postSettingsAutoTag(id: String)
 
 GET     /search                                 controllers.SearchController.index(q: Option[String] ?= None, page: Int ?= 0)
 

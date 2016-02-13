@@ -613,6 +613,46 @@ package io.flow.delta.v0.anorm.parsers {
 
   }
 
+  object Settings {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      autoTag = s"$prefix${sep}auto_tag"
+    )
+
+    def parser(
+      autoTag: String = "auto_tag"
+    ): RowParser[io.flow.delta.v0.models.Settings] = {
+      SqlParser.bool(autoTag) map {
+        case autoTag => {
+          io.flow.delta.v0.models.Settings(
+            autoTag = autoTag
+          )
+        }
+      }
+    }
+
+  }
+
+  object SettingsForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      autoTag = s"$prefix${sep}auto_tag"
+    )
+
+    def parser(
+      autoTag: String = "auto_tag"
+    ): RowParser[io.flow.delta.v0.models.SettingsForm] = {
+      SqlParser.bool(autoTag).? map {
+        case autoTag => {
+          io.flow.delta.v0.models.SettingsForm(
+            autoTag = autoTag
+          )
+        }
+      }
+    }
+
+  }
+
   object Sha {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(

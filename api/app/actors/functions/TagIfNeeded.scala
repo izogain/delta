@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.{ShasDao, TagsDao, UsersDao}
+import db.{ShasDao, SettingsDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
@@ -19,6 +19,8 @@ import scala.concurrent.Future
   */
 object TagIfNeeded extends SupervisorFunction {
 
+  val InitialTag = "0.0.1"
+
   override def run(
     project: Project
   ) (
@@ -36,8 +38,6 @@ case class TagIfNeeded(project: Project) extends Github {
   private[this] val repo = GithubUtil.parseUri(project.uri).right.getOrElse {
     sys.error(s"Project id[${project.id}] uri[${project.uri}]: Could not parse")
   }
-
-  val InitialTag = "0.0.1"
 
   def run(
     implicit ec: scala.concurrent.ExecutionContext
@@ -58,7 +58,7 @@ case class TagIfNeeded(project: Project) extends Github {
 
             localTags.reverse.headOption match {
               case None => {
-                createTag(InitialTag, master)
+                createTag(TagIfNeeded.InitialTag, master)
               }
               case Some(tag) => {
                 tag.sha == master match {
@@ -80,8 +80,10 @@ case class TagIfNeeded(project: Project) extends Github {
   }
 
   /**
-    * This method actually creates a new tag with the given name,
-    * pointing to the specified sha.
+    * For projects with auto tag enabled, this method actually creates
+    * a new tag with the given name, pointing to the specified sha. If
+    * auto tag is disabled, returns a nice message in a
+    * SupervisorResult.NoChange.
     * 
     * @param name e.g. 0.0.2
     * @param sha e.g. ff731cfdad6e5b05ec40535fd7db03c91bbcb8ff
@@ -93,34 +95,44 @@ case class TagIfNeeded(project: Project) extends Github {
   ): Future[SupervisorResult] = {
     assert(Semver.isSemver(name), s"Tag[$name] must be in semver format")
 
-    withGithubClient(project.user.id) { client =>
-      client.tags.postGitAndTags(
-        repo.owner,
-        repo.project,
-        TagForm(
-          tag = name,
-          message = s"Delta automated tag $name",
-          `object` = sha,
-          tagger = Tagger(
-            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
-            email = Email.fromEmail,
-            date = new DateTime()
-          )
-        )
-      ).flatMap { githubTag =>
-        client.refs.post(
-          repo.owner,
-          repo.project,
-          RefForm(
-            ref = s"refs/tags/$name",
-            sha = sha
-          )
-        ).map { githubRef =>
-          TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
-          SupervisorResult.Change(s"Created tag $name for sha[$sha]")
-        }.recover {
-          case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
-            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
+    SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id).autoTag match {
+      case false => {
+        Future {
+          SupervisorResult.NoChange(s"Project autoTag setting is disabled - no tag was created. Note that master '$sha' is ahead of latest tag")
+        }
+      }
+
+      case true => {
+        withGithubClient(project.user.id) { client =>
+          client.tags.postGitAndTags(
+            repo.owner,
+            repo.project,
+            TagForm(
+              tag = name,
+              message = s"Delta automated tag $name",
+              `object` = sha,
+              tagger = Tagger(
+                name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
+                email = Email.fromEmail,
+                date = new DateTime()
+              )
+            )
+          ).flatMap { githubTag =>
+            client.refs.post(
+              repo.owner,
+              repo.project,
+              RefForm(
+                ref = s"refs/tags/$name",
+                sha = sha
+              )
+            ).map { githubRef =>
+              TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
+              SupervisorResult.Change(s"Created tag $name for sha[$sha]")
+            }.recover {
+              case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
+                SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
+              }
+            }
           }
         }
       }
