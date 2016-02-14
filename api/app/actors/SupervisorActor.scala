@@ -1,10 +1,10 @@
 package io.flow.delta.actors
 
-import db.{EventsDao, SettingsDao}
+import db.SettingsDao
 import akka.actor.Actor
 import io.flow.delta.v0.models.{Project, Settings}
 import io.flow.play.actors.Util
-import io.flow.postgresql.{Authorization, OrderBy}
+import io.flow.postgresql.Authorization
 import play.api.Logger
 import play.libs.Akka
 import scala.concurrent.Await
@@ -13,6 +13,8 @@ import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
+  val SuccessfulCompletionMessage = "completed PursueExpectedState"
+  
   trait Message
 
   object Messages {
@@ -35,9 +37,6 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
 
   implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
-  private[this] val MinutesUntilInactive = 2
-  private[this] val SuccessfulCompletionMessage = "completed PursueExpectedState"
-
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
@@ -51,46 +50,13 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
       */
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       withProject { project =>
-
-        isActive(project.id) match {
-          case true => {
-            Logger.info(s"SupervisorActor: Project[${project.id}] is already active")
-          }
-          case false => {
-            val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-            log.started("PursueExpectedState")
-            run(project, settings, SupervisorActor.All)
-            log.message(SuccessfulCompletionMessage)
-          }
-        }
+        val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
+        log.started("PursueExpectedState")
+        run(project, settings, SupervisorActor.All)
+        log.message(SupervisorActor.SuccessfulCompletionMessage)
       }
     }
 
-  }
-
-  /**
-   * A project is considered active if:
-   * 
-   *   - it has had at least one log entry written in the past MinutesUntilInactive minutes
-   *   - the last log entry writtin was not the successful completion of the supervisor
-   *     actor loop (SuccessfulCompletionMessage)
-   * 
-   * Otherwise, the project is not active
-   */
-  private[this] def isActive(projectId: String): Boolean = {
-    EventsDao.findAll(
-      projectId = Some(projectId),
-      numberMinutesSinceCreation = Some(MinutesUntilInactive),
-      limit = 1,
-      orderBy = OrderBy("-events.created_at")
-    ).headOption match {
-      case None => {
-        false
-      }
-      case Some(event) => {
-        event.summary != SuccessfulCompletionMessage
-      }
-    }
   }
 
   /**

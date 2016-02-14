@@ -12,6 +12,7 @@ class Healthchecks extends Controller {
   private val HealthyJson = Json.toJson(Healthcheck(status = "healthy"))
 
   def getHealthcheck() = Action { request =>
+    io.flow.delta.actors.MainActor.ref // wake up actor
     Ok(HealthyJson)
   }
 
