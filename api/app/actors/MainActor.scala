@@ -35,6 +35,8 @@ object MainActor {
     case class UserCreated(id: String)
 
     case class ImageCreated(id: String)
+
+    case class BuildDockerImage(projectId: String, name: String, version: String)
   }
 }
 
@@ -114,15 +116,20 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
     }
 
+    case msg @ MainActor.Messages.BuildDockerImage(projectId, name, version) => withVerboseErrorHandler(msg) {
+      // TODO - name: 'flowcommerce/splashpage', version: '0.0.1'
+      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
+    }
+
     case msg: Any => logUnhandledMessage(msg)
 
   }
 
-  def upsertDockerHubActor(id: String): ActorRef = {
-    dockerHubActors.lift(id).getOrElse {
-      val ref = Akka.system.actorOf(Props[DockerHubActor], name = s"$name:dockerHubActor:$id")
-      ref ! DockerHubActor.Messages.Data(id)
-      dockerHubActors += (id -> ref)
+  def upsertDockerHubActor(projectId: String): ActorRef = {
+    dockerHubActors.lift(projectId).getOrElse {
+      val ref = Akka.system.actorOf(Props[DockerHubActor], name = s"$name:dockerHubActor:$projectId")
+      ref ! DockerHubActor.Messages.Data(projectId)
+      dockerHubActors += (projectId -> ref)
       ref
     }
   }

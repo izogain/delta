@@ -23,7 +23,8 @@ object SupervisorActor {
   val All = Seq(
     functions.SyncMasterSha,
     functions.TagMaster,
-    functions.SetExpectedState
+    functions.SetExpectedState,
+    functions.BuildDockerImage
   )
 
 }
@@ -75,7 +76,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
               // TODO: Remove the await
               Await.result(
                 f.run(project),
-                Duration(5, "seconds")
+                Duration(10, "minutes")
               )
             ) match {
               case Success(result) => {
