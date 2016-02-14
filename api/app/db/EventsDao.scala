@@ -68,10 +68,15 @@ object EventsDao {
     findAll(ids = Some(Seq(id)), limit = 1).headOption
   }
 
+  /**
+   * @param numberMinutesSinceCreation If specified, we filter to events.created_at >= now() - interval 'x minutes'.
+    *       This can be used to find recent events (say events created in past 5 minutes)
+   */
   def findAll(
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     `type`: Option[EventType] = None,
+    numberMinutesSinceCreation: Option[Long] = None,
     orderBy: OrderBy = OrderBy("-events.created_at, events.id"),
     limit: Long = 25,
     offset: Long = 0
@@ -81,6 +86,9 @@ object EventsDao {
         optionalIn(s"events.id", ids).
         equals(s"events.project_id", projectId).
         equals(s"events.type", `type`.map(_.toString)).
+        and(numberMinutesSinceCreation.map { minutes =>
+          s"events.created_at >= now() - interval '$minutes minutes'"
+        }).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).
