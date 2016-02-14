@@ -59,40 +59,10 @@ case class BuildDockerImage(project: Project) extends Github with EventLog {
           }
           case None => {
             MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, tag.name)
-            waitFor(
-              check = {
-                log.checkpoint(s"Checking if docker image '${repo}:${tag.name}' is ready")
-                !ImagesDao.findByProjectIdAndVersion(project.id, tag.name).isEmpty
-              },
-              intervalSeconds = 30
-            ) match {
-              case Left(ex) => {
-                SupervisorResult.Error(s"Error building image ${repo}:${tag.name}", ex)
-              }
-              case Right(_) => {
-                SupervisorResult.Change(s"Built docker image ${repo}:${tag.name}")
-              }
-            }
+            SupervisorResult.Change(s"Started build of docker image ${repo}:${tag.name}")
           }
         }
       }
-    }
-  }
-
-  private[this] def waitFor(
-    check: => Boolean,
-    intervalSeconds: Int
-  ): Either[Throwable, Unit] = {
-    val startTimeMs = System.currentTimeMillis
-
-    Try {
-      while (!check) {
-        val durationSeconds = (System.currentTimeMillis - startTimeMs) / 1000
-        Thread.sleep(intervalSeconds * 1000)
-      }
-    } match {
-      case Success(_) => Right(())
-      case Failure(ex) => Left(ex)
     }
   }
 

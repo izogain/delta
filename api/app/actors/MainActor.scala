@@ -118,8 +118,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.BuildDockerImage(projectId, version) => withVerboseErrorHandler(msg) {
-      // TODO - name: 'flowcommerce/splashpage', version: '0.0.1'
-      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
+      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.Build(version)
     }
 
     case msg: Any => logUnhandledMessage(msg)
