@@ -24,7 +24,7 @@ object TagsDao {
            tags.name,
            tags.hash,
            projects.id as project_id,
-           projects.id as project_name,
+           projects.name as project_name,
            projects.uri as project_uri,
            projects.organization_id as project_organization_id
       from tags

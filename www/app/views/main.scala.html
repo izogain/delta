@@ -28,7 +28,7 @@
           <ul class="nav nav-sidebar">
             <li><a@if(data.section == Some(io.flow.delta.www.lib.Section.Dashboard)) { class="active" } href="@routes.ApplicationController.index()">Dashboard</a></li>
             <li><a@if(data.section == Some(io.flow.delta.www.lib.Section.Projects)) { class="active" } href="@routes.ProjectsController.index()">Projects</a></li>
-            <li><a@if(data.section == Some(io.flow.delta.www.lib.Section.Events)) { class="active" } href="@routes.EventsController.index()">Events</a></li>
+            <li><a@if(data.section == Some(io.flow.delta.www.lib.Section.Events)) { class="active" } href="@routes.EventsController.index()">Event Log</a></li>
             <li><a@if(data.section == Some(io.flow.delta.www.lib.Section.Subscriptions)) { class="active" } href="@routes.SubscriptionsController.index()">Subscriptions</a></li>
           </ul>
         </div>
