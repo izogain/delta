@@ -75,6 +75,10 @@ class DeployImageActor extends Actor with Util with DataProject with EventLog {
     EC2ContainerService.scaleUp(image.id, image.version, image.project.name)
   }
 
+  // For registerTaskDefinition, createService, monitorScaleUp:
+  // image.id (example: "flowcommerce/user")
+  // image.version (example: "0.0.12")
+  // image.project.name (example: "user")
   def registerTaskDefinition(image: Image): String = {
     log.started(s"Registering task definition: [${image.id}]")
     val taskDefinition = EC2ContainerService.registerTaskDefinition(image.id, image.version, image.project.name)
