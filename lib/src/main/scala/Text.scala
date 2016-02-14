@@ -3,7 +3,14 @@ package io.flow.delta.lib
 // From https://github.com/mbryzek/apidoc/blob/6186612993a0c913cfd0b7a36417bda45281825e/lib/src/main/scala/Text.scala
 object Text {
 
-  private val Ellipsis = "..."
+  private[this] val Ellipsis = "..."
+
+  def pluralize(num: Long, singular: String, plural: String) = {
+    num match {
+      case 1 => s"1 $singular"
+      case _ => s"$num $plural"
+    }
+  }
 
   /**
    * if value is longer than maxLength characters, it wil be truncated
