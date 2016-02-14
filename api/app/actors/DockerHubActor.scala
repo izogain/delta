@@ -90,11 +90,11 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
 
   def syncImages(project: Project, repo: Repo) {
-    println("syncImages(${project.id})")
+    println(s"syncImages(${project.id})")
     for {
       tags <- client.tags.get(repo.owner, repo.project)
     } yield {
-      println(" - tags: " + tags)
+      println(" - docker hub image tags: " + tags)
       tags.foreach { tag =>
         Try(
           syncImageIfNotExists(project.id, repo, tag.name)
