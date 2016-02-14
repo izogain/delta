@@ -78,7 +78,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
            limit = 5,
            orderBy = OrderBy("-tags.created_at")
          ).foreach { tag =>
-           syncImageIfNotExists(project.id, repo, tag.name)
+           ImagesDao.findByProjectIdAndVersion(project.id, tag.name) match {
+             case None => {
+               log.checkpoint(s"Docker hub image $repo/${tag.name} not found in local DB. Building")
+               sender ! MainActor.Messages.BuildDockerImage(project.id, tag.name)
+             }
+             case Some(_) => {
+               // No-op
+             }
+           }
          }
 
        }
