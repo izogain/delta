@@ -58,7 +58,7 @@ case class BuildDockerImage(project: Project) extends Github with EventLog {
             SupervisorResult.NoChange(s"Image ${repo}:${tag.name} already exist")
           }
           case None => {
-            MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, repo.toString, tag.name)
+            MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, tag.name)
             waitFor(
               check = {
                 log.checkpoint(s"Checking if docker image '${repo}:${tag.name}' is ready")
