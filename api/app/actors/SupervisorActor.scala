@@ -52,11 +52,16 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       withProject { project =>
 
-        if (!isActive(project.id)){
-          val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-          log.started("PursueExpectedState")
-          run(project, settings, SupervisorActor.All)
-          log.message(SuccessfulCompletionMessage)
+        isActive(project.id) match {
+          case false => {
+            Logger.info(s"SupervisorActor: Project[${project.id}] is already active")
+          }
+          case true => {
+            val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
+            log.started("PursueExpectedState")
+            run(project, settings, SupervisorActor.All)
+            log.message(SuccessfulCompletionMessage)
+          }
         }
       }
     }
