@@ -64,10 +64,10 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
         SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
-        log.started(format(f))
         f.isEnabled(settings) match {
           case false => {
-            log.completed(format(f, "This function is disabled in the project settings. Stopping"))
+            log.skipped(format(f, "is disabled in the project settings"))
+            run(project, settings, functions.drop(1))
           }
           case true => {
             log.started(format(f))
