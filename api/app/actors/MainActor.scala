@@ -38,7 +38,7 @@ object MainActor {
 
     case class UserCreated(id: String)
 
-    case class ImageCreated(id: String)
+    case class ImageCreated(projectId: String, id: String)
 
   }
 }
@@ -116,7 +116,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
-    case msg @ MainActor.Messages.ImageCreated(projectId) => withVerboseErrorHandler(msg) {
+    case msg @ MainActor.Messages.ImageCreated(projectId, id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 

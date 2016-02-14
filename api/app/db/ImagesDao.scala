@@ -65,7 +65,7 @@ object ImagesDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ImageCreated(id)
+        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, id)
 
         Right(
           findById(id).getOrElse {
