@@ -64,4 +64,13 @@ class EventsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     EventsDao.findAll(projectId = Some(createTestKey())) must be(Nil)
   }
 
+  "findAll by numberMinutesSinceCreation" in {
+    val event = createEvent()
+
+    EventsDao.findAll(ids = Some(Seq(event.id)), numberMinutesSinceCreation = Some(10)).map(_.id) must be(Seq(event.id))
+
+    DirectDbAccess.setCreatedAt("events", event.id, -15)
+    EventsDao.findAll(ids = Some(Seq(event.id)), numberMinutesSinceCreation = Some(10)) must be(Nil)
+  }
+
 }

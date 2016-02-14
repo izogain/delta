@@ -34,6 +34,11 @@ case class EventLog(
     EventsDao.create(user, project.id, EventType.Info, s"skipped $message", ex = None)
   }
 
+  def message(message: String) = {
+    println(format(message))
+    EventsDao.create(user, project.id, EventType.Info, message, ex = None)
+  }
+
   /**
     * Indicates a start event. Should be followed by a completed event
     * when the function is complete.

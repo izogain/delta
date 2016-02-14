@@ -10,6 +10,7 @@ import akka.actor.Actor
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import play.api.Play.current
 import scala.util.{Failure, Success, Try}
 
@@ -22,6 +23,7 @@ object DockerHubActor {
   object Messages {
     case class Data(projectId: String) extends Message
     case object SyncImages extends Message
+    case class Build(version: String) extends Message
   }
 
 }
@@ -31,6 +33,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
   private[this] val client = new Client
+  private[this] val IntervalSeconds = 30
 
   override val logPrefix = "DockerHubActor"
 
@@ -40,22 +43,30 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       setDataProject(projectId)
     }
 
+    case m @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(m.toString) {
+      withProject { project =>
+        withRepo { repo =>
+          syncImages(project, repo)
+
+          ImagesDao.findByProjectIdAndVersion(project.id, version) match {
+            case Some(_) => {
+              log.checkpoint(s"Docker hub image $repo:$version is ready")
+            }
+            case None => {
+              log.checkpoint(s"Docker hub image $repo:$version is not ready. Will check again in $IntervalSeconds seconds")
+              Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
+                self ! DockerHubActor.Messages.Build(version)
+              }
+            }
+          }
+        }
+      }
+    }
+
    case m @ DockerHubActor.Messages.SyncImages => withVerboseErrorHandler(m) {
      withProject { project =>
        withRepo { repo =>
-         for {
-           tags <- client.tags.get(repo.owner, repo.project)
-         } yield {
-           tags.foreach { tag =>
-             Try(createImage(project.id, repo, tag)) match {
-               case Success(_) => // No-op
-               case Failure(ex) => {
-                 ex.printStackTrace(System.err)
-                 println("ERROR syncing docker image: " + ex)
-               }
-             }
-           }
-         }
+         syncImages(project, repo)
        }
      }
    }
@@ -64,6 +75,22 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
  }
 
 
+  def syncImages(project: Project, repo: Repo) {
+    for {
+      tags <- client.tags.get(repo.owner, repo.project)
+    } yield {
+      tags.foreach { tag =>
+        Try(createImage(project.id, repo, tag)) match {
+          case Success(_) => // No-op
+          case Failure(ex) => {
+            println("ERROR syncing docker image: " + ex)
+            ex.printStackTrace(System.err)
+          }
+        }
+      }
+    }
+  }
+  
  def createImageForm(projectId: String, repo: Repo, tag: Tag): ImageForm = {
    ImageForm(
      projectId,
