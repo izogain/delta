@@ -616,16 +616,24 @@ package io.flow.delta.v0.anorm.parsers {
   object Settings {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      autoTag = s"$prefix${sep}auto_tag"
+      syncMasterSha = s"$prefix${sep}sync_master_sha",
+      tagMaster = s"$prefix${sep}tag_master",
+      setExpectedState = s"$prefix${sep}set_expected_state"
     )
 
     def parser(
-      autoTag: String = "auto_tag"
+      syncMasterSha: String = "sync_master_sha",
+      tagMaster: String = "tag_master",
+      setExpectedState: String = "set_expected_state"
     ): RowParser[io.flow.delta.v0.models.Settings] = {
-      SqlParser.bool(autoTag) map {
-        case autoTag => {
+      SqlParser.bool(syncMasterSha) ~
+      SqlParser.bool(tagMaster) ~
+      SqlParser.bool(setExpectedState) map {
+        case syncMasterSha ~ tagMaster ~ setExpectedState => {
           io.flow.delta.v0.models.Settings(
-            autoTag = autoTag
+            syncMasterSha = syncMasterSha,
+            tagMaster = tagMaster,
+            setExpectedState = setExpectedState
           )
         }
       }
@@ -636,16 +644,24 @@ package io.flow.delta.v0.anorm.parsers {
   object SettingsForm {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      autoTag = s"$prefix${sep}auto_tag"
+      syncMasterSha = s"$prefix${sep}sync_master_sha",
+      tagMaster = s"$prefix${sep}tag_master",
+      setExpectedState = s"$prefix${sep}set_expected_state"
     )
 
     def parser(
-      autoTag: String = "auto_tag"
+      syncMasterSha: String = "sync_master_sha",
+      tagMaster: String = "tag_master",
+      setExpectedState: String = "set_expected_state"
     ): RowParser[io.flow.delta.v0.models.SettingsForm] = {
-      SqlParser.bool(autoTag).? map {
-        case autoTag => {
+      SqlParser.bool(syncMasterSha).? ~
+      SqlParser.bool(tagMaster).? ~
+      SqlParser.bool(setExpectedState).? map {
+        case syncMasterSha ~ tagMaster ~ setExpectedState => {
           io.flow.delta.v0.models.SettingsForm(
-            autoTag = autoTag
+            syncMasterSha = syncMasterSha,
+            tagMaster = tagMaster,
+            setExpectedState = setExpectedState
           )
         }
       }

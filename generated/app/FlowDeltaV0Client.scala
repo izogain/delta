@@ -143,11 +143,15 @@ package io.flow.delta.v0.models {
    * Project level settings / configuration
    */
   case class Settings(
-    autoTag: Boolean = true
+    syncMasterSha: Boolean = true,
+    tagMaster: Boolean = true,
+    setExpectedState: Boolean = true
   )
 
   case class SettingsForm(
-    autoTag: _root_.scala.Option[Boolean] = None
+    syncMasterSha: _root_.scala.Option[Boolean] = None,
+    tagMaster: _root_.scala.Option[Boolean] = None,
+    setExpectedState: _root_.scala.Option[Boolean] = None
   )
 
   case class Sha(
@@ -1057,12 +1061,18 @@ package io.flow.delta.v0.models {
     }
 
     implicit def jsonReadsDeltaSettings: play.api.libs.json.Reads[Settings] = {
-      (__ \ "auto_tag").read[Boolean].map { x => new Settings(autoTag = x) }
+      (
+        (__ \ "sync_master_sha").read[Boolean] and
+        (__ \ "tag_master").read[Boolean] and
+        (__ \ "set_expected_state").read[Boolean]
+      )(Settings.apply _)
     }
 
     def jsObjectSettings(obj: io.flow.delta.v0.models.Settings) = {
       play.api.libs.json.Json.obj(
-        "auto_tag" -> play.api.libs.json.JsBoolean(obj.autoTag)
+        "sync_master_sha" -> play.api.libs.json.JsBoolean(obj.syncMasterSha),
+        "tag_master" -> play.api.libs.json.JsBoolean(obj.tagMaster),
+        "set_expected_state" -> play.api.libs.json.JsBoolean(obj.setExpectedState)
       )
     }
 
@@ -1075,13 +1085,25 @@ package io.flow.delta.v0.models {
     }
 
     implicit def jsonReadsDeltaSettingsForm: play.api.libs.json.Reads[SettingsForm] = {
-      (__ \ "auto_tag").readNullable[Boolean].map { x => new SettingsForm(autoTag = x) }
+      (
+        (__ \ "sync_master_sha").readNullable[Boolean] and
+        (__ \ "tag_master").readNullable[Boolean] and
+        (__ \ "set_expected_state").readNullable[Boolean]
+      )(SettingsForm.apply _)
     }
 
     def jsObjectSettingsForm(obj: io.flow.delta.v0.models.SettingsForm) = {
-      (obj.autoTag match {
+      (obj.syncMasterSha match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("auto_tag" -> play.api.libs.json.JsBoolean(x))
+        case Some(x) => play.api.libs.json.Json.obj("sync_master_sha" -> play.api.libs.json.JsBoolean(x))
+      }) ++
+      (obj.tagMaster match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("tag_master" -> play.api.libs.json.JsBoolean(x))
+      }) ++
+      (obj.setExpectedState match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("set_expected_state" -> play.api.libs.json.JsBoolean(x))
       })
     }
 

@@ -51,10 +51,12 @@
       }
     </li>
     <li> <a href="@routes.EventsController.index(project_id = Some(project.id))">View all events for this project</a></li>
-    <li>Auto tag: @{settings.autoTag match {
-      case true => "Enabled"
-      case false => "Disabled"
-      }} (<a href="@routes.ProjectsController.postSettingsAutoTag(project.id)" class="postForm">toggle</a>)
+    <li> Settings:
+      <ul>
+        <li> @setting(project.id, "syncMasterSha", settings.syncMasterSha)</li>
+        <li> @setting(project.id, "tagMaster", settings.tagMaster)</li>
+        <li> @setting(project.id, "setExpectedState", settings.setExpectedState)</li>
+      </ul>
     </li>
   </ul>
 

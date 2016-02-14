@@ -95,10 +95,10 @@ case class TagMaster(project: Project) extends Github {
   ): Future[SupervisorResult] = {
     assert(Semver.isSemver(name), s"Tag[$name] must be in semver format")
 
-    SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id).autoTag match {
+    SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id).tagMaster match {
       case false => {
         Future {
-          SupervisorResult.NoChange(s"Project autoTag setting is disabled - no tag was created. Note that master '$sha' is ahead of latest tag")
+          SupervisorResult.NoChange(s"Project setting tagMaster is disabled - no tag was created. Note that master '$sha' is ahead of latest tag")
         }
       }
 

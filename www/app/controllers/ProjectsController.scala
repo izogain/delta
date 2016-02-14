@@ -261,15 +261,36 @@ class ProjectsController @javax.inject.Inject() (
   }
 
   /**
-   * Toggle the autoTag setting
+   * Toggle the setting w/ the given name
    */
-  def postSettingsAutoTag(id: String) = Identified.async { implicit request =>
+  def postSettingsToggle(id: String, name: String) = Identified.async { implicit request =>
     deltaClient(request).projects.getSettingsById(id).flatMap { settings =>
-      deltaClient(request).projects.putSettingsById(
-        id,
-        SettingsForm(autoTag = Some(!settings.autoTag))
-      ).map { _ =>
-        Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Auto tag updated")
+      val form = name match {
+        case "syncMasterSha" => {
+          Some(SettingsForm(syncMasterSha = Some(!settings.syncMasterSha)))
+        }
+        case "tagMaster" => {
+          Some(SettingsForm(tagMaster = Some(!settings.tagMaster)))
+        }
+        case "setExpectedState" => {
+          Some(SettingsForm(setExpectedState = Some(!settings.setExpectedState)))
+        }
+        case other => {
+          None
+        }
+      }
+
+      form match {
+        case None => {
+          Future {
+            Redirect(routes.ProjectsController.show(id)).flashing("warning" -> s"Unknown setting")
+          }
+        }
+        case Some(f) => {
+          deltaClient(request).projects.putSettingsById(id, f).map { _ =>
+            Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Settings updated")
+          }
+        }
       }
     }
   }
