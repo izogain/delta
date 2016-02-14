@@ -18,6 +18,8 @@ class EventsController @javax.inject.Inject() (
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  private[this] val Limit = 100
+
   override def section = Some(io.flow.delta.www.lib.Section.Events)
 
   def index(
@@ -29,8 +31,8 @@ class EventsController @javax.inject.Inject() (
       events <- deltaClient(request).events.get(
         projectId = projectId,
         `type` = `type`,
-        limit = Pagination.DefaultLimit+1,
-        offset = page * Pagination.DefaultLimit
+        limit = Limit+1,
+        offset = page * Limit
       )
     } yield {
       val title = projectId match {
@@ -43,7 +45,7 @@ class EventsController @javax.inject.Inject() (
           uiData(request).copy(title = Some(title)),
           projectId,
           `type`,
-          PaginatedCollection(page, events)
+          PaginatedCollection(page, events, Limit)
         )
       )
     }

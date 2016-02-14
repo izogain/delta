@@ -127,13 +127,17 @@
     "settings": {
       "description": "Project level settings / configuration",
       "fields": [
-	{ "name": "auto_tag", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" }
+	{ "name": "sync_master_sha", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
+	{ "name": "tag_master", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
+	{ "name": "set_expected_state", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" }
       ]
     },
     
     "settings_form": {
       "fields": [
-	{ "name": "auto_tag", "type": "boolean", "required": false }
+	{ "name": "sync_master_sha", "type": "boolean", "required": false },
+	{ "name": "tag_master", "type": "boolean", "required": false },
+	{ "name": "set_expected_state", "type": "boolean", "required": false }
       ]
     },
 

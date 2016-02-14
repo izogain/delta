@@ -1,8 +1,10 @@
 package io.flow.delta.actors
 
+import db.SettingsDao
 import akka.actor.Actor
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.{Project, Settings}
 import io.flow.play.actors.Util
+import io.flow.postgresql.Authorization
 import play.api.Logger
 import play.libs.Akka
 import scala.concurrent.Await
@@ -40,8 +42,10 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
       withProject { project =>
+        val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
+
         log.run("PursueExpectedState") {
-          run(project, SupervisorActor.All)
+          run(project, settings, SupervisorActor.All)
         }
       }
     }
@@ -54,37 +58,45 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Unchanged at the end of all the functions.
     */
-  private[this] def run(project: Project, functions: Seq[SupervisorFunction]) {
+  private[this] def run(project: Project, settings: Settings, functions: Seq[SupervisorFunction]) {
     functions.headOption match {
       case None => {
         SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
-        log.started(format(f))
-        Try(
-          // TODO: Remove the await
-          Await.result(
-            f.run(project),
-            Duration(5, "seconds")
-          )
-        ) match {
-          case Success(result) => {
-            result match {
-              case SupervisorResult.Change(desc) => {
-                log.changed(format(f, desc))
+        f.isEnabled(settings) match {
+          case false => {
+            log.skipped(format(f, "is disabled in the project settings"))
+            run(project, settings, functions.drop(1))
+          }
+          case true => {
+            log.started(format(f))
+            Try(
+              // TODO: Remove the await
+              Await.result(
+                f.run(project),
+                Duration(5, "seconds")
+              )
+            ) match {
+              case Success(result) => {
+                result match {
+                  case SupervisorResult.Change(desc) => {
+                    log.changed(format(f, desc))
+                  }
+                  case SupervisorResult.NoChange(desc)=> {
+                    log.completed(format(f, desc))
+                    run(project, settings, functions.drop(1))
+                  }
+                  case SupervisorResult.Error(desc, ex)=> {
+                    log.completed(format(f, desc), Some(ex))
+                  }
+                }
               }
-              case SupervisorResult.NoChange(desc)=> {
-                log.completed(format(f, desc))
-                run(project, functions.drop(1))
-              }
-              case SupervisorResult.Error(desc, ex)=> {
-                log.completed(format(f, desc), Some(ex))
+
+              case Failure(ex) => {
+                log.completed(format(f, ex.getMessage), Some(ex))
               }
             }
-          }
-
-          case Failure(ex) => {
-            log.completed(format(f, ex.getMessage), Some(ex))
           }
         }
       }

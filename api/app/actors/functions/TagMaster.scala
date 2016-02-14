@@ -6,7 +6,7 @@ import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.GithubUtil
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.{Project, Settings}
 import org.joda.time.DateTime
 import play.api.Logger
 import play.libs.Akka
@@ -28,6 +28,8 @@ object TagMaster extends SupervisorFunction {
   ): Future[SupervisorResult] = {
     TagMaster(project).run
   }
+
+  override def isEnabled(settings: Settings) = settings.tagMaster
 
 }
 
@@ -95,44 +97,34 @@ case class TagMaster(project: Project) extends Github {
   ): Future[SupervisorResult] = {
     assert(Semver.isSemver(name), s"Tag[$name] must be in semver format")
 
-    SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id).autoTag match {
-      case false => {
-        Future {
-          SupervisorResult.NoChange(s"Project autoTag setting is disabled - no tag was created. Note that master '$sha' is ahead of latest tag")
-        }
-      }
-
-      case true => {
-        withGithubClient(project.user.id) { client =>
-          client.tags.postGitAndTags(
-            repo.owner,
-            repo.project,
-            TagForm(
-              tag = name,
-              message = s"Delta automated tag $name",
-              `object` = sha,
-              tagger = Tagger(
-                name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
-                email = Email.fromEmail,
-                date = new DateTime()
-              )
-            )
-          ).flatMap { githubTag =>
-            client.refs.post(
-              repo.owner,
-              repo.project,
-              RefForm(
-                ref = s"refs/tags/$name",
-                sha = sha
-              )
-            ).map { githubRef =>
-              TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
-              SupervisorResult.Change(s"Created tag $name for sha[$sha]")
-            }.recover {
-              case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
-                SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
-              }
-            }
+    withGithubClient(project.user.id) { client =>
+      client.tags.postGitAndTags(
+        repo.owner,
+        repo.project,
+        TagForm(
+          tag = name,
+          message = s"Delta automated tag $name",
+          `object` = sha,
+          tagger = Tagger(
+            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
+            email = Email.fromEmail,
+            date = new DateTime()
+          )
+        )
+      ).flatMap { githubTag =>
+        client.refs.post(
+          repo.owner,
+          repo.project,
+          RefForm(
+            ref = s"refs/tags/$name",
+            sha = sha
+          )
+        ).map { githubRef =>
+          TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
+          SupervisorResult.Change(s"Created tag $name for sha[$sha]")
+        }.recover {
+          case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
+            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
           }
         }
       }

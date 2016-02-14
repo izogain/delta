@@ -19,25 +19,45 @@ class SettingsSpec extends PlaySpecification with MockClient {
       client.projects.getSettingsById(project.id)
     )
 
-    settings.autoTag must beEqualTo(true)
+    settings.syncMasterSha must beEqualTo(true)
+    settings.tagMaster must beEqualTo(true)
+    settings.setExpectedState must beEqualTo(true)
   }
 
   "PUT /projects/:id/settings for a new project" in new WithServer(port=port) {
     val project = createProject(org)
 
     val settings = await(
-      client.projects.putSettingsById(project.id, SettingsForm(autoTag = Some(false)))
+      client.projects.putSettingsById(project.id, SettingsForm(
+        syncMasterSha = Some(false),
+        tagMaster = Some(false),
+        setExpectedState = Some(false)
+      ))
     )
-    settings.autoTag must beEqualTo(false)
+    settings.syncMasterSha must beEqualTo(false)
+    settings.tagMaster must beEqualTo(false)
+    settings.setExpectedState must beEqualTo(false)
 
     val settings2 = await(
-      client.projects.putSettingsById(project.id, SettingsForm(autoTag = None))
+      client.projects.putSettingsById(project.id, SettingsForm(
+        syncMasterSha = None,
+        tagMaster = None,
+        setExpectedState = None
+      ))
     )
-    settings2.autoTag must beEqualTo(false)
+    settings2.syncMasterSha must beEqualTo(false)
+    settings2.tagMaster must beEqualTo(false)
+    settings2.setExpectedState must beEqualTo(false)
 
     val settings3 = await(
-      client.projects.putSettingsById(project.id, SettingsForm(autoTag = Some(true)))
+      client.projects.putSettingsById(project.id, SettingsForm(
+        syncMasterSha = Some(true),
+        tagMaster = Some(true),
+        setExpectedState = Some(true)
+      ))
     )
-    settings3.autoTag must beEqualTo(true)
+    settings3.syncMasterSha must beEqualTo(true)
+    settings3.tagMaster must beEqualTo(true)
+    settings3.setExpectedState must beEqualTo(true)
   }
 }
