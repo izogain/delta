@@ -1,7 +1,7 @@
 package controllers
 
 import db.EventsDao
-import io.flow.delta.v0.models.Event
+import io.flow.delta.v0.models.{Event, EventType}
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
@@ -17,6 +17,7 @@ class Events @javax.inject.Inject() (
   def get(
     id: Option[Seq[String]],
     project: Option[String],
+    `type`: Option[EventType],
     limit: Long,
     offset: Long,
     sort: String
@@ -27,6 +28,7 @@ class Events @javax.inject.Inject() (
           EventsDao.findAll(
             ids = optionals(id),
             projectId = project,
+            `type` = `type`,
             limit = limit,
             offset = offset,
             orderBy = orderBy

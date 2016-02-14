@@ -37,36 +37,14 @@
         @latestTag.get.name [@latestTag.get.hash]
       }
     </li>
+    <li> <a href="@routes.EventsController.index(project_id = Some(project.id))">View all events for this project</a></li>
   </ul>
 
-  <h3>Events</h3>
+  <h3>Changes</h3>
   @if(events.isEmpty) {
-    <em>No events</em>
+    <em>No changes</em>
   } else {
-    <div class="table-responsive">
-      <table class="table">
-	<thead>
-	  <tr>
-	    <th>Timestamp (EST)</th>
-	    <th>Description</th>
-	    <th>Error</th>
-	  </tr>
-	</thead>
-        @events.items.map { e =>
-          <tr>
-            <td>@io.flow.delta.www.lib.DateHelper.consoleLongDateTime(e.createdAt)</td>
-            <td>@e.action.toString @e.summary</td>
-            <td>
-              @if(e.error.isEmpty) {
-                -
-              } else {
-                <div>@io.flow.delta.lib.Text.truncate(e.error.get)</div>
-              }
-            </td>
-          </tr>
-        }
-      </table>
-    </div>
+    @views.html.events.eventsTable(events)
 
     @if(events.hasPrevious || events.hasNext) {
       <ul class="pager">

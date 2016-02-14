@@ -1,0 +1,26 @@
+@(
+  events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
+)(implicit flash: Flash, messages: Messages)
+
+<div class="table-responsive">
+  <table class="table">
+	<thead>
+	  <tr>
+	    <th>Timestamp (EST)</th>
+	    <th colspan="2">Description</th>
+	  </tr>
+	</thead>
+    @events.items.map { e =>
+      <tr>
+        <td>@io.flow.delta.www.lib.DateHelper.consoleLongDateTime(e.createdAt)</td>
+        <td>@e.summary</td>
+        <td>
+          @if(!e.error.isEmpty) {
+            <div>@io.flow.delta.lib.Text.truncate(e.error.get)</div>
+          }
+        </td>
+      </tr>
+    }
+  </table>
+</div>
+

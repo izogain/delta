@@ -70,20 +70,20 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
           case Success(result) => {
             result match {
               case SupervisorResult.Change(desc) => {
-                log.completed(format(f, desc))
+                log.changed(format(f, desc))
               }
               case SupervisorResult.NoChange(desc)=> {
-                log.completed(format(f, s"No change: $desc"))
+                log.completed(format(f, desc))
                 run(project, functions.drop(1))
               }
               case SupervisorResult.Error(desc, ex)=> {
-                log.completed(format(f, s"Error: $desc"), Some(ex))
+                log.completed(format(f, desc), Some(ex))
               }
             }
           }
 
           case Failure(ex) => {
-            log.completed(format(f, s"Unhandled Exception ${ex.getMessage}"), Some(ex))
+            log.completed(format(f, ex.getMessage), Some(ex))
           }
         }
       }

@@ -42,11 +42,10 @@
       ]
     },
 
-    "event_action": {
+    "event_type": {
       "values": [
-	{ "name": "started" },
-	{ "name": "checkpoint" },
-	{ "name": "completed" }
+	{ "name": "change", "description": "Indicates this event actually reported a successful change was completed in the project" },
+	{ "name": "info", "description": "Indicates this was an informational event only" }
       ]
     }
 
@@ -308,7 +307,7 @@
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "created_at", "type": "date-time-iso8601" },
-        { "name": "action", "type": "event_action" },
+        { "name": "type", "type": "event_type" },
         { "name": "summary", "type": "string" },
         { "name": "error", "type": "string", "required": false }
       ]
@@ -941,6 +940,7 @@
           "parameters": [
 	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
             { "name": "project_id", "type": "string", "description": "Find events for this project.", "required": false },
+            { "name": "type", "type": "event_type", "required": false },
             { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
             { "name": "sort", "type": "string", "default": "-events.created_at" }

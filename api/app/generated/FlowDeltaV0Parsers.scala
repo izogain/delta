@@ -9,13 +9,13 @@ package io.flow.delta.v0.anorm.parsers {
 
   import io.flow.delta.v0.anorm.conversions.Json._
 
-  object EventAction {
+  object EventType {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
 
-    def parser(name: String = "event_action"): RowParser[io.flow.delta.v0.models.EventAction] = {
+    def parser(name: String = "event_type"): RowParser[io.flow.delta.v0.models.EventType] = {
       SqlParser.str(name) map {
-        case value => io.flow.delta.v0.models.EventAction(value)
+        case value => io.flow.delta.v0.models.EventType(value)
       }
     }
 
@@ -74,7 +74,7 @@ package io.flow.delta.v0.anorm.parsers {
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       id = s"$prefix${sep}id",
       createdAt = s"$prefix${sep}created_at",
-      action = s"$prefix${sep}action",
+      `type` = s"$prefix${sep}type",
       summary = s"$prefix${sep}summary",
       error = s"$prefix${sep}error"
     )
@@ -82,20 +82,20 @@ package io.flow.delta.v0.anorm.parsers {
     def parser(
       id: String = "id",
       createdAt: String = "created_at",
-      action: String = "action",
+      `type`: String = "type",
       summary: String = "summary",
       error: String = "error"
     ): RowParser[io.flow.delta.v0.models.Event] = {
       SqlParser.str(id) ~
       SqlParser.get[_root_.org.joda.time.DateTime](createdAt) ~
-      io.flow.delta.v0.anorm.parsers.EventAction.parser(action) ~
+      io.flow.delta.v0.anorm.parsers.EventType.parser(`type`) ~
       SqlParser.str(summary) ~
       SqlParser.str(error).? map {
-        case id ~ createdAt ~ action ~ summary ~ error => {
+        case id ~ createdAt ~ typeInstance ~ summary ~ error => {
           io.flow.delta.v0.models.Event(
             id = id,
             createdAt = createdAt,
-            action = action,
+            `type` = typeInstance,
             summary = summary,
             error = error
           )

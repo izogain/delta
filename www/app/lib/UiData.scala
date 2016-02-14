@@ -8,6 +8,7 @@ sealed trait Section
 object Section {
   case object Dashboard extends Section
   case object Projects extends Section
+  case object Events extends Section
   case object Subscriptions extends Section
 }
 

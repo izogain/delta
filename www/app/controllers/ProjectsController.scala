@@ -1,7 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{Organization, Project, ProjectForm, Scms, SettingsForm, Visibility}
+import io.flow.delta.v0.models.{EventType, Organization, Project, ProjectForm, Scms, SettingsForm, Visibility}
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.common.v0.models.User
 import io.flow.play.clients.UserTokensClient
@@ -46,6 +46,7 @@ class ProjectsController @javax.inject.Inject() (
         settings <- deltaClient(request).projects.getSettingsById(id)
         events <- deltaClient(request).events.get(
           projectId = Some(project.id),
+          `type` = Some(EventType.Change),
           limit = Pagination.DefaultLimit+1,
           offset = eventsPage * Pagination.DefaultLimit
         )

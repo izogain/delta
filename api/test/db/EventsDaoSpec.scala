@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.EventAction
+import io.flow.delta.v0.models.EventType
 import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
@@ -14,11 +14,11 @@ class EventsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "create" in {
     val project = createProject()
-    val id = EventsDao.create(systemUser, project.id, EventAction.Started, "test", ex = None)
+    val id = EventsDao.create(systemUser, project.id, EventType.Info, "test", ex = None)
     val event = EventsDao.findById(id).getOrElse {
       sys.error("Failed to create event")
     }
-    event.action must be(EventAction.Started)
+    event.`type` must be(EventType.Info)
     event.summary must be("test")
     event.error must be(None)
   }

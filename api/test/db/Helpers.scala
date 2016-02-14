@@ -264,7 +264,7 @@ trait Helpers {
 
   def createEvent(
     project: Project = createProject(),
-    action: EventAction = EventAction.Started,
+    action: EventType = EventType.Info,
     summary: String = "test",
     ex: Option[Throwable] = None
   ): Event = {
