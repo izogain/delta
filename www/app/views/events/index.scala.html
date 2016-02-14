@@ -10,7 +10,15 @@
   @if(events.isEmpty) {
     <em>No changes</em>
   } else {
-    @eventsTable(events)
+    <code class="text-muted">
+      @events.items.map { e =>
+        @io.flow.delta.www.lib.DateHelper.consoleLongDateTime(e.createdAt) <a href="@routes.ProjectsController.show(e.project.id)">@e.project.id</a> @e.summary
+        <br/>
+        @if(!e.error.isEmpty) {
+          <p class="bg-danger">@e.error.get</p>
+        }
+      }
+    </code>
 
     @if(events.hasPrevious || events.hasNext) {
       <ul class="pager">
