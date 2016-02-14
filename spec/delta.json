@@ -836,25 +836,6 @@
       ]
     },
 
-    "image": {
-      "operations": [
-        {
-          "method": "GET",
-          "description": "Returns a list of all matching images",
-          "parameters": [
-            { "name": "name", "type": "string", "required": false, "description": "Optionally filter by repo name. Case in-sensitive. Exact match" },
-            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
-            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
-            { "name": "sort", "type": "string", "default": "lower(images.name)" }
-          ],
-          "responses": {
-            "200": { "type": "[image]" },
-            "401": { "type": "unit" }
-          }
-        }
-      ]
-    },
-
     "tag": {
       "operations": [
         {
@@ -878,6 +859,48 @@
 	  "path": "/:id",
           "responses": {
             "200": { "type": "tag" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+	},
+
+        {
+          "method": "DELETE",
+	  "path": "/:id",
+	  "responses": {
+            "204": { "type": "unit" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+
+        }
+        
+      ]
+    },
+
+    "image": {
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+	    { "name": "id", "type": "[string]", "description": "Filter by any one of these ids", "required": false },
+            { "name": "project_id", "type": "string", "description": "Find images for this project.", "required": false },
+            { "name": "name", "type": "string", "description": "Find images with this name.", "required": false, "example": "0.0.1" },
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
+            { "name": "sort", "type": "string", "default": "-images.created_at" }
+	  ],
+          "responses": {
+            "200": { "type": "[image]" },
+            "401": { "type": "unit" }
+          }
+	},
+
+	{
+	  "method": "GET",
+	  "path": "/:id",
+          "responses": {
+            "200": { "type": "image" },
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
