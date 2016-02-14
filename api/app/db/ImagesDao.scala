@@ -85,18 +85,6 @@ object ImagesDao {
     findAll(ids = Some(Seq(id)), limit = 1).headOption
   }
 
-  /**
-    * @param name: e.g. flowcommerce/user
-    * @param version: e.g. 0.0.1
-    */
-  def findByNameAndVersion(name: String, version: String): Option[Image] = {
-    findAll(
-      names = Some(Seq(name)),
-      versions = Some(Seq(version)),
-      limit = 1
-    ).headOption
-  }
-
   def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
     findAll(
       projectId = Some(projectId),

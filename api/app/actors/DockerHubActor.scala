@@ -50,8 +50,8 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
           syncImages(project, repo)
 
           ImagesDao.findByProjectIdAndVersion(project.id, version) match {
-            case Some(_) => {
-              log.checkpoint(s"Docker hub image $repo:$version is ready")
+            case Some(image) => {
+              log.checkpoint(s"Docker hub image $repo:$version is ready - image id[${image.id}]")
             }
             case None => {
               log.checkpoint(s"Docker hub image $repo:$version is not ready. Will check again in $IntervalSeconds seconds")
@@ -78,7 +78,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
            limit = 5,
            orderBy = OrderBy("-tags.created_at")
          ).foreach { tag =>
-           createImage(project.id, repo, tag.name)
+           syncImageIfNotExists(project.id, repo, tag.name)
          }
 
        }
@@ -90,11 +90,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
 
   def syncImages(project: Project, repo: Repo) {
+    println("syncImages(${project.id})")
     for {
       tags <- client.tags.get(repo.owner, repo.project)
     } yield {
+      println(" - tags: " + tags)
       tags.foreach { tag =>
-        Try(createImage(project.id, repo, tag.name)) match {
+        Try(
+          syncImageIfNotExists(project.id, repo, tag.name)
+        ) match {
           case Success(_) => // No-op
           case Failure(ex) => {
             println("ERROR syncing docker image: " + ex)
@@ -105,32 +109,30 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
   
- def createImageForm(projectId: String, repo: Repo, version: String): ImageForm = {
-   ImageForm(
-     projectId,
-     repo.toString,
-     version
-   )
- }
-
   // This method doesn't actually create the docker image - just syncs
   // an image in the database and thus will execute quickly with no
   // external dependencies. I'm not sure it's worth logging anything
   // here - but we do need to think about how to build the docker
   // image.
-  def createImage(projectId: String, repo: Repo, version: String) {
+  def syncImageIfNotExists(projectId: String, repo: Repo, version: String) {
     ImagesDao.findByProjectIdAndVersion(projectId, version) match {
-      case Some(_) => // No-op
+      case Some(_) => {
+        // Image already exists in DB - do nothing
+      }
+
       case None => {
-        log.started(s"Creating image [${repo.owner}/${repo.project}:$version] if it does not already exist.")
-        val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, version)
-        checkImageExists match {
-          case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:$version] already exists, no image created.")
+        ImagesDao.findByProjectIdAndVersion(projectId, version) match {
+          case Some(img) => {
+            // No-op
+          }
           case None => {
-            val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, version))
-            imageCreate match {
+            // TODO - should never have a failure here
+            ImagesDao.create(
+              MainActor.SystemUser,
+              ImageForm(projectId, repo.toString, version)
+            ) match {
               case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:$version].")
-              case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:$version] created.")
+              case Right(img) => log.completed(s"Synced image [${repo.owner}/${repo.project}:$version] as id ${img.id}")
             }
           }
         }
