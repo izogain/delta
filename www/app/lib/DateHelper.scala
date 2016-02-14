@@ -29,6 +29,22 @@ object DateHelper {
     }
   }
 
+  def shortDateTime(
+    dateTime: DateTime
+  ): String = shortDateTimeOption(Some(dateTime))
+
+  def shortDateTimeOption(
+    dateTime: Option[DateTime],
+    default: String = DefaultLabel
+  ): String = {
+    dateTime match {
+      case None => default
+      case Some(dt) => {
+        DateTimeFormat.forPattern("MM/dd/YY HH:mm:ss").withZone(EasternTime).print(dt)
+      }
+    }
+  }
+  
   def longDateTime(
     dateTime: DateTime
   ): String = longDateTimeOption(Some(dateTime))

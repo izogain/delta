@@ -78,7 +78,7 @@
       <table class="table">
         @changeEvents.items.map { e =>
           <tr>
-            <td>@io.flow.delta.www.lib.DateHelper.longDateTime(e.createdAt)</td>
+            <td>@io.flow.delta.www.lib.DateHelper.shortDateTime(e.createdAt)</td>
             <td>@e.summary</td>
           </tr>
           <tr>
