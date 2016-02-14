@@ -61,6 +61,7 @@ case class BuildDockerImage(project: Project) extends Github with EventLog {
             MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, repo.toString, tag.name)
             waitFor(
               check = {
+                log.checkpoint(s"Checking if docker image '${repo}:${tag.name}' is ready")
                 !ImagesDao.findByProjectIdAndVersion(project.id, tag.name).isEmpty
               },
               intervalSeconds = 3,
