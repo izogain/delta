@@ -5,7 +5,8 @@
   settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
-  events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
+  latestEvent: Option[io.flow.delta.v0.models.Event],
+  changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(project.name))) {
@@ -55,7 +56,13 @@
         }
       }
     </li>
-    <li> <a href="@routes.EventsController.index(project_id = Some(project.id))">View all events for this project</a></li>
+    <li> Latest event at: @if(latestEvent.isEmpty) {
+           -
+         } else {
+           @io.flow.delta.www.lib.DateHelper.consoleLongDateTime(latestEvent.get.createdAt)
+           <a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>
+         }
+    </li>
     <li> Settings:
       <ul>
         <li> @setting(project.id, "syncMasterSha", settings.syncMasterSha)</li>
@@ -66,18 +73,18 @@
   </ul>
 
   <h3>Changes</h3>
-  @if(events.isEmpty) {
+  @if(changeEvents.isEmpty) {
     <em>No changes</em>
   } else {
-    @views.html.events.eventsTable(events)
+    @views.html.events.eventsTable(changeEvents)
 
-    @if(events.hasPrevious || events.hasNext) {
+    @if(changeEvents.hasPrevious || changeEvents.hasNext) {
       <ul class="pager">
-        @if(events.hasPrevious) {
-          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page - 1)">Previous</a></li>
+        @if(changeEvents.hasPrevious) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = changeEvents.page - 1)">Previous</a></li>
         }
-        @if(events.hasNext) {
-          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = events.page + 1)">Next</a></li>
+        @if(changeEvents.hasNext) {
+          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = changeEvents.page + 1)">Next</a></li>
         }
       </ul>
     }

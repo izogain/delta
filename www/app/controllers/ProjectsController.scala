@@ -45,7 +45,12 @@ class ProjectsController @javax.inject.Inject() (
       for {
         settings <- deltaClient(request).projects.getSettingsById(id)
         state <- deltaClient(request).projects.getStateAndLatestById(id)
-        events <- deltaClient(request).events.get(
+        latestEvents <- deltaClient(request).events.get(
+          projectId = Some(project.id),
+          sort = "-events.created_at",
+          limit = 1
+        )
+        changeEvents <- deltaClient(request).events.get(
           projectId = Some(project.id),
           `type` = Some(EventType.Change),
           limit = Pagination.DefaultLimit+1,
@@ -70,7 +75,8 @@ class ProjectsController @javax.inject.Inject() (
             settings,
             shas.headOption.map(_.hash),
             tags.headOption,
-            PaginatedCollection(eventsPage, events)
+            latestEvents.headOption,
+            PaginatedCollection(eventsPage, changeEvents)
           )
         )
       }
