@@ -42,12 +42,17 @@
     <li>Visbility: @project.visibility.toString</li>
     <li>SCMS: @project.scms.toString</li>
     <li>URI: <a href="@project.uri">@project.uri</a></li>
-    <li>Master Sha: @masterHash.getOrElse("-")</li>
+    <li>Master: @masterHash.getOrElse("-")</li>
     <li>Latest Tag:
       @if(latestTag.isEmpty) {
         -
       } else {
-        @latestTag.get.name [@latestTag.get.hash]
+      @latestTag.get.name
+        @if(latestTag.map(_.hash) == masterHash) {
+          [master]
+        } else {
+          [@latestTag.get.hash]
+        }
       }
     </li>
     <li> <a href="@routes.EventsController.index(project_id = Some(project.id))">View all events for this project</a></li>
