@@ -10,6 +10,7 @@ package io.flow.delta.v0.models {
   case class Event(
     id: String,
     createdAt: _root_.org.joda.time.DateTime,
+    project: io.flow.delta.v0.models.ProjectSummary,
     `type`: io.flow.delta.v0.models.EventType,
     summary: String,
     error: _root_.scala.Option[String] = None
@@ -612,6 +613,7 @@ package io.flow.delta.v0.models {
       (
         (__ \ "id").read[String] and
         (__ \ "created_at").read[_root_.org.joda.time.DateTime] and
+        (__ \ "project").read[io.flow.delta.v0.models.ProjectSummary] and
         (__ \ "type").read[io.flow.delta.v0.models.EventType] and
         (__ \ "summary").read[String] and
         (__ \ "error").readNullable[String]
@@ -622,6 +624,7 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "created_at" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.createdAt)),
+        "project" -> jsObjectProjectSummary(obj.project),
         "type" -> play.api.libs.json.JsString(obj.`type`.toString),
         "summary" -> play.api.libs.json.JsString(obj.summary)
       ) ++ (obj.error match {

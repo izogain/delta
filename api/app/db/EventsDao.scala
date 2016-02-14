@@ -17,8 +17,13 @@ object EventsDao {
            events.created_at,
            events.type,
            events.summary,
-           events.error
+           events.error,
+           projects.id as project_id,
+           projects.name as project_name,
+           projects.uri as project_uri,
+           projects.organization_id as project_organization_id
       from events
+      join projects on events.project_id = projects.id
   """)
 
   private[this] val InsertQuery = """

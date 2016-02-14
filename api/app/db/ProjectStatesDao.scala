@@ -19,7 +19,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
            ${table}.versions,
            ${table}.timestamp,
            projects.id as project_id,
-           projects.id as project_name,
+           projects.name as project_name,
            projects.uri as project_uri,
            projects.organization_id as project_organization_id
       from $table

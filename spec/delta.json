@@ -102,7 +102,7 @@
 	{ "name": "id", "type": "string" },
 	{ "name": "organization", "type": "organization_summary" },
 	{ "name": "name", "type": "string" },
-    { "name": "uri", "type": "string" }
+        { "name": "uri", "type": "string" }
       ]
     },
 
@@ -311,6 +311,7 @@
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "created_at", "type": "date-time-iso8601" },
+        { "name": "project", "type": "project_summary" },
         { "name": "type", "type": "event_type" },
         { "name": "summary", "type": "string" },
         { "name": "error", "type": "string", "required": false }
