@@ -5,6 +5,7 @@
   settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
+  latestImage: Option[io.flow.delta.v0.models.Image],
   latestEvent: Option[io.flow.delta.v0.models.Event],
   changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
@@ -39,9 +40,13 @@
   </div>
   
   <ul>
-    <li>Visbility: @project.visibility.toString</li>
-    <li>SCMS: <a href="@project.uri">@project.uri</a></li>
-    <li>Master: @masterHash.getOrElse("-")</li>
+    <li>Latest Image:
+      @if(latestImage.isEmpty) {
+        -
+      } else {
+        @latestImage.get.name:@latestImage.get.version
+      }
+    </li>
     <li>Latest Tag:
       @if(latestTag.isEmpty) {
         -
@@ -61,6 +66,9 @@
            <a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>
          }
     </li>
+    <li> Master: @masterHash.getOrElse("-")</li>
+    <li> Visbility: @project.visibility.toString</li>
+    <li> SCMS: <a href="@project.uri">@project.uri</a></li>
     <li> Settings:
       <ul>
         <li> @setting(project.id, "syncMasterSha", settings.syncMasterSha)</li>

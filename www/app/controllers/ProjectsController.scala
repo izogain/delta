@@ -61,6 +61,11 @@ class ProjectsController @javax.inject.Inject() (
           sort = "-tags.created_at",
           limit = 1
         )
+        images <- deltaClient(request).images.get(
+          projectId = Some(id),
+          sort = "-images.created_at",
+          limit = 1
+        )
         shas <- deltaClient(request).shas.get(
           projectId = Some(id),
           branch = Some("master"),
@@ -75,6 +80,7 @@ class ProjectsController @javax.inject.Inject() (
             settings,
             shas.headOption.map(_.hash),
             tags.headOption,
+            images.headOption,
             latestEvents.headOption,
             PaginatedCollection(eventsPage, changeEvents)
           )

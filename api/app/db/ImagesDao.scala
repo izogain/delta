@@ -77,8 +77,12 @@ object ImagesDao {
     }
   }
 
+  def delete(deletedBy: User, image: Image) {
+    Delete.delete("images", deletedBy.id, image.id)
+  }
+
   def findById(id: String): Option[Image] = {
-    findAll(Some(Seq(id)), limit = 1).headOption
+    findAll(ids = Some(Seq(id)), limit = 1).headOption
   }
 
   /**
@@ -87,8 +91,8 @@ object ImagesDao {
     */
   def findByNameAndVersion(name: String, version: String): Option[Image] = {
     findAll(
-      name = Some(Seq(name)),
-      version = Some(Seq(version)),
+      names = Some(Seq(name)),
+      versions = Some(Seq(version)),
       limit = 1
     ).headOption
   }
@@ -96,26 +100,26 @@ object ImagesDao {
   def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
     findAll(
       projectId = Some(projectId),
-      version = Some(Seq(version)),
+      versions = Some(Seq(version)),
       limit = 1
     ).headOption
   }
 
   def findAll(
-   id: Option[Seq[String]] = None,
-   name: Option[Seq[String]] = None,
+   ids: Option[Seq[String]] = None,
    projectId: Option[String] = None,
-   version: Option[Seq[String]] = None,
+   names: Option[Seq[String]] = None,
+   versions: Option[Seq[String]] = None,
    orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
    limit: Long = 25,
    offset: Long = 0
   ): Seq[Image] = {
     DB.withConnection { implicit c =>
       BaseQuery.
-        optionalIn("images.id", id).
-        optionalIn("images.name", name).
+        optionalIn("images.id", ids).
+        optionalIn("images.name", names).
         equals("images.project_id", projectId).
-        optionalIn("images.version", version).
+        optionalIn("images.version", versions).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).

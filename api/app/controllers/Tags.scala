@@ -67,5 +67,4 @@ class Tags @javax.inject.Inject() (
     }
   }
 
-  
 }
