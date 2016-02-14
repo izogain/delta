@@ -1,8 +1,8 @@
 package controllers
 
-import db.{ProjectsDao, SettingsDao}
+import db.{ProjectsDao, ProjectExpectedStatesDao, ProjectActualStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.{Project, ProjectForm, SettingsForm}
+import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation
@@ -117,8 +117,23 @@ class Projects @javax.inject.Inject() (
     }
   }
 
- def getStateAndLatestById(id: String) = TODO
+  def getStateAndLatestById(id: String) = Identified { request =>
+    withProject(request.user, id) { project =>
+      Ok(
+        Json.toJson(
+          ProjectState(
+            expected = ProjectExpectedStatesDao.findByProjectId(authorization(request), id),
+            actual = ProjectActualStatesDao.findByProjectId(authorization(request), id)
+          )
+        )
+      )
+    }
+  }
+
   def getStateAndExpectedById(id: String) = TODO
+
   def postStateAndExpectedById(id: String) = TODO
+
   def getStateAndActualById(id: String) = TODO
+
 }

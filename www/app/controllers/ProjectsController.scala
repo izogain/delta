@@ -44,6 +44,7 @@ class ProjectsController @javax.inject.Inject() (
     withProject(request, id) { project =>
       for {
         settings <- deltaClient(request).projects.getSettingsById(id)
+        state <- deltaClient(request).projects.getStateAndLatestById(id)
         events <- deltaClient(request).events.get(
           projectId = Some(project.id),
           `type` = Some(EventType.Change),
@@ -65,6 +66,7 @@ class ProjectsController @javax.inject.Inject() (
           views.html.projects.show(
             uiData(request),
             project,
+            state,
             settings,
             shas.headOption.map(_.hash),
             tags.headOption,

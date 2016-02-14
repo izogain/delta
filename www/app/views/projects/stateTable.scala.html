@@ -1,0 +1,22 @@
+@(state: Option[io.flow.delta.v0.models.State])
+
+@if(state.isEmpty) {
+  -
+} else {
+  <div class="table-responsive">
+    <table class="table">
+      <tbody>
+        @state.get.versions.map { v =>
+          <tr>
+            <td>@v.name</td>
+            <td>@io.flow.delta.lib.Text.pluralize(v.instances, "instance", "instances")</td>
+          </tr>
+          }
+        <tr>
+          <td colspan="2"><em>Set at @io.flow.delta.www.lib.DateHelper.longDateTime(state.get.timestamp)</em></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+}
+

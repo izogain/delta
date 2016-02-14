@@ -1,6 +1,7 @@
 @(
   data: io.flow.delta.www.lib.UiData,
   project: io.flow.delta.v0.models.Project,
+  state: io.flow.delta.v0.models.ProjectState,
   settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
@@ -19,6 +20,24 @@
 
   </div>
 
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Current State</th>
+          <th></th>
+          <th>Target State</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>@stateTable(state.actual)</td>
+          <td>@stateTable(state.expected)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
   <ul>
     <li>Owner: <a href="@routes.OrganizationsController.show(project.organization.id)">@project.organization.id</a></li>
     <li>Visbility: @project.visibility.toString</li>
