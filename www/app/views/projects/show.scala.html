@@ -38,14 +38,9 @@
   </div>
   
   <ul>
-    <li>Owner: <a href="@routes.OrganizationsController.show(project.organization.id)">@project.organization.id</a></li>
+    <li>Organization: <a href="@routes.OrganizationsController.show(project.organization.id)">@project.organization.id</a></li>
     <li>Visbility: @project.visibility.toString</li>
     <li>SCMS: @project.scms.toString</li>
-    <li>Auto tag: @{settings.autoTag match {
-      case true => "Enabled"
-      case false => "Disabled"
-      }} (<a href="@routes.ProjectsController.postSettingsAutoTag(project.id)" class="postForm">toggle</a>)
-    </li>
     <li>URI: <a href="@project.uri">@project.uri</a></li>
     <li>Master Sha: @masterHash.getOrElse("-")</li>
     <li>Latest Tag:
@@ -56,6 +51,11 @@
       }
     </li>
     <li> <a href="@routes.EventsController.index(project_id = Some(project.id))">View all events for this project</a></li>
+    <li>Auto tag: @{settings.autoTag match {
+      case true => "Enabled"
+      case false => "Disabled"
+      }} (<a href="@routes.ProjectsController.postSettingsAutoTag(project.id)" class="postForm">toggle</a>)
+    </li>
   </ul>
 
   <h3>Changes</h3>
