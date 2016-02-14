@@ -1,5 +1,6 @@
 package db
 
+import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Project, State, StateForm, Version}
 import io.flow.delta.v0.models.json._
 import io.flow.postgresql.{Authorization, Query, OrderBy}
@@ -9,11 +10,22 @@ import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
 
-object ProjectExpectedStatesDao extends ProjectStatesDao("project_expected_states", "pes")
+object ProjectExpectedStatesDao extends ProjectStatesDao("project_expected_states", "pes") {
+
+  override def onChange(projectId: String) {
+    MainActor.ref ! MainActor.Messages.ProjectExpectedStateUpdated(projectId)
+  }
+
+}
+
 object ProjectActualStatesDao extends ProjectStatesDao("project_actual_states", "pes")
 
 class ProjectStatesDao(table: String, idPrefix: String) {
 
+  def onChange(projectId: String) {
+    // No-op
+  }
+  
   private[this] val BaseQuery = Query(s"""
     select ${table}.id,
            ${table}.versions,
@@ -80,6 +92,8 @@ class ProjectStatesDao(table: String, idPrefix: String) {
           ).execute()
         }
 
+        onChange(project.id)
+
         Right(
           findById(Authorization.All, id).getOrElse {
             sys.error(s"Failed to create $table")
@@ -108,6 +122,8 @@ class ProjectStatesDao(table: String, idPrefix: String) {
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
+
+        onChange(project.id)
 
         Right(
           findByProjectId(Authorization.All, project.id).getOrElse {

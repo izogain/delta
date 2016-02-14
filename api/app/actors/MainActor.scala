@@ -19,12 +19,16 @@ object MainActor {
 
   object Messages {
 
+    case class BuildDockerImage(projectId: String, version: String)
+    
     case class Deploy(projectId: String, imageId: String)
 
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
+
+    case class ProjectExpectedStateUpdated(projectId: String)
 
     case class ShaCreated(projectId: String, id: String)
     case class ShaUpdated(projectId: String, id: String)
@@ -36,7 +40,6 @@ object MainActor {
 
     case class ImageCreated(id: String)
 
-    case class BuildDockerImage(projectId: String, version: String)
   }
 }
 
@@ -114,11 +117,15 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ImageCreated(projectId) => withVerboseErrorHandler(msg) {
-      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
     case msg @ MainActor.Messages.BuildDockerImage(projectId, version) => withVerboseErrorHandler(msg) {
       upsertDockerHubActor(projectId) ! DockerHubActor.Messages.Build(version)
+    }
+
+    case msg @ MainActor.Messages.ProjectExpectedStateUpdated(projectId) => withVerboseErrorHandler(msg) {
+      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
     }
 
     case msg: Any => logUnhandledMessage(msg)
