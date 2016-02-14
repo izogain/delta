@@ -11,6 +11,7 @@ import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
 import play.api.Play.current
+import scala.util.{Failure, Success, Try}
 
 object DockerHubActor {
 
@@ -45,7 +46,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
          for {
            tags <- client.tags.get(repo.owner, repo.project)
          } yield {
-           tags.foreach(tag => createImage(project.id, repo, tag))
+           tags.foreach { tag =>
+             Try(createImage(project.id, repo, tag)) match {
+               case Success(_) => // No-op
+               case Failure(ex) => {
+                 ex.printStackTrace(System.err)
+                 println("ERROR syncing docker image: " + ex)
+               }
+             }
+           }
          }
        }
      }
@@ -58,7 +67,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
  def createImageForm(projectId: String, repo: Repo, tag: Tag): ImageForm = {
    ImageForm(
      projectId,
-     repo.project,
+     repo.toString,
      tag.name
    )
  }
