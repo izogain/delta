@@ -20,7 +20,8 @@ object SupervisorActor {
 
   val All = Seq(
     functions.SyncMasterSha,
-    functions.TagIfNeeded
+    functions.TagIfNeeded,
+    functions.SetExpectedState
   )
 
 }
