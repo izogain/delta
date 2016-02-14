@@ -53,10 +53,10 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
       withProject { project =>
 
         isActive(project.id) match {
-          case false => {
+          case true => {
             Logger.info(s"SupervisorActor: Project[${project.id}] is already active")
           }
-          case true => {
+          case false => {
             val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
             log.started("PursueExpectedState")
             run(project, settings, SupervisorActor.All)
@@ -84,8 +84,12 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
       limit = 1,
       orderBy = OrderBy("-events.created_at")
     ).headOption match {
-      case None => false
-      case Some(event) => event.summary != SuccessfulCompletionMessage
+      case None => {
+        false
+      }
+      case Some(event) => {
+        event.summary != SuccessfulCompletionMessage
+      }
     }
   }
 
