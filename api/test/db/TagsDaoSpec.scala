@@ -57,6 +57,17 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     TagsDao.findById(Authorization.All, UUID.randomUUID.toString) must be(None)
   }
 
+  "findLatestByProjectId" in {
+    val project = createProject()
+    TagsDao.findLatestByProjectId(Authorization.All, project.id) must be(None)
+
+    val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
+    TagsDao.findLatestByProjectId(Authorization.All, project.id).map(_.id) must be(Some(tag1.id))
+
+    val tag2 = createTag(createTagForm(project).copy(name = "0.0.2"))
+    TagsDao.findLatestByProjectId(Authorization.All, project.id).map(_.id) must be(Some(tag2.id))
+  }
+  
   "findByProjectIdAndName" in {
     val project = createProject()
 

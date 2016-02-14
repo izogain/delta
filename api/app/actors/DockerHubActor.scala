@@ -11,6 +11,7 @@ import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
 import play.api.Play.current
+import scala.util.{Failure, Success, Try}
 
 object DockerHubActor {
 
@@ -45,7 +46,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
          for {
            tags <- client.tags.get(repo.owner, repo.project)
          } yield {
-           tags.foreach(tag => createImage(project.id, repo, tag))
+           tags.foreach { tag =>
+             Try(createImage(project.id, repo, tag)) match {
+               case Success(_) => // No-op
+               case Failure(ex) => {
+                 ex.printStackTrace(System.err)
+                 println("ERROR syncing docker image: " + ex)
+               }
+             }
+           }
          }
        }
      }
@@ -58,7 +67,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
  def createImageForm(projectId: String, repo: Repo, tag: Tag): ImageForm = {
    ImageForm(
      projectId,
-     repo.project,
+     repo.toString,
      tag.name
    )
  }
@@ -68,16 +77,21 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   // external dependencies. I'm not sure it's worth logging anything
   // here - but we do need to think about how to build the docker
   // image.
-  def createImage(projectId: String, repo: Repo, tag: Tag) = {
-    log.started(s"Creating image [${repo.owner}/${repo.project}:${tag.name}] if it does not already exist.")
-    val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, tag.name)
-    checkImageExists match {
-      case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] already exists, no image created.")
+  def createImage(projectId: String, repo: Repo, tag: Tag) {
+    ImagesDao.findByProjectIdAndVersion(projectId, tag.name) match {
+      case Some(_) => // No-op
       case None => {
-        val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, tag))
-        imageCreate match {
-          case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:${tag.name}].")
-          case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] created.")
+        log.started(s"Creating image [${repo.owner}/${repo.project}:${tag.name}] if it does not already exist.")
+        val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, tag.name)
+        checkImageExists match {
+          case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] already exists, no image created.")
+          case None => {
+            val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, tag))
+            imageCreate match {
+              case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:${tag.name}].")
+              case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] created.")
+            }
+          }
         }
       }
     }
