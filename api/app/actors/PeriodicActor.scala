@@ -23,18 +23,15 @@ class PeriodicActor extends Actor with Util {
   def receive = {
 
     case m @ PeriodicActor.Messages.CheckProjects => withVerboseErrorHandler(m) {
-      println("PeriodicActor.Messages.CheckProjects")
       Pager.create { offset =>
         ProjectsDao.findAll(Authorization.All, offset = offset)
       }.foreach { project =>
-        println("project: " + project)
-
         isActive(project.id) match {
           case true => {
             Logger.info(s"PeriodicActor: Project[${project.id}] is already active")
           }
           case false => {
-            sender ! MainActor.Messages.ProjectSync(project.id)
+            MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
           }
         }
       }
