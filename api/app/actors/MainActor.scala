@@ -36,7 +36,7 @@ object MainActor {
 
     case class ImageCreated(id: String)
 
-    case class BuildDockerImage(projectId: String, name: String, version: String)
+    case class BuildDockerImage(projectId: String, version: String)
   }
 }
 
