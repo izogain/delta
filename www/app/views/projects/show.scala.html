@@ -9,7 +9,7 @@
   changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
-@main(data.copy(title = Some(project.name))) {
+@main(data.copy(title = Some(s"${project.organization.id}/${project.name}"))) {
 
   <div class="pull-right">
     @if(io.flow.delta.www.lib.Permissions.Project.edit(project, data.user)) {
@@ -39,10 +39,8 @@
   </div>
   
   <ul>
-    <li>Organization: <a href="@routes.OrganizationsController.show(project.organization.id)">@project.organization.id</a></li>
     <li>Visbility: @project.visibility.toString</li>
-    <li>SCMS: @project.scms.toString</li>
-    <li>URI: <a href="@project.uri">@project.uri</a></li>
+    <li>SCMS: <a href="@project.uri">@project.uri</a></li>
     <li>Master: @masterHash.getOrElse("-")</li>
     <li>Latest Tag:
       @if(latestTag.isEmpty) {
