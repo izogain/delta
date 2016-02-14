@@ -40,7 +40,7 @@ if subproject == ""
   end
   puts ""
   exit(1)
-end  
+end
 
 # Select out the names of the configuration variables coming from the environment
 application_conf_file = File.join(File.dirname(__FILE__), "..", subproject, "conf", "application.conf")
@@ -62,7 +62,7 @@ key_file = File.join(KEYS_REPO_DIR, "ec2", "apps", "%s-%s" % [name, subproject])
 if File.exists?(key_file)
   puts "Loading environment variables from %s" % key_file
   vars = IO.readlines(key_file).map do |line|
-    (key, value) = line.strip.split("=").map(&:strip)
+    (key, value) = line.strip.split("=", 2).map(&:strip)
     if names.include?(key) && value && !value.empty?
       puts " - setting env var %s" % key
       "%s=%s" % [key, value]
@@ -79,4 +79,3 @@ if File.exists?(key_file)
 else
   puts "WARNING: Could not find application keys file. Expected at %s" % key_file
 end
-
