@@ -17,7 +17,7 @@ trait DataProject {
   def setDataProject(id: String) {
     dataProject = ProjectsDao.findById(Authorization.All, id)
     if (dataProject.isEmpty) {
-      Logger.warn("Could not find project with id[$id]")
+      Logger.warn(s"Could not find project with id[$id]")
     }
   }
 
