@@ -14,8 +14,13 @@ object ImagesDao {
     select images.id,
            images.project_id,
            images.name,
-           images.version
+           images.version,
+           projects.id as project_id,
+           projects.name as project_name,
+           projects.uri as project_uri,
+           projects.organization_id as project_organization_id
       from images
+      join projects on projects.id = images.project_id
   """)
 
   private[this] val InsertQuery = """
@@ -76,13 +81,30 @@ object ImagesDao {
     findAll(Some(Seq(id)), limit = 1).headOption
   }
 
+  /**
+    * @param name: e.g. flowcommerce/user
+    * @param version: e.g. 0.0.1
+    */
   def findByNameAndVersion(name: String, version: String): Option[Image] = {
-    findAll(Some(Seq(name)), Some(Seq(version)), limit = 1).headOption
+    findAll(
+      name = Some(Seq(name)),
+      version = Some(Seq(version)),
+      limit = 1
+    ).headOption
+  }
+
+  def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
+    findAll(
+      projectId = Some(projectId),
+      version = Some(Seq(version)),
+      limit = 1
+    ).headOption
   }
 
   def findAll(
    id: Option[Seq[String]] = None,
    name: Option[Seq[String]] = None,
+   projectId: Option[String] = None,
    version: Option[Seq[String]] = None,
    orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
    limit: Long = 25,
@@ -92,6 +114,7 @@ object ImagesDao {
       BaseQuery.
         optionalIn("images.id", id).
         optionalIn("images.name", name).
+        equals("images.project_id", projectId).
         optionalIn("images.version", version).
         orderBy(orderBy.sql).
         limit(limit).
