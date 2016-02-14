@@ -1,11 +1,12 @@
 package io.flow.delta.actors
 
-import db.ImagesDao
+import db.{ImagesDao, TagsDao}
 import io.flow.delta.api.lib.Repo
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.Client
 import io.flow.docker.registry.v0.models.Tag
 import io.flow.play.actors.Util
+import io.flow.postgresql.{Authorization, OrderBy}
 import akka.actor.Actor
 import play.api.Logger
 import play.api.libs.concurrent.Akka
@@ -67,6 +68,19 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
      withProject { project =>
        withRepo { repo =>
          syncImages(project, repo)
+
+         // Ensure docker images for most recent 5 tags. Eventually
+         // should consider if we make images for all tags, or all
+         // tags created in last week or ???
+         TagsDao.findAll(
+           Authorization.All,
+           projectId = Some(project.id),
+           limit = 5,
+           orderBy = OrderBy("-tags.created_at")
+         ).foreach { tag =>
+           createImage(project.id, repo, tag.name)
+         }
+
        }
      }
    }
@@ -80,7 +94,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       tags <- client.tags.get(repo.owner, repo.project)
     } yield {
       tags.foreach { tag =>
-        Try(createImage(project.id, repo, tag)) match {
+        Try(createImage(project.id, repo, tag.name)) match {
           case Success(_) => // No-op
           case Failure(ex) => {
             println("ERROR syncing docker image: " + ex)
@@ -91,11 +105,11 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
   
- def createImageForm(projectId: String, repo: Repo, tag: Tag): ImageForm = {
+ def createImageForm(projectId: String, repo: Repo, version: String): ImageForm = {
    ImageForm(
      projectId,
      repo.toString,
-     tag.name
+     version
    )
  }
 
@@ -104,23 +118,24 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   // external dependencies. I'm not sure it's worth logging anything
   // here - but we do need to think about how to build the docker
   // image.
-  def createImage(projectId: String, repo: Repo, tag: Tag) {
-    ImagesDao.findByProjectIdAndVersion(projectId, tag.name) match {
+  def createImage(projectId: String, repo: Repo, version: String) {
+    ImagesDao.findByProjectIdAndVersion(projectId, version) match {
       case Some(_) => // No-op
       case None => {
-        log.started(s"Creating image [${repo.owner}/${repo.project}:${tag.name}] if it does not already exist.")
-        val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, tag.name)
+        log.started(s"Creating image [${repo.owner}/${repo.project}:$version] if it does not already exist.")
+        val checkImageExists = ImagesDao.findByNameAndVersion(repo.project, version)
         checkImageExists match {
-          case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] already exists, no image created.")
+          case Some(img) => log.completed(s"Image [${repo.owner}/${repo.project}:$version] already exists, no image created.")
           case None => {
-            val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, tag))
+            val imageCreate = ImagesDao.create(MainActor.SystemUser, createImageForm(projectId, repo, version))
             imageCreate match {
-              case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:${tag.name}].")
-              case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:${tag.name}] created.")
+              case Left(msgs) => log.completed(s"Failed to create image [${repo.owner}/${repo.project}:$version].")
+              case Right(img) => log.completed(s"Image [${repo.owner}/${repo.project}:$version] created.")
             }
           }
         }
       }
     }
   }
+
 }
