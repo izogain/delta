@@ -17,7 +17,7 @@ import scala.concurrent.Future
   * If there is no tag pointing to the master sha, creates a tag in
   * github and records it here.
   */
-object TagIfNeeded extends SupervisorFunction {
+object TagMaster extends SupervisorFunction {
 
   val InitialTag = "0.0.1"
 
@@ -26,12 +26,12 @@ object TagIfNeeded extends SupervisorFunction {
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    TagIfNeeded(project).run
+    TagMaster(project).run
   }
 
 }
 
-case class TagIfNeeded(project: Project) extends Github {
+case class TagMaster(project: Project) extends Github {
 
   private[this] case class Tag(semver: Semver, sha: String)
 
@@ -58,7 +58,7 @@ case class TagIfNeeded(project: Project) extends Github {
 
             localTags.reverse.headOption match {
               case None => {
-                createTag(TagIfNeeded.InitialTag, master)
+                createTag(TagMaster.InitialTag, master)
               }
               case Some(tag) => {
                 tag.sha == master match {

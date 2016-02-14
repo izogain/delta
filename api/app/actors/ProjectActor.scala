@@ -126,7 +126,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
                 active = true
               )
             }.map { hook =>
-              Logger.info("Creating githib webhook for project[${project.id}]: $hook")
+              Logger.info("Created githib webhook for project[${project.id}]: $hook")
             }.recover {
               case e: Throwable => {
                 Logger.error("Project[${project.id}] Error creating hook: " + e)
