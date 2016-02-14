@@ -31,33 +31,39 @@ class SettingsSpec extends PlaySpecification with MockClient {
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = Some(false),
         tagMaster = Some(false),
-        setExpectedState = Some(false)
+        setExpectedState = Some(false),
+        buildDockerImage = Some(false)
       ))
     )
     settings.syncMasterSha must beEqualTo(false)
     settings.tagMaster must beEqualTo(false)
     settings.setExpectedState must beEqualTo(false)
+    settings.buildDockerImage must beEqualTo(false)
 
     val settings2 = await(
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = None,
         tagMaster = None,
-        setExpectedState = None
+        setExpectedState = None,
+        buildDockerImage = None
       ))
     )
     settings2.syncMasterSha must beEqualTo(false)
     settings2.tagMaster must beEqualTo(false)
     settings2.setExpectedState must beEqualTo(false)
+    settings2.buildDockerImage must beEqualTo(false)
 
     val settings3 = await(
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = Some(true),
         tagMaster = Some(true),
-        setExpectedState = Some(true)
+        setExpectedState = Some(true),
+        buildDockerImage = Some(true)
       ))
     )
     settings3.syncMasterSha must beEqualTo(true)
     settings3.tagMaster must beEqualTo(true)
     settings3.setExpectedState must beEqualTo(true)
+    settings3.buildDockerImage must beEqualTo(true)
   }
 }

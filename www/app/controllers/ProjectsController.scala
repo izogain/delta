@@ -281,6 +281,9 @@ class ProjectsController @javax.inject.Inject() (
         case "setExpectedState" => {
           Some(SettingsForm(setExpectedState = Some(!settings.setExpectedState)))
         }
+        case "buildDockerImage" => {
+          Some(SettingsForm(buildDockerImage = Some(!settings.buildDockerImage)))
+        }
         case other => {
           None
         }

@@ -146,13 +146,15 @@ package io.flow.delta.v0.models {
   case class Settings(
     syncMasterSha: Boolean = true,
     tagMaster: Boolean = true,
-    setExpectedState: Boolean = true
+    setExpectedState: Boolean = true,
+    buildDockerImage: Boolean = true
   )
 
   case class SettingsForm(
     syncMasterSha: _root_.scala.Option[Boolean] = None,
     tagMaster: _root_.scala.Option[Boolean] = None,
-    setExpectedState: _root_.scala.Option[Boolean] = None
+    setExpectedState: _root_.scala.Option[Boolean] = None,
+    buildDockerImage: _root_.scala.Option[Boolean] = None
   )
 
   case class Sha(
@@ -1067,7 +1069,8 @@ package io.flow.delta.v0.models {
       (
         (__ \ "sync_master_sha").read[Boolean] and
         (__ \ "tag_master").read[Boolean] and
-        (__ \ "set_expected_state").read[Boolean]
+        (__ \ "set_expected_state").read[Boolean] and
+        (__ \ "build_docker_image").read[Boolean]
       )(Settings.apply _)
     }
 
@@ -1075,7 +1078,8 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "sync_master_sha" -> play.api.libs.json.JsBoolean(obj.syncMasterSha),
         "tag_master" -> play.api.libs.json.JsBoolean(obj.tagMaster),
-        "set_expected_state" -> play.api.libs.json.JsBoolean(obj.setExpectedState)
+        "set_expected_state" -> play.api.libs.json.JsBoolean(obj.setExpectedState),
+        "build_docker_image" -> play.api.libs.json.JsBoolean(obj.buildDockerImage)
       )
     }
 
@@ -1091,7 +1095,8 @@ package io.flow.delta.v0.models {
       (
         (__ \ "sync_master_sha").readNullable[Boolean] and
         (__ \ "tag_master").readNullable[Boolean] and
-        (__ \ "set_expected_state").readNullable[Boolean]
+        (__ \ "set_expected_state").readNullable[Boolean] and
+        (__ \ "build_docker_image").readNullable[Boolean]
       )(SettingsForm.apply _)
     }
 
@@ -1107,6 +1112,10 @@ package io.flow.delta.v0.models {
       (obj.setExpectedState match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("set_expected_state" -> play.api.libs.json.JsBoolean(x))
+      }) ++
+      (obj.buildDockerImage match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("build_docker_image" -> play.api.libs.json.JsBoolean(x))
       })
     }
 

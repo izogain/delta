@@ -14,16 +14,17 @@ object SettingsDao {
   private[this] val BaseQuery = Query(s"""
     select settings.sync_master_sha,
            settings.tag_master,
-           settings.set_expected_state
+           settings.set_expected_state,
+           settings.build_docker_image
       from settings
       join projects on projects.id = settings.project_id
   """)
 
   private[this] val InsertQuery = """
     insert into settings
-    (id, project_id, sync_master_sha, tag_master, set_expected_state, updated_by_user_id)
+    (id, project_id, sync_master_sha, tag_master, set_expected_state, build_docker_image, updated_by_user_id)
     values
-    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_expected_state}, {updated_by_user_id})
+    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_expected_state}, {build_docker_image}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -31,6 +32,7 @@ object SettingsDao {
        set sync_master_sha = {sync_master_sha},
            tag_master = {tag_master},
            set_expected_state = {set_expected_state},
+           build_docker_image = {build_docker_image},
            updated_by_user_id = {updated_by_user_id}
      where project_id = {project_id}
   """
@@ -65,6 +67,7 @@ object SettingsDao {
         'sync_master_sha -> settings.syncMasterSha,
         'tag_master -> settings.tagMaster,
         'set_expected_state -> settings.setExpectedState,
+        'build_docker_image -> settings.buildDockerImage,
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
@@ -77,6 +80,7 @@ object SettingsDao {
         'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
         'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
         'set_expected_state -> form.setExpectedState.getOrElse(settings.setExpectedState),
+        'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage),
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
