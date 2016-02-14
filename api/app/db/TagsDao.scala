@@ -174,6 +174,10 @@ object TagsDao {
     Delete.delete("tags", deletedBy.id, tag.id)
   }
 
+  def findLatestByProjectId(auth: Authorization, projectId: String): Option[Tag] = {
+    findAll(auth, projectId = Some(projectId), orderBy = OrderBy("-tags.created_at"), limit = 1).headOption
+  }
+
   def findByProjectIdAndName(auth: Authorization, projectId: String, name: String): Option[Tag] = {
     findAll(auth, projectId = Some(projectId), name = Some(name), limit = 1).headOption
   }
