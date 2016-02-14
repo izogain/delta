@@ -1,7 +1,7 @@
 package io.flow.delta.api.lib
 
 import db.{EventsDao, UsersDao}
-import io.flow.delta.v0.models.{EventAction, Project}
+import io.flow.delta.v0.models.{EventType, Project}
 import io.flow.common.v0.models.User
 import java.io.{PrintWriter, StringWriter}
 import org.joda.time.DateTime
@@ -24,13 +24,18 @@ case class EventLog(
   prefix: String
 ) {
 
+  def changed(message: String) = {
+    println(format(s"changed $message"))
+    EventsDao.create(user, project.id, EventType.Change, message, ex = None)
+  }
+
   /**
     * Indicates a start event. Should be followed by a completed event
     * when the function is complete.
     */
   def started(message: String) = {
     println(format(s"started $message"))
-    EventsDao.create(user, project.id, EventAction.Started, message, ex = None)
+    EventsDao.create(user, project.id, EventType.Info, s"started $message", ex = None)
   }
 
   /**
@@ -41,7 +46,7 @@ case class EventLog(
     error match {
       case None => {
         println(format(s"completed $message"))
-        EventsDao.create(user, project.id, EventAction.Completed, message, ex = None)
+        EventsDao.create(user, project.id, EventType.Info, s"completed $message", ex = None)
       }
       case Some(ex) => {
         // this works much better
@@ -49,21 +54,21 @@ case class EventLog(
         ex.printStackTrace(new PrintWriter(sw))
         println(format(s"error $message: ${ex.getMessage}\n\n$sw"))
 
-        EventsDao.create(user, project.id, EventAction.Completed, message, ex = Some(ex))
+        EventsDao.create(user, project.id, EventType.Info, s"error $message", ex = Some(ex))
       }
     }
   }
 
   /**
     * Records a checkpoint - main purpose is to communicate that
-    * progress is being made. We intend to build functions that detect
+    * info is being made. We intend to build functions that detect
     * failure based on no activity written to the log. So long running
-    * functions should periodically checkpoint to track progress in
+    * functions should periodically checkpoint to track info in
     * the log.
     */
   def checkpoint(message: String) = {
     println(format(s"checkpoint $message"))
-    EventsDao.create(user, project.id, EventAction.Checkpoint, message, ex = None)
+    EventsDao.create(user, project.id, EventType.Info, s"checkpoint $message", ex = None)
   }
 
   /**

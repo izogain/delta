@@ -14,6 +14,9 @@ POST    /projects/:id/postEdit                  controllers.ProjectsController.p
 POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
 POST    /projects/:id/settings/autoTag          controllers.ProjectsController.postSettingsAutoTag(id: String)
 
+GET     /events                                 controllers.ApplicationController.redirect
+GET     /events/                                controllers.EventsController.index(page: Int ?= 0, project_id: Option[String] ?= None, event_type: Option[io.flow.delta.v0.models.EventType] ?= None)
+
 GET     /search                                 controllers.SearchController.index(q: Option[String] ?= None, page: Int ?= 0)
 
 GET     /subscriptions                          controllers.ApplicationController.redirect

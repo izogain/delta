@@ -2,7 +2,7 @@
 # Service version: 0.0.3
 # apidoc:0.11.8 http://www.apidoc.me/flow/delta/0.0.3/play_2_x_routes
 
-GET        /events                          controllers.Events.get(id: _root_.scala.Option[List[String]], project_id: _root_.scala.Option[String], limit: Long ?= 25, offset: Long ?= 0, sort: String ?= "-events.created_at")
+GET        /events                          controllers.Events.get(id: _root_.scala.Option[List[String]], project_id: _root_.scala.Option[String], type: _root_.scala.Option[io.flow.delta.v0.models.EventType], limit: Long ?= 25, offset: Long ?= 0, sort: String ?= "-events.created_at")
 GET        /events/:id                      controllers.Events.getById(id: String)
 POST       /authentications/github          controllers.GithubUsers.postGithub()
 POST       /webhooks/github/:project_id     controllers.GithubWebhooks.postByProjectId(project_id: String)

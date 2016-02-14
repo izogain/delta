@@ -71,8 +71,8 @@ package io.flow.delta.v0.anorm.conversions {
     implicit val columnToMapUUID: Column[Map[String, _root_.java.util.UUID]] = parser { _.as[Map[String, _root_.java.util.UUID]] }
 
     import io.flow.delta.v0.models.json._
-    implicit val columnToSeqDeltaEventAction: Column[Seq[_root_.io.flow.delta.v0.models.EventAction]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.EventAction]] }
-    implicit val columnToMapDeltaEventAction: Column[Map[String, _root_.io.flow.delta.v0.models.EventAction]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.EventAction]] }
+    implicit val columnToSeqDeltaEventType: Column[Seq[_root_.io.flow.delta.v0.models.EventType]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.EventType]] }
+    implicit val columnToMapDeltaEventType: Column[Map[String, _root_.io.flow.delta.v0.models.EventType]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.EventType]] }
     implicit val columnToSeqDeltaPublication: Column[Seq[_root_.io.flow.delta.v0.models.Publication]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Publication]] }
     implicit val columnToMapDeltaPublication: Column[Map[String, _root_.io.flow.delta.v0.models.Publication]] = parser { _.as[Map[String, _root_.io.flow.delta.v0.models.Publication]] }
     implicit val columnToSeqDeltaRole: Column[Seq[_root_.io.flow.delta.v0.models.Role]] = parser { _.as[Seq[_root_.io.flow.delta.v0.models.Role]] }

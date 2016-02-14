@@ -1,7 +1,7 @@
 package db
 
 import anorm._
-import io.flow.delta.v0.models.{Event, EventAction}
+import io.flow.delta.v0.models.{Event, EventType}
 import io.flow.delta.actors.MainActor
 import io.flow.postgresql.{Query, OrderBy}
 import io.flow.common.v0.models.User
@@ -15,7 +15,7 @@ object EventsDao {
   private[this] val BaseQuery = Query(s"""
     select events.id,
            events.created_at,
-           events.action,
+           events.type,
            events.summary,
            events.error
       from events
@@ -23,17 +23,17 @@ object EventsDao {
 
   private[this] val InsertQuery = """
     insert into events
-    (id, project_id, action, summary, error, updated_by_user_id)
+    (id, project_id, type, summary, error, updated_by_user_id)
     values
-    ({id}, {project_id}, {action}, {summary}, {error}, {updated_by_user_id})
+    ({id}, {project_id}, {type}, {summary}, {error}, {updated_by_user_id})
   """
 
   /**
     * Create an event, returning its id
     */
-  def create(createdBy: User, projectId: String, action: EventAction, summary: String, ex: Option[Throwable]): String = {
-    action match {
-      case EventAction.UNDEFINED(_) => sys.error(s"Invalid action: $action")
+  def create(createdBy: User, projectId: String, `type`: EventType, summary: String, ex: Option[Throwable]): String = {
+    `type` match {
+      case EventType.UNDEFINED(_) => sys.error("Invalid type: " + `type`)
       case _ => {}
     }
 
@@ -49,7 +49,7 @@ object EventsDao {
       SQL(InsertQuery).on(
         'id -> id,
         'project_id -> projectId,
-        'action -> action.toString,
+        'type -> `type`.toString,
         'summary -> summary.trim,
         'error -> error,
         'updated_by_user_id -> createdBy.id
@@ -66,6 +66,7 @@ object EventsDao {
   def findAll(
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
+    `type`: Option[EventType] = None,
     orderBy: OrderBy = OrderBy("-events.created_at, events.id"),
     limit: Long = 25,
     offset: Long = 0
@@ -74,6 +75,7 @@ object EventsDao {
       BaseQuery.
         optionalIn(s"events.id", ids).
         equals(s"events.project_id", projectId).
+        equals(s"events.type", `type`.map(_.toString)).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).

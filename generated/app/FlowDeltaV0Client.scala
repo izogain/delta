@@ -10,7 +10,7 @@ package io.flow.delta.v0.models {
   case class Event(
     id: String,
     createdAt: _root_.org.joda.time.DateTime,
-    action: io.flow.delta.v0.models.EventAction,
+    `type`: io.flow.delta.v0.models.EventType,
     summary: String,
     error: _root_.scala.Option[String] = None
   )
@@ -242,13 +242,19 @@ package io.flow.delta.v0.models {
     description: String
   ) extends ItemSummary
 
-  sealed trait EventAction
+  sealed trait EventType
 
-  object EventAction {
+  object EventType {
 
-    case object Started extends EventAction { override def toString = "started" }
-    case object Checkpoint extends EventAction { override def toString = "checkpoint" }
-    case object Completed extends EventAction { override def toString = "completed" }
+    /**
+     * Indicates this event actually reported a successful change was completed in the
+     * project
+     */
+    case object Change extends EventType { override def toString = "change" }
+    /**
+     * Indicates this was an informational event only
+     */
+    case object Info extends EventType { override def toString = "info" }
 
     /**
      * UNDEFINED captures values that are sent either in error or
@@ -259,21 +265,21 @@ package io.flow.delta.v0.models {
      * We use all CAPS for the variable name to avoid collisions
      * with the camel cased values above.
      */
-    case class UNDEFINED(override val toString: String) extends EventAction
+    case class UNDEFINED(override val toString: String) extends EventType
 
     /**
      * all returns a list of all the valid, known values. We use
      * lower case to avoid collisions with the camel cased values
      * above.
      */
-    val all = Seq(Started, Checkpoint, Completed)
+    val all = Seq(Change, Info)
 
     private[this]
     val byName = all.map(x => x.toString.toLowerCase -> x).toMap
 
-    def apply(value: String): EventAction = fromString(value).getOrElse(UNDEFINED(value))
+    def apply(value: String): EventType = fromString(value).getOrElse(UNDEFINED(value))
 
-    def fromString(value: String): _root_.scala.Option[EventAction] = byName.get(value.toLowerCase)
+    def fromString(value: String): _root_.scala.Option[EventType] = byName.get(value.toLowerCase)
 
   }
 
@@ -448,13 +454,13 @@ package io.flow.delta.v0.models {
       }
     }
 
-    implicit val jsonReadsDeltaEventAction = new play.api.libs.json.Reads[io.flow.delta.v0.models.EventAction] {
-      def reads(js: play.api.libs.json.JsValue): play.api.libs.json.JsResult[io.flow.delta.v0.models.EventAction] = {
+    implicit val jsonReadsDeltaEventType = new play.api.libs.json.Reads[io.flow.delta.v0.models.EventType] {
+      def reads(js: play.api.libs.json.JsValue): play.api.libs.json.JsResult[io.flow.delta.v0.models.EventType] = {
         js match {
-          case v: play.api.libs.json.JsString => play.api.libs.json.JsSuccess(io.flow.delta.v0.models.EventAction(v.value))
+          case v: play.api.libs.json.JsString => play.api.libs.json.JsSuccess(io.flow.delta.v0.models.EventType(v.value))
           case _ => {
             (js \ "value").validate[String] match {
-              case play.api.libs.json.JsSuccess(v, _) => play.api.libs.json.JsSuccess(io.flow.delta.v0.models.EventAction(v))
+              case play.api.libs.json.JsSuccess(v, _) => play.api.libs.json.JsSuccess(io.flow.delta.v0.models.EventType(v))
               case err: play.api.libs.json.JsError => err
             }
           }
@@ -462,18 +468,18 @@ package io.flow.delta.v0.models {
       }
     }
 
-    def jsonWritesDeltaEventAction(obj: io.flow.delta.v0.models.EventAction) = {
+    def jsonWritesDeltaEventType(obj: io.flow.delta.v0.models.EventType) = {
       play.api.libs.json.JsString(obj.toString)
     }
 
-    def jsObjectEventAction(obj: io.flow.delta.v0.models.EventAction) = {
+    def jsObjectEventType(obj: io.flow.delta.v0.models.EventType) = {
       play.api.libs.json.Json.obj("value" -> play.api.libs.json.JsString(obj.toString))
     }
 
-    implicit def jsonWritesDeltaEventAction: play.api.libs.json.Writes[EventAction] = {
-      new play.api.libs.json.Writes[io.flow.delta.v0.models.EventAction] {
-        def writes(obj: io.flow.delta.v0.models.EventAction) = {
-          jsonWritesDeltaEventAction(obj)
+    implicit def jsonWritesDeltaEventType: play.api.libs.json.Writes[EventType] = {
+      new play.api.libs.json.Writes[io.flow.delta.v0.models.EventType] {
+        def writes(obj: io.flow.delta.v0.models.EventType) = {
+          jsonWritesDeltaEventType(obj)
         }
       }
     }
@@ -602,7 +608,7 @@ package io.flow.delta.v0.models {
       (
         (__ \ "id").read[String] and
         (__ \ "created_at").read[_root_.org.joda.time.DateTime] and
-        (__ \ "action").read[io.flow.delta.v0.models.EventAction] and
+        (__ \ "type").read[io.flow.delta.v0.models.EventType] and
         (__ \ "summary").read[String] and
         (__ \ "error").readNullable[String]
       )(Event.apply _)
@@ -612,7 +618,7 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "id" -> play.api.libs.json.JsString(obj.id),
         "created_at" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.createdAt)),
-        "action" -> play.api.libs.json.JsString(obj.action.toString),
+        "type" -> play.api.libs.json.JsString(obj.`type`.toString),
         "summary" -> play.api.libs.json.JsString(obj.summary)
       ) ++ (obj.error match {
         case None => play.api.libs.json.Json.obj()
@@ -1468,15 +1474,15 @@ package io.flow.delta.v0 {
       ISODateTimeFormat.yearMonthDay.parseLocalDate(_), _.toString, (key: String, e: Exception) => s"Error parsing date $key. Example: 2014-04-29"
     )
 
-    // Enum: EventAction
-    private[this] val enumEventActionNotFound = (key: String, e: Exception) => s"Unrecognized $key, should be one of ${io.flow.delta.v0.models.EventAction.all.mkString(", ")}"
+    // Enum: EventType
+    private[this] val enumEventTypeNotFound = (key: String, e: Exception) => s"Unrecognized $key, should be one of ${io.flow.delta.v0.models.EventType.all.mkString(", ")}"
 
-    implicit val pathBindableEnumEventAction = new PathBindable.Parsing[io.flow.delta.v0.models.EventAction] (
-      EventAction.fromString(_).get, _.toString, enumEventActionNotFound
+    implicit val pathBindableEnumEventType = new PathBindable.Parsing[io.flow.delta.v0.models.EventType] (
+      EventType.fromString(_).get, _.toString, enumEventTypeNotFound
     )
 
-    implicit val queryStringBindableEnumEventAction = new QueryStringBindable.Parsing[io.flow.delta.v0.models.EventAction](
-      EventAction.fromString(_).get, _.toString, enumEventActionNotFound
+    implicit val queryStringBindableEnumEventType = new QueryStringBindable.Parsing[io.flow.delta.v0.models.EventType](
+      EventType.fromString(_).get, _.toString, enumEventTypeNotFound
     )
 
     // Enum: Publication
@@ -1585,12 +1591,14 @@ package io.flow.delta.v0 {
       override def get(
         id: _root_.scala.Option[Seq[String]] = None,
         projectId: _root_.scala.Option[String] = None,
+        `type`: _root_.scala.Option[io.flow.delta.v0.models.EventType] = None,
         limit: Long = 25,
         offset: Long = 0,
         sort: String = "-events.created_at"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Event]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
+          `type`.map("type" -> _.toString),
           Some("limit" -> limit.toString),
           Some("offset" -> offset.toString),
           Some("sort" -> sort)
@@ -2395,6 +2403,7 @@ package io.flow.delta.v0 {
     def get(
       id: _root_.scala.Option[Seq[String]] = None,
       projectId: _root_.scala.Option[String] = None,
+      `type`: _root_.scala.Option[io.flow.delta.v0.models.EventType] = None,
       limit: Long = 25,
       offset: Long = 0,
       sort: String = "-events.created_at"

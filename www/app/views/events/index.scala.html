@@ -1,0 +1,26 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  projectId: Option[String],
+  typ: Option[io.flow.delta.v0.models.EventType],
+  events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data) {
+
+  @if(events.isEmpty) {
+    <em>No changes</em>
+  } else {
+    @eventsTable(events)
+
+    @if(events.hasPrevious || events.hasNext) {
+      <ul class="pager">
+        @if(events.hasPrevious) {
+          <li><a href="@routes.EventsController.index(events.page - 1, project_id = projectId, event_type = typ)">Previous</a></li>
+        }
+        @if(events.hasNext) {
+          <li><a href="@routes.EventsController.index(events.page + 1, project_id = projectId, event_type = typ)">Next</a></li>
+        }
+      </ul>
+    }
+  }
+}
