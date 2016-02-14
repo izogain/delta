@@ -64,8 +64,7 @@ case class BuildDockerImage(project: Project) extends Github with EventLog {
                 log.checkpoint(s"Checking if docker image '${repo}:${tag.name}' is ready")
                 !ImagesDao.findByProjectIdAndVersion(project.id, tag.name).isEmpty
               },
-              intervalSeconds = 3,
-              timeoutSeconds = 10
+              intervalSeconds = 30
             ) match {
               case Left(ex) => {
                 SupervisorResult.Error(s"Error building image ${repo}:${tag.name}", ex)
@@ -82,20 +81,14 @@ case class BuildDockerImage(project: Project) extends Github with EventLog {
 
   private[this] def waitFor(
     check: => Boolean,
-    intervalSeconds: Int,
-    timeoutSeconds: Int
+    intervalSeconds: Int
   ): Either[Throwable, Unit] = {
     val startTimeMs = System.currentTimeMillis
 
     Try {
       while (!check) {
         val durationSeconds = (System.currentTimeMillis - startTimeMs) / 1000
-        println(s"durationSeconds[$durationSeconds]")
-        if (durationSeconds > timeoutSeconds) {
-          sys.error(s"Timeout: Operation took longer than timeout[$timeoutSeconds seconds]")
-        } else {
-          Thread.sleep(intervalSeconds * 1000)
-        }
+        Thread.sleep(intervalSeconds * 1000)
       }
     } match {
       case Success(_) => Right(())
