@@ -20,7 +20,7 @@ object SupervisorActor {
 
   val All = Seq(
     functions.SyncMasterSha,
-    functions.TagIfNeeded,
+    functions.TagMaster,
     functions.SetExpectedState
   )
 
@@ -94,7 +94,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
   /**
     * Prepend the description with the class name of the
     * function. This lets us have automatic messages like
-    * "TagIfNeeded: xxx"
+    * "TagMaster: xxx"
     */
   private[this] def format(f: Any, desc: String): String = {
     format(f) + ": " + desc
