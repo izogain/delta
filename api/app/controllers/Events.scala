@@ -18,6 +18,7 @@ class Events @javax.inject.Inject() (
     id: Option[Seq[String]],
     project: Option[String],
     `type`: Option[EventType],
+    numberMinutesSinceCreation: Option[Long],
     limit: Long,
     offset: Long,
     sort: String
@@ -29,6 +30,7 @@ class Events @javax.inject.Inject() (
             ids = optionals(id),
             projectId = project,
             `type` = `type`,
+            numberMinutesSinceCreation = numberMinutesSinceCreation,
             limit = limit,
             offset = offset,
             orderBy = orderBy

@@ -1,0 +1,24 @@
+@(events: Seq[io.flow.delta.v0.models.Event])
+
+<div class="table-responsive">
+  <table class="table">
+    @events.map { e =>
+      <tr>
+        <td>@io.flow.delta.www.lib.DateHelper.shortDateTime(e.createdAt)</td>
+        <td>@e.summary</td>
+      </tr>
+      <tr>
+        @if(!e.error.isEmpty) {
+          <td colspan="2">
+            <table>  
+              <tr>
+                <td width="100">&nbsp;</td>
+                <td><code class="bg-danger">@io.flow.delta.lib.Text.truncate(e.error.get)</code></td>
+              </tr>
+            </table>
+          </td>
+        }
+      </tr>
+    }
+  </table>
+</div>

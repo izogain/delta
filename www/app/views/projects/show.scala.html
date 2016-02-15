@@ -6,8 +6,8 @@
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
   latestImage: Option[io.flow.delta.v0.models.Image],
-  latestEvent: Option[io.flow.delta.v0.models.Event],
-  changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
+  changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event],
+  recentEvents: Seq[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(s"${project.organization.id}/${project.name}"))) {
@@ -59,11 +59,10 @@
         }
       }
     </li>
-    <li> Latest event at: @if(latestEvent.isEmpty) {
+    <li> Latest event at: @if(recentEvents.headOption.isEmpty) {
            -
          } else {
-           @io.flow.delta.www.lib.DateHelper.consoleLongDateTime(latestEvent.get.createdAt)
-           <a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>
+           @io.flow.delta.www.lib.DateHelper.consoleLongDateTime(recentEvents.head.createdAt)
          }
     </li>
     <li> Master: @masterHash.getOrElse("-")</li>
@@ -83,28 +82,7 @@
   @if(changeEvents.isEmpty) {
     <em>No changes</em>
   } else {
-    <div class="table-responsive">
-      <table class="table">
-        @changeEvents.items.map { e =>
-          <tr>
-            <td>@io.flow.delta.www.lib.DateHelper.shortDateTime(e.createdAt)</td>
-            <td>@e.summary</td>
-          </tr>
-          <tr>
-            @if(!e.error.isEmpty) {
-              <td colspan="2">
-                <table>  
-                  <tr>
-                    <td width="100">&nbsp;</td>
-                    <td><code class="bg-danger">@io.flow.delta.lib.Text.truncate(e.error.get)</code></td>
-                  </tr>
-                </table>
-              </td>
-            }
-          </tr>
-        }
-      </table>
-    </div>
+    @eventsTable(changeEvents.items)
 
     @if(changeEvents.hasPrevious || changeEvents.hasNext) {
       <ul class="pager">
@@ -116,8 +94,15 @@
         }
       </ul>
     }
-
   }
 
+  <h3>Recent Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
+  @if(changeEvents.isEmpty) {
+    <em>None</em>
+  } else {
+    <em>We show up to the 10 most recent events that were created in past 10 minutes</em>
+    
+    @eventsTable(recentEvents)
+  }
   
 }

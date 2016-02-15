@@ -108,7 +108,6 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.TagCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
@@ -125,7 +124,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ProjectExpectedStateUpdated(projectId) => withVerboseErrorHandler(msg) {
-      upsertDockerHubActor(projectId) ! DockerHubActor.Messages.SyncImages
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
     }
 
     case msg: Any => logUnhandledMessage(msg)
