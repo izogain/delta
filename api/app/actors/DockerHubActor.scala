@@ -6,7 +6,6 @@ import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.Util
 import akka.actor.Actor
-import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -45,11 +44,11 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
   def receive = {
 
-    case m @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(m.toString) {
+    case msg @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(msg.toString) {
       setDataProject(projectId)
     }
 
-    case m @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(m.toString) {
+    case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withRepo { repo =>
           syncImages(project, repo)
@@ -72,7 +71,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-   case m: Any => logUnhandledMessage(m)
+   case msg: Any => logUnhandledMessage(msg)
  }
 
 
