@@ -24,6 +24,10 @@ trait Helpers {
     s"z-test-${UUID.randomUUID.toString.toLowerCase}"
   }
 
+  def createTestVersion(): String = {
+    s"0.0.${scala.util.Random.nextInt(100)}"
+  }
+
   def rightOrErrors[T](result: Either[Seq[String], T]): T = {
     result match {
       case Left(errors) => sys.error(errors.mkString(", "))
@@ -272,6 +276,23 @@ trait Helpers {
     EventsDao.findById(id).getOrElse {
       sys.error("Failed to create event")
     }
+  }
+
+  def createImage(
+   form: ImageForm = createImageForm(),
+   user: User = systemUser
+  ): Image = {
+    rightOrErrors(ImagesDao.create(user, form))
+  }
+
+  def createImageForm(
+   project: Project = createProject()
+  ) = {
+    ImageForm(
+      projectId = project.id,
+      name = createTestName(),
+      version = createTestVersion()
+    )
   }
   
 }
