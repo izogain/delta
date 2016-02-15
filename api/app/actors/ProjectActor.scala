@@ -42,11 +42,9 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
-        withRepo { repo =>
-          val lc = createLaunchConfiguration(repo)
-          val elb = createLoadBalancer(repo, project)
-          createAutoScalingGroup(repo, lc, elb)
-        }
+        val lc = createLaunchConfiguration(project)
+        val elb = createLoadBalancer(project)
+        createAutoScalingGroup(project, lc, elb)
       }
     }
 
@@ -69,23 +67,23 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   }
 
-  def createLaunchConfiguration(repo: Repo): String = {
+  def createLaunchConfiguration(project: Project): String = {
     log.started("EC2 auto scaling group launch configuration")
-    val lc = AutoScalingGroup.createLaunchConfiguration(repo.awsName)
+    val lc = AutoScalingGroup.createLaunchConfiguration(project.name)
     log.completed(s"EC2 auto scaling group launch configuration: [$lc]")
     return lc
   }
 
-  def createLoadBalancer(repo: Repo, project: Project): String = {
+  def createLoadBalancer(project: Project): String = {
     log.started("EC2 load balancer")
-    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(repo.awsName, project.name)
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.name)
     log.completed(s"EC2 Load Balancer: [$elb]")
     return elb
   }
 
-  def createAutoScalingGroup(repo: Repo, launchConfigName: String, loadBalancerName: String) {
+  def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String) {
     log.started("EC2 auto scaling group")
-    val asg = AutoScalingGroup.createAutoScalingGroup(repo.awsName, launchConfigName, loadBalancerName)
+    val asg = AutoScalingGroup.createAutoScalingGroup(project.name, launchConfigName, loadBalancerName)
     log.completed(s"EC2 auto scaling group: [$asg]")
   }
 
