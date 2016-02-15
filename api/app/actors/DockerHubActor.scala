@@ -24,12 +24,6 @@ object DockerHubActor {
     case class Data(projectId: String) extends Message
 
     /**
-      * Creates a record in the local images table for every tag found
-      * in docker hub for this project.
-      */
-    case object SyncImages extends Message
-
-    /**
       * Message to start the build the docker image for the specified
       * version. Note the current implementation does not actually
       * trigger a build - just watches docker until the build
@@ -77,14 +71,6 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
         }
       }
     }
-
-   case m @ DockerHubActor.Messages.SyncImages => withVerboseErrorHandler(m) {
-     withProject { project =>
-       withRepo { repo =>
-         syncImages(project, repo)
-       }
-     }
-   }
 
    case m: Any => logUnhandledMessage(m)
  }
