@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{ImagesDao, ProjectExpectedStatesDao}
-import io.flow.delta.actors.{MainActor, EventLog, SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.{Project, Settings}
 import play.api.Logger
@@ -28,17 +28,11 @@ object BuildDockerImage extends SupervisorFunction {
     }
   }
 
-  override def isEnabled(settings: Settings) = true // TODO: settings.buildDockerImage
+  override def isEnabled(settings: Settings) = settings.buildDockerImage
 
 }
 
-case class BuildDockerImage(project: Project) extends Github with EventLog {
-
-  def logPrefix = "BuildDockerImage"
-
-  def withProject[T](f: Project => T): Option[T] = {
-    Some(f(project))
-  }
+case class BuildDockerImage(project: Project) {
 
   def run(
     implicit ec: scala.concurrent.ExecutionContext

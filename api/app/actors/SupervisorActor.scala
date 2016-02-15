@@ -26,7 +26,8 @@ object SupervisorActor {
     functions.SyncMasterSha,
     functions.TagMaster,
     functions.SetExpectedState,
-    functions.BuildDockerImage
+    functions.BuildDockerImage,
+    functions.BringUpAws
   )
 
 }
