@@ -50,8 +50,8 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg.toString) {
-      withRepo { repo =>
-        createCluster(repo)
+      withProject { project =>
+        createCluster(project)
       }
     }
 
@@ -87,9 +87,9 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     log.completed(s"EC2 auto scaling group: [$asg]")
   }
 
-  def createCluster(repo: Repo) {
+  def createCluster(project: Project) {
     log.started("ECS Cluster")
-    val cluster = EC2ContainerService.createCluster(repo.awsName)
+    val cluster = EC2ContainerService.createCluster(project.id)
     log.completed(s"ECS Cluster: [$cluster]")
   }
 
