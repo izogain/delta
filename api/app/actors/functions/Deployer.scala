@@ -23,7 +23,7 @@ case class Deployer(project: Project, actual: State, expected: State) {
   def up(): SupervisorResult = {
     val diff = expected.versions.flatMap { expVersion =>
       val actualInstances: Long = actual.versions.find { _.name == expVersion.name }.map(_.instances).getOrElse(0)
-      actualInstances < expVersion.instances match {
+      actualInstances > expVersion.instances match {
         case true => {
           // Expected number of instances matches actual. Nothing to do
           None
