@@ -50,8 +50,8 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg.toString) {
-      withRepo { repo =>
-        createCluster(repo)
+      withProject { project =>
+        createCluster(project)
       }
     }
 
@@ -69,27 +69,27 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   def createLaunchConfiguration(project: Project): String = {
     log.started("EC2 auto scaling group launch configuration")
-    val lc = AutoScalingGroup.createLaunchConfiguration(project.name)
+    val lc = AutoScalingGroup.createLaunchConfiguration(project.id)
     log.completed(s"EC2 auto scaling group launch configuration: [$lc]")
     return lc
   }
 
   def createLoadBalancer(project: Project): String = {
     log.started("EC2 load balancer")
-    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.name)
+    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id)
     log.completed(s"EC2 Load Balancer: [$elb]")
     return elb
   }
 
   def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String) {
     log.started("EC2 auto scaling group")
-    val asg = AutoScalingGroup.createAutoScalingGroup(project.name, launchConfigName, loadBalancerName)
+    val asg = AutoScalingGroup.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
     log.completed(s"EC2 auto scaling group: [$asg]")
   }
 
-  def createCluster(repo: Repo) {
+  def createCluster(project: Project) {
     log.started("ECS Cluster")
-    val cluster = EC2ContainerService.createCluster(repo.awsName)
+    val cluster = EC2ContainerService.createCluster(project.id)
     log.completed(s"ECS Cluster: [$cluster]")
   }
 

@@ -72,28 +72,28 @@ class DeployImageActor extends Actor with Util with DataProject with EventLog {
   }
 
   def scaleUpService(image: Image) {
-    EC2ContainerService.scaleUp(image.id, image.version, image.project.name)
+    EC2ContainerService.scaleUp(image.id, image.version, image.project.id)
   }
 
   // For registerTaskDefinition, createService, monitorScaleUp:
   // image.id (example: "flowcommerce/user")
   // image.version (example: "0.0.12")
-  // image.project.name (example: "user")
+  // image.project.id (example: "user")
   def registerTaskDefinition(image: Image): String = {
     log.started(s"Registering task definition: [${image.id}]")
-    val taskDefinition = EC2ContainerService.registerTaskDefinition(image.id, image.version, image.project.name)
+    val taskDefinition = EC2ContainerService.registerTaskDefinition(image.id, image.version, image.project.id)
     log.completed(s"Task Registered: [${image.id}], Task: [${taskDefinition}]")
     taskDefinition
   }
 
   def createService(image: Image, taskDefinition: String) {
     log.started(s"Creating service: [${image.id}]")
-    val service = EC2ContainerService.createService(image.id, image.version, image.project.name, taskDefinition)
+    val service = EC2ContainerService.createService(image.id, image.version, image.project.id, taskDefinition)
     log.completed(s"Service Created: [${image.id}], Service: [${service}]")
   }
 
   def monitorScaleUp(image: Image) {
-    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.version, image.project.name)
+    val ecsService = EC2ContainerService.getServiceInfo(image.id, image.version, image.project.id)
     val running = ecsService.getRunningCount
     val desired = ecsService.getDesiredCount
     val pending = ecsService.getPendingCount

@@ -5,8 +5,6 @@ case class Repo(
   project: String  // e.g. registry
 ) {
 
-  val awsName = owner + "-" + project
-
   override def toString() = s"$owner/$project"
 
 }
