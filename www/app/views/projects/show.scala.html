@@ -6,7 +6,7 @@
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
   latestImage: Option[io.flow.delta.v0.models.Image],
-  changeEvents: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event],
+  changeEvents: Seq[io.flow.delta.v0.models.Event],
   recentEvents: Seq[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
@@ -78,29 +78,18 @@
     </li>
   </ul>
 
-  <h3>Changes</h3>
+  <h3>Change Events (<a href="@routes.EventsController.index(project_id = Some(project.id), event_type = Some(io.flow.delta.v0.models.EventType.Change))">View all</a>)</h3>
   @if(changeEvents.isEmpty) {
     <em>No changes</em>
   } else {
-    @eventsTable(changeEvents.items)
-
-    @if(changeEvents.hasPrevious || changeEvents.hasNext) {
-      <ul class="pager">
-        @if(changeEvents.hasPrevious) {
-          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = changeEvents.page - 1)">Previous</a></li>
-        }
-        @if(changeEvents.hasNext) {
-          <li><a href="@routes.ProjectsController.show(project.id, eventsPage = changeEvents.page + 1)">Next</a></li>
-        }
-      </ul>
-    }
+    @eventsTable(changeEvents)
   }
 
   <h3>Recent Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
   @if(changeEvents.isEmpty) {
-    <em>None</em>
+    <em>No events in past 10 minutes</em>
   } else {
-    <em>We show up to the 10 most recent events that were created in past 10 minutes</em>
+    <em>We show up to the 5 most recent events that were created in past 10 minutes</em>
     
     @eventsTable(recentEvents)
   }

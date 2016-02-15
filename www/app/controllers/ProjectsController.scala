@@ -40,7 +40,7 @@ class ProjectsController @javax.inject.Inject() (
     }
   }
 
-  def show(id: String, eventsPage: Int) = Identified.async { implicit request =>
+  def show(id: String) = Identified.async { implicit request =>
     withProject(request, id) { project =>
       for {
         settings <- deltaClient(request).projects.getSettingsById(id)
@@ -48,13 +48,12 @@ class ProjectsController @javax.inject.Inject() (
         changeEvents <- deltaClient(request).events.get(
           projectId = Some(project.id),
           `type` = Some(EventType.Change),
-          limit = Pagination.DefaultLimit+1,
-          offset = eventsPage * Pagination.DefaultLimit
+          limit = 5
         )
         recentEvents <- deltaClient(request).events.get(
           projectId = Some(project.id),
           numberMinutesSinceCreation = Some(10),
-          limit = 10
+          limit = 5
         )
         tags <- deltaClient(request).tags.get(
           projectId = Some(id),
@@ -81,7 +80,7 @@ class ProjectsController @javax.inject.Inject() (
             shas.headOption.map(_.hash),
             tags.headOption,
             images.headOption,
-            PaginatedCollection(eventsPage, changeEvents),
+            changeEvents,
             recentEvents
           )
         )

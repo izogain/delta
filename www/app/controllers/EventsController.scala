@@ -36,8 +36,18 @@ class EventsController @javax.inject.Inject() (
       )
     } yield {
       val title = projectId match {
-        case None => "Event Log"
-        case Some(id) => s"Event Log: $id"
+        case None => {
+          `type` match {
+            case None => "Event Log"
+            case Some(t) => s"Event Log: (type $t)"
+          }
+        }
+        case Some(id) => {
+          `type` match {
+            case None => s"Event Log: $id"
+            case Some(t) => s"Event Log: $id (type: $t)"
+          }
+        }
       }
 
       Ok(
