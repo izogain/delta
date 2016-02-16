@@ -30,6 +30,7 @@ object SetExpectedState extends SupervisorFunction {
 case class SetExpectedState(project: Project) extends Github {
 
   def run(): SupervisorResult = {
+    // TODO: Make sure tag is actually the latest in semver ordering.
     TagsDao.findAll(
       Authorization.All,
       projectId = Some(project.id),
@@ -46,6 +47,12 @@ case class SetExpectedState(project: Project) extends Github {
             setVersions(Seq(Version(latestTag.name, instances = SetExpectedState.DefaultNumberInstances)))
           }
           case Some(state) => {
+            // TODO: Maybe turn this into a sum? Not sure... The goal
+            // here is to understand how many instance we should
+            // create based on what we are already running.
+            //  - If expected state was: 0.0.1 - 3 instances, and we
+            //    are publishing 0.0.2, we want the new expected state
+            //    to be 0.0.2 - 3 instances
             val instances: Long = state.versions.headOption.map(_.instances).getOrElse {
               SetExpectedState.DefaultNumberInstances
             }

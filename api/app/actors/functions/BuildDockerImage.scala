@@ -42,7 +42,6 @@ case class BuildDockerImage(project: Project) {
 
       case Some(state) => {
         val versions = state.versions.flatMap { version =>
-          println(s"version[$version]")
           ImagesDao.findByProjectIdAndVersion(project.id, version.name) match {
             case Some(i) => {
               None
