@@ -40,7 +40,7 @@ object DateHelper {
     dateTime match {
       case None => default
       case Some(dt) => {
-        DateTimeFormat.forPattern("MM/dd/YY HH:mm:ss").withZone(EasternTime).print(dt)
+        DateTimeFormat.forPattern("MM/dd/YY HH:mm:ss z").withZone(EasternTime).print(dt)
       }
     }
   }
@@ -72,7 +72,7 @@ object DateHelper {
     dateTime match {
       case None => default
       case Some(dt) => {
-        DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(EasternTime).print(dt)
+        DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss z").withZone(EasternTime).print(dt)
       }
     }
   }
