@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import db.{ProjectExpectedStatesDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
-import io.flow.delta.v0.models.{Project, Settings, StateForm, Version}
+import io.flow.delta.v0.models.{Project, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future
 
@@ -25,7 +25,6 @@ object SetExpectedState extends SupervisorFunction {
     }
   }
 
-  override def isEnabled(settings: Settings) = settings.setExpectedState
 }
 
 case class SetExpectedState(project: Project) extends Github {

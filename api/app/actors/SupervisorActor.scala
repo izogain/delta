@@ -72,7 +72,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
         SupervisorResult.NoChange("All functions returned without modification")
       }
       case Some(f) => {
-        f.isEnabled(settings) match {
+        isEnabled(settings, f) match {
           case false => {
             log.skipped(format(f, "is disabled in the project settings"))
             run(project, settings, functions.drop(1))
@@ -124,6 +124,17 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     val name = f.getClass.getName
     val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
     name.substring(idx + 1).dropRight(1) // Remove trailing $
+  }
+
+  private[this] def isEnabled(settings: Settings, f: Any): Boolean = {
+    format(f) match {
+      case "SyncMasterSha" => settings.syncMasterSha
+      case "TagMaster" => settings.tagMaster
+      case "SetExpectedState" => settings.setExpectedState
+      case "BuildDockerImage" => settings.buildDockerImage
+      case "Scale" => settings.scale
+      case other => sys.error(s"Cannot determine setting for function[$other]")
+    }
   }
 
 }

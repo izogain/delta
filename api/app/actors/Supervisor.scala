@@ -22,10 +22,4 @@ trait SupervisorFunction {
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult]
 
-  /**
-   * Returns true if enabled based on project settings, false
-   * otherwise.
-   */
-  def isEnabled(settings: Settings): Boolean
-
 }

@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import db.{ProjectActualStatesDao, ProjectExpectedStatesDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
 import scala.concurrent.Future
 
@@ -51,8 +51,6 @@ object Scale extends SupervisorFunction {
       }
     }
   }
-
-  override def isEnabled(settings: Settings) = settings.scale
 
 }
 
