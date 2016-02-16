@@ -62,7 +62,7 @@
     <li> Latest event at: @if(recentEvents.headOption.isEmpty) {
            -
          } else {
-           @io.flow.delta.www.lib.DateHelper.consoleLongDateTime(recentEvents.head.createdAt)
+           @io.flow.play.util.DateHelper.consoleLongDateTime(recentEvents.head.createdAt)
          }
     </li>
     <li> Master: @masterHash.getOrElse("-")</li>
