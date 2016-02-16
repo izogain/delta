@@ -69,18 +69,10 @@ class ProjectStatesDao(table: String, idPrefix: String) {
     project: Project,
     form: StateForm
   ): Seq[String] = {
-    val versionErrors = if (form.versions.isEmpty) {
-      Seq("Must have at least one version")
-    } else {
-      Nil
-    }
-
-    val projectErrors = ProjectsDao.findById(Authorization.All, project.id) match {
+    ProjectsDao.findById(Authorization.All, project.id) match {
       case None => Seq("Project not found")
       case Some(project) => Nil
     }
-
-    versionErrors ++ projectErrors
   }
 
   def create(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
