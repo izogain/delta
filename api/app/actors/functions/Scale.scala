@@ -26,6 +26,16 @@ object Scale extends SupervisorFunction {
     val desiredState = ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id)
     Future {
       (lastState, desiredState) match {
+
+        case (_, None) => {
+          SupervisorResult.NoChange(s"Desired state is not known")
+        }
+
+        case (None, Some(_)) => {
+          MainActor.ref ! MainActor.Messages.CheckLastState(project.id)
+          SupervisorResult.Change(s"Last state is not known. Requested CheckLastState")
+        }
+
         case (Some(last), Some(desired)) => {
           Scale.isRecent(last.timestamp) match {
             case false => {
@@ -36,15 +46,6 @@ object Scale extends SupervisorFunction {
               Deployer(project, last, desired).scale()
             }
           }
-        }
-        case (None, Some(_)) => {
-          SupervisorResult.NoChange(s"Last state is not known")
-        }
-        case (Some(_), None) => {
-          SupervisorResult.NoChange(s"Desired state is not known")
-        }
-        case (None, None) => {
-          SupervisorResult.NoChange(s"Last state and desired state are not known")
         }
       }
     }
