@@ -289,6 +289,9 @@ class ProjectsController @javax.inject.Inject() (
         case "buildDockerImage" => {
           Some(SettingsForm(buildDockerImage = Some(!settings.buildDockerImage)))
         }
+        case "scale" => {
+          Some(SettingsForm(scale = Some(!settings.scale)))
+        }
         case other => {
           None
         }

@@ -10,9 +10,10 @@ import scala.concurrent.Future
 /**
   * If we have both an expected state and a recent actual state,
   * compares the two to see if there are any instances we need to
-  * bring up in production. If so, deploys those versions.
+  * scale up or down in production. Scale Up will always happen first;
+  * scale down only initiatied after Scale Up is complete.
   */
-object ScaleUp extends SupervisorFunction {
+object Scale extends SupervisorFunction {
 
   override def run(
     project: Project
@@ -29,7 +30,12 @@ object ScaleUp extends SupervisorFunction {
               SupervisorResult.NoChange(s"Actual state is too old. Last updated at ${act.timestamp}")
             }
             case true => {
-              Deployer(project, act, exp).up()
+              val deployer = Deployer(project, act, exp)
+              deployer.up() match {
+                case SupervisorResult.NoChange(desc) => deployer.down()
+                case r: SupervisorResult.Change => r
+                case r: SupervisorResult.Error => r
+              }
             }
           }
         }
@@ -46,7 +52,7 @@ object ScaleUp extends SupervisorFunction {
     }
   }
 
-  override def isEnabled(settings: Settings) = true // TODO: settings.scaleUp
+  override def isEnabled(settings: Settings) = settings.scale
 
 }
 
