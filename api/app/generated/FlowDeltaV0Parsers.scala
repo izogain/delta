@@ -623,25 +623,29 @@ package io.flow.delta.v0.anorm.parsers {
       syncMasterSha = s"$prefix${sep}sync_master_sha",
       tagMaster = s"$prefix${sep}tag_master",
       setExpectedState = s"$prefix${sep}set_expected_state",
-      buildDockerImage = s"$prefix${sep}build_docker_image"
+      buildDockerImage = s"$prefix${sep}build_docker_image",
+      scale = s"$prefix${sep}scale"
     )
 
     def parser(
       syncMasterSha: String = "sync_master_sha",
       tagMaster: String = "tag_master",
       setExpectedState: String = "set_expected_state",
-      buildDockerImage: String = "build_docker_image"
+      buildDockerImage: String = "build_docker_image",
+      scale: String = "scale"
     ): RowParser[io.flow.delta.v0.models.Settings] = {
       SqlParser.bool(syncMasterSha) ~
       SqlParser.bool(tagMaster) ~
       SqlParser.bool(setExpectedState) ~
-      SqlParser.bool(buildDockerImage) map {
-        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage => {
+      SqlParser.bool(buildDockerImage) ~
+      SqlParser.bool(scale) map {
+        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ scale => {
           io.flow.delta.v0.models.Settings(
             syncMasterSha = syncMasterSha,
             tagMaster = tagMaster,
             setExpectedState = setExpectedState,
-            buildDockerImage = buildDockerImage
+            buildDockerImage = buildDockerImage,
+            scale = scale
           )
         }
       }
@@ -655,25 +659,29 @@ package io.flow.delta.v0.anorm.parsers {
       syncMasterSha = s"$prefix${sep}sync_master_sha",
       tagMaster = s"$prefix${sep}tag_master",
       setExpectedState = s"$prefix${sep}set_expected_state",
-      buildDockerImage = s"$prefix${sep}build_docker_image"
+      buildDockerImage = s"$prefix${sep}build_docker_image",
+      state = s"$prefix${sep}state"
     )
 
     def parser(
       syncMasterSha: String = "sync_master_sha",
       tagMaster: String = "tag_master",
       setExpectedState: String = "set_expected_state",
-      buildDockerImage: String = "build_docker_image"
+      buildDockerImage: String = "build_docker_image",
+      state: String = "state"
     ): RowParser[io.flow.delta.v0.models.SettingsForm] = {
       SqlParser.bool(syncMasterSha).? ~
       SqlParser.bool(tagMaster).? ~
       SqlParser.bool(setExpectedState).? ~
-      SqlParser.bool(buildDockerImage).? map {
-        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage => {
+      SqlParser.bool(buildDockerImage).? ~
+      SqlParser.bool(state).? map {
+        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ state => {
           io.flow.delta.v0.models.SettingsForm(
             syncMasterSha = syncMasterSha,
             tagMaster = tagMaster,
             setExpectedState = setExpectedState,
-            buildDockerImage = buildDockerImage
+            buildDockerImage = buildDockerImage,
+            state = state
           )
         }
       }
