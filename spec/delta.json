@@ -28,6 +28,12 @@
       ]
     },
 
+    "docker_provider": {
+      "values": [
+	{ "name": "docker_hub" }
+      ]
+    },
+
     "publication": {
       "description": "A publication represents something that a user can subscribe to.",
       "values": [
@@ -52,7 +58,7 @@
   },
 
   "models": {
-    
+
     "reference": {
       "fields": [
 	{ "name": "id", "type": "string" }
@@ -65,11 +71,12 @@
 	{ "name": "password", "type": "string", "required": false }
       ]
     },
-    
+
     "organization": {
       "fields": [
 	{ "name": "id", "type": "string" },
-	{ "name": "user", "type": "user_summary", "description": "The user that created this organization" }
+	{ "name": "user", "type": "user_summary", "description": "The user that created this organization" },
+  { "name": "docker", "type": "docker" }
       ]
     },
 
@@ -81,7 +88,15 @@
 
     "organization_form": {
       "fields": [
-	{ "name": "id", "type": "string" }
+	{ "name": "id", "type": "string" },
+  { "name": "docker", "type": "docker" }
+      ]
+    },
+
+    "docker": {
+      "fields": [
+        { "name": "provider", "type": "docker_provider" },
+        { "name": "organization", "type": "string", "example": "flowcommerce" }
       ]
     },
 
@@ -115,7 +130,7 @@
 	{ "name": "uri", "type": "string" }
       ]
     },
-    
+
     "project_state": {
       "description": "Returns the desired and last states for this project",
       "fields": [
@@ -134,7 +149,7 @@
 	{ "name": "scale", "type": "boolean", "default": true, "description": "If enabled, we will automatically scale instances up or down to match current desired state" }
       ]
     },
-    
+
     "settings_form": {
       "fields": [
 	{ "name": "sync_master_sha", "type": "boolean", "required": false },
@@ -152,7 +167,7 @@
         { "name": "versions", "type": "[version]" }
       ]
     },
-    
+
     "version": {
       "fields": [
         { "name": "name", "type": "string", "example": "0.0.1" },
@@ -165,7 +180,7 @@
         { "name": "versions", "type": "[version]" }
       ]
     },
-    
+
     "repository": {
       "fields": [
 	{ "name": "name", "type": "string" },
@@ -173,7 +188,7 @@
 	{ "name": "uri", "type": "string" }
       ]
     },
-    
+
     "user_form": {
       "fields": [
 	{ "name": "email", "type": "string", "required": false },
@@ -188,7 +203,7 @@
 	{ "name": "login", "type": "string" }
       ]
     },
-    
+
     "github_user": {
       "fields": [
 	{ "name": "id", "type": "string" },
@@ -229,7 +244,7 @@
 	{ "name": "description", "type": "string", "required": false }
       ]
     },
-    
+
     "subscription": {
       "description": "Represents a user that is currently subscribed to a publication",
       "fields": [
@@ -438,7 +453,7 @@
             { "name": "name", "type": "string", "description": "Find project with this name. Case in-sensitive. Exact match", "required": false },
 	    { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
-            { "name": "sort", "type": "string", "default": "projects.id" }            
+            { "name": "sort", "type": "string", "default": "projects.id" }
           ],
           "responses": {
             "200": { "type": "[project]" },
@@ -510,7 +525,7 @@
             "404": { "type": "unit" }
           }
         },
-        
+
         {
           "method": "GET",
           "path": "/:id/state/latest",
@@ -876,7 +891,7 @@
           }
 
         }
-        
+
       ]
     },
 
@@ -918,7 +933,7 @@
           }
 
         }
-        
+
       ]
     },
 
@@ -961,7 +976,7 @@
           }
 
         }
-        
+
       ]
     },
 
@@ -993,7 +1008,7 @@
             "404": { "type": "unit" }
           }
         }
-        
+
       ]
     }
 
