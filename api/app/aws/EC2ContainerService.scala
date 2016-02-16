@@ -1,5 +1,7 @@
 package io.flow.delta.aws
 
+import io.flow.delta.v0.models.Version
+
 import util.RegistryClient
 
 import com.amazonaws.services.ecs.AmazonECSClient
@@ -73,6 +75,26 @@ object EC2ContainerService extends Settings {
             .withDesiredCount(0)
         )
       }
+    }
+  }
+
+  def getClusterInfo(projectId: String): Seq[Version] = {
+    val cluster = getClusterName(projectId)
+    client.describeServices(
+      new DescribeServicesRequest()
+        .withCluster(cluster)
+    ).getServices().asScala.map{service =>
+      // val image = "flowcommerce/helloworld:0.0.2"
+      val image = client.describeTaskDefinition(
+        new DescribeTaskDefinitionRequest()
+          .withTaskDefinition(service.getTaskDefinition)
+      ).getTaskDefinition().getContainerDefinitions().asScala.head.getImage()
+
+      // image name = "flow/user:0.0.1"
+      // o = flow, p = user, version = 0.0.1
+      val pattern = "(\\w+)/(\\w+):(.+)".r
+      val pattern(o, p, version) = image
+      Version(version, service.getRunningCount.toInt)
     }
   }
 
