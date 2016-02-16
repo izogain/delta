@@ -19,6 +19,8 @@ object ProjectActor {
   object Messages {
     case class Data(id: String) extends Message
 
+    case object CheckLastState extends Message
+
     case object ConfigureEC2 extends Message // One-time EC2 setup
     case object ConfigureECS extends Message // One-time ECS setup
 
@@ -35,12 +37,20 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   def receive = {
 
-    case m @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
+    case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
       setDataProject(id)
     }
 
+    case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
+      withProject { project =>
+        withRepo { repo =>
+          captureLastState(project, repo)
+        }
+      }
+    }
+
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
-    case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg.toString) {
+    case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg) {
       withProject { project =>
         val lc = createLaunchConfiguration(project)
         val elb = createLoadBalancer(project)
@@ -49,7 +59,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
-    case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg.toString) {
+    case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg) {
       withProject { project =>
         createCluster(project)
       }
@@ -65,6 +75,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     case m: Any => logUnhandledMessage(m)
 
+  }
+
+  def captureLastState(project: Project, repo: Repo) {
+    // We want to get:
+    //  0.0.1: 2 instances
+    //  0.0.2: 1 instance
   }
 
   def createLaunchConfiguration(project: Project): String = {

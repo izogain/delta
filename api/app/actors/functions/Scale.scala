@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{ProjectLastStatesDao, ProjectDesiredStatesDao}
-import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
@@ -29,7 +29,8 @@ object Scale extends SupervisorFunction {
         case (Some(act), Some(exp)) => {
           Scale.isRecent(act.timestamp) match {
             case false => {
-              SupervisorResult.NoChange(s"Actual state is too old. Last updated at ${act.timestamp}")
+              MainActor.ref ! MainActor.Messages.CheckLastState(project.id)
+              SupervisorResult.NoChange(s"Last state is too old. Last updated at ${act.timestamp}")
             }
             case true => {
               Deployer(project, act, exp).scale()
@@ -37,13 +38,13 @@ object Scale extends SupervisorFunction {
           }
         }
         case (None, Some(_)) => {
-          SupervisorResult.NoChange(s"Actual state is not known")
+          SupervisorResult.NoChange(s"Last state is not known")
         }
         case (Some(_), None) => {
           SupervisorResult.NoChange(s"Desired state is not known")
         }
         case (None, None) => {
-          SupervisorResult.NoChange(s"Actual state and desired state are not known")
+          SupervisorResult.NoChange(s"Last state and desired state are not known")
         }
       }
     }
