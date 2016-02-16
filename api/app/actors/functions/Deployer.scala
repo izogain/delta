@@ -9,7 +9,7 @@ import org.joda.time.DateTime
 case class Deployer(project: Project, actual: State, desired: State) {
 
   /**
-    * Scales up or down the project instances to move actual state
+    * Scales up or down the project instances to move last state
     * towards desired state. This works in two phases:
     * 
     *   1. Find any instances that need to be brought up, and issue
@@ -27,7 +27,7 @@ case class Deployer(project: Project, actual: State, desired: State) {
         StateDiff.down(actual, desired).toList match {
           case Nil => {
             SupervisorResult.NoChange(
-              s"Actual state[%s] matches desired state[%s]".format(
+              s"Last state[%s] matches desired state[%s]".format(
                 StateFormatter.label(actual.versions),
                 StateFormatter.label(desired.versions)
               )
