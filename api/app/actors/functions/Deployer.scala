@@ -1,12 +1,12 @@
 package io.flow.delta.actors.functions
 
-import io.flow.delta.actors.SupervisorResult
+import io.flow.delta.actors.{MainActor, SupervisorResult}
 import io.flow.delta.api.lib.{StateDiff, StateFormatter}
 import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Project, State}
 import org.joda.time.DateTime
 
-case class Deployer(project: Project, actual: State, desired: State) {
+case class Deployer(project: Project, last: State, desired: State) {
 
   /**
     * Scales up or down the project instances to move last state
@@ -22,50 +22,37 @@ case class Deployer(project: Project, actual: State, desired: State) {
     * unhealthy.
     */
   def scale(): SupervisorResult = {
-    StateDiff.up(actual, desired).toList match {
+    StateDiff.up(last, desired).toList match {
       case Nil => {
-        StateDiff.down(actual, desired).toList match {
+        StateDiff.down(last, desired).toList match {
           case Nil => {
             SupervisorResult.NoChange(
               s"Last state[%s] matches desired state[%s]".format(
-                StateFormatter.label(actual.versions),
+                StateFormatter.label(last.versions),
                 StateFormatter.label(desired.versions)
               )
             )
           }
           case diffs => {
-            execute(diffs)
+            MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
             SupervisorResult.Change(s"Scale Down: " + toLabel(diffs))
           }
         }
       }
       case diffs => {
-        execute(diffs)
+        MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
         SupervisorResult.Change(s"Scale Up: " + toLabel(diffs))
-      }
-    }
-  }
-
-  private[this] def execute(diffs: Seq[StateDiff]) {
-    assert(!diffs.isEmpty, "Must have at least one state diff")
-    diffs.foreach { diff =>
-      if (diff.actualInstances > diff.desiredInstances) {
-        val instances = diff.actualInstances - diff.desiredInstances
-        println(s"Bring down ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
-      } else if (diff.actualInstances < diff.desiredInstances) {
-        val instances = diff.desiredInstances - diff.actualInstances
-        println(s"Bring up ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
       }
     }
   }
 
   private[this] def toLabel(diffs: Seq[StateDiff]): String = {
     diffs.flatMap { diff =>
-      if (diff.actualInstances > diff.desiredInstances) {
-        val label = Text.pluralize(diff.actualInstances - diff.desiredInstances, "instance", "instances")
+      if (diff.lastInstances > diff.desiredInstances) {
+        val label = Text.pluralize(diff.lastInstances - diff.desiredInstances, "instance", "instances")
         Some(s"${diff.versionName}: Remove $label")
-      } else if (diff.actualInstances < diff.desiredInstances) {
-        val label = Text.pluralize(diff.desiredInstances - diff.actualInstances , "instance", "instances")
+      } else if (diff.lastInstances < diff.desiredInstances) {
+        val label = Text.pluralize(diff.desiredInstances - diff.lastInstances , "instance", "instances")
         Some(s"${diff.versionName}: Add $label")
       } else {
         None

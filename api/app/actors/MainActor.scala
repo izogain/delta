@@ -1,7 +1,8 @@
 package io.flow.delta.actors
 
-import io.flow.postgresql.Authorization
+import io.flow.delta.api.lib.StateDiff
 import io.flow.play.actors.Util
+import io.flow.postgresql.Authorization
 import play.api.libs.concurrent.Akka
 import akka.actor._
 import play.api.Logger
@@ -22,8 +23,6 @@ object MainActor {
     case class BuildDockerImage(projectId: String, version: String)
     case class CheckLastState(projectId: String)
     
-    case class Deploy(projectId: String, imageId: String)
-
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
     case class ProjectDeleted(id: String)
@@ -31,6 +30,8 @@ object MainActor {
 
     case class ProjectDesiredStateUpdated(projectId: String)
     case class ProjectLastStateUpdated(projectId: String)
+
+    case class Scale(projectId: String, diffs: Seq[StateDiff])
 
     case class ShaCreated(projectId: String, id: String)
     case class ShaUpdated(projectId: String, id: String)
@@ -65,10 +66,6 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   def receive = akka.event.LoggingReceive {
 
-    case msg @ MainActor.Messages.Deploy(projectId, imageId) => withVerboseErrorHandler(msg) {
-      upsertImageActor(projectId, imageId) ! DeployImageActor.Messages.Deploy
-    }
-
     case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
       upsertUserActor(id) ! UserActor.Messages.Created
     }
@@ -99,6 +96,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
+    }
+
+    case msg @ MainActor.Messages.Scale(projectId, diffs) => withVerboseErrorHandler(msg) {
+      upsertProjectActor(projectId) ! ProjectActor.Messages.Scale(diffs)
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {

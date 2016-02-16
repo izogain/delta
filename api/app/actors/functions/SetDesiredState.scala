@@ -47,14 +47,12 @@ case class SetDesiredState(project: Project) extends Github {
             setVersions(Seq(Version(latestTag.name, instances = SetDesiredState.DefaultNumberInstances)))
           }
           case Some(state) => {
-            // TODO: Maybe turn this into a sum? Not sure... The goal
-            // here is to understand how many instance we should
-            // create based on what we are already running.
-            //  - If desired state was: 0.0.1 - 3 instances, and we
-            //    are publishing 0.0.2, we want the new desired state
-            //    to be 0.0.2 - 3 instances
-            val instances: Long = state.versions.headOption.map(_.instances).getOrElse {
-              SetDesiredState.DefaultNumberInstances
+            // By default, we create the same number of instances of
+            // the new version as the total number of instances in the
+            // last state.
+            val instances: Long = state.versions.headOption.map(_.instances).sum match {
+              case 0 => SetDesiredState.DefaultNumberInstances
+              case n => n
             }
             val targetVersions = Seq(Version(latestTag.name, instances = instances))
 

@@ -22,18 +22,18 @@ object Scale extends SupervisorFunction {
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    val actual = ProjectLastStatesDao.findByProjectId(Authorization.All, project.id)
-    val desired = ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id)
+    val lastState = ProjectLastStatesDao.findByProjectId(Authorization.All, project.id)
+    val desiredState = ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id)
     Future {
-      (actual, desired) match {
-        case (Some(act), Some(exp)) => {
-          Scale.isRecent(act.timestamp) match {
+      (lastState, desiredState) match {
+        case (Some(last), Some(desired)) => {
+          Scale.isRecent(last.timestamp) match {
             case false => {
               MainActor.ref ! MainActor.Messages.CheckLastState(project.id)
-              SupervisorResult.NoChange(s"Last state is too old. Last updated at ${act.timestamp}")
+              SupervisorResult.NoChange(s"Last state is too old. Last updated at ${last.timestamp}")
             }
             case true => {
-              Deployer(project, act, exp).scale()
+              Deployer(project, last, desired).scale()
             }
           }
         }
