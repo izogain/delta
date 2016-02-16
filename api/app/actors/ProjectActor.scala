@@ -1,10 +1,11 @@
 package io.flow.delta.actors
 
+import org.joda.time.DateTime
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
-import db.{TokensDao, UsersDao}
+import db.{TokensDao, UsersDao, ProjectLastStatesDao}
 import io.flow.delta.api.lib.{GithubHelper, Repo}
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.{Project,StateForm}
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
 import play.api.Logger
@@ -81,6 +82,13 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     // We want to get:
     //  0.0.1: 2 instances
     //  0.0.2: 1 instance
+    log.run(s"Capturing last state for project ${project.name}") {
+      ProjectLastStatesDao.upsert(
+        UsersDao.systemUser,
+        project,
+        StateForm(versions = EC2ContainerService.getClusterInfo(project.id))
+      )
+    }
   }
 
   def createLaunchConfiguration(project: Project): String = {
