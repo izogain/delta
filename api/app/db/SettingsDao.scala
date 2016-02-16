@@ -42,8 +42,8 @@ object SettingsDao {
   private[this] val idGenerator = IdGenerator("set")
 
   /**
-    * Each project has 0 or 1 settings records... Upsert creates if
-    * necessary, then updates
+    * Each project has 0 or 1 settings records. Upsert will update or
+    * create settings to match the specified form for this project.
     */
   def upsert(createdBy: User, projectId: String, form: SettingsForm): Settings = {
     findByProjectId(Authorization.All, projectId) match {
