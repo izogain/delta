@@ -37,7 +37,7 @@ class GithubUtilSpec extends Specification {
     )
 
     GithubUtil.parseUri("http://github.com/mbryzek/apidoc/other") must beEqualTo(
-      Left("Invalid uri path[http://github.com/mbryzek/apidoc/other] - expected exactly two path components")
+      Left("Invalid uri path[http://github.com/mbryzek/apidoc/other] - desired exactly two path components")
     )
   }
 

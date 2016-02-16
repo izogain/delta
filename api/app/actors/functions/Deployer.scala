@@ -6,11 +6,11 @@ import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Project, State}
 import org.joda.time.DateTime
 
-case class Deployer(project: Project, actual: State, expected: State) {
+case class Deployer(project: Project, actual: State, desired: State) {
 
   /**
     * Scales up or down the project instances to move actual state
-    * towards expected state. This works in two phases:
+    * towards desired state. This works in two phases:
     * 
     *   1. Find any instances that need to be brought up, and issue
     *      messages to bring those instances up.
@@ -22,14 +22,14 @@ case class Deployer(project: Project, actual: State, expected: State) {
     * unhealthy.
     */
   def scale(): SupervisorResult = {
-    StateDiff.up(actual, expected).toList match {
+    StateDiff.up(actual, desired).toList match {
       case Nil => {
-        StateDiff.down(actual, expected).toList match {
+        StateDiff.down(actual, desired).toList match {
           case Nil => {
             SupervisorResult.NoChange(
-              s"Actual state[%s] matches expected state[%s]".format(
+              s"Actual state[%s] matches desired state[%s]".format(
                 StateFormatter.label(actual.versions),
-                StateFormatter.label(expected.versions)
+                StateFormatter.label(desired.versions)
               )
             )
           }
@@ -49,11 +49,11 @@ case class Deployer(project: Project, actual: State, expected: State) {
   private[this] def execute(diffs: Seq[StateDiff]) {
     assert(!diffs.isEmpty, "Must have at least one state diff")
     diffs.foreach { diff =>
-      if (diff.actualInstances > diff.expectedInstances) {
-        val instances = diff.actualInstances - diff.expectedInstances
+      if (diff.actualInstances > diff.desiredInstances) {
+        val instances = diff.actualInstances - diff.desiredInstances
         println(s"Bring down ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
-      } else if (diff.actualInstances < diff.expectedInstances) {
-        val instances = diff.expectedInstances - diff.actualInstances
+      } else if (diff.actualInstances < diff.desiredInstances) {
+        val instances = diff.desiredInstances - diff.actualInstances
         println(s"Bring up ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
       }
     }
@@ -61,11 +61,11 @@ case class Deployer(project: Project, actual: State, expected: State) {
 
   private[this] def toLabel(diffs: Seq[StateDiff]): String = {
     diffs.flatMap { diff =>
-      if (diff.actualInstances > diff.expectedInstances) {
-        val label = Text.pluralize(diff.actualInstances - diff.expectedInstances, "instance", "instances")
+      if (diff.actualInstances > diff.desiredInstances) {
+        val label = Text.pluralize(diff.actualInstances - diff.desiredInstances, "instance", "instances")
         Some(s"${diff.versionName}: Remove $label")
-      } else if (diff.actualInstances < diff.expectedInstances) {
-        val label = Text.pluralize(diff.expectedInstances - diff.actualInstances , "instance", "instances")
+      } else if (diff.actualInstances < diff.desiredInstances) {
+        val label = Text.pluralize(diff.desiredInstances - diff.actualInstances , "instance", "instances")
         Some(s"${diff.versionName}: Add $label")
       } else {
         None

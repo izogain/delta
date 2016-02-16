@@ -28,7 +28,7 @@ object MainActor {
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
 
-    case class ProjectExpectedStateUpdated(projectId: String)
+    case class ProjectDesiredStateUpdated(projectId: String)
 
     case class ShaCreated(projectId: String, id: String)
     case class ShaUpdated(projectId: String, id: String)
@@ -81,13 +81,13 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       actor ! ProjectActor.Messages.CreateHooks
       actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
       actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
     case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
       searchActor ! SearchActor.Messages.SyncProject(id)
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
@@ -95,36 +95,36 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.ShaUpdated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.TagCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.TagUpdated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.ImageCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.BuildDockerImage(projectId, version) => withVerboseErrorHandler(msg) {
       upsertDockerHubActor(projectId) ! DockerHubActor.Messages.Build(version)
     }
 
-    case msg @ MainActor.Messages.ProjectExpectedStateUpdated(projectId) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueExpectedState
+    case msg @ MainActor.Messages.ProjectDesiredStateUpdated(projectId) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
 
     case msg: Any => logUnhandledMessage(msg)

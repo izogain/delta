@@ -8,15 +8,15 @@ import play.api.test.Helpers._
 import org.scalatestplus.play._
 import java.util.UUID
 
-class ProjectExpectedStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
+class ProjectDesiredStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def createProjectExpectedState(
+  def createProjectDesiredState(
     project: Project = createProject(),
     form: StateForm = createStateForm()
   ): State = {
-    rightOrErrors(ProjectExpectedStatesDao.create(systemUser, project, form))
+    rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, form))
   }
 
   def createStateForm(): StateForm = {
@@ -28,33 +28,33 @@ class ProjectExpectedStatesDaoSpec extends PlaySpec with OneAppPerSuite with Hel
     )
   }
 
-  "create expected" in {
+  "create desired" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectExpectedStatesDao.create(systemUser, project, createStateForm()))
+    val state = rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "create actual" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectActualStatesDao.create(systemUser, project, createStateForm()))
+    val state = rightOrErrors(ProjectLastStatesDao.create(systemUser, project, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "upsert" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectExpectedStatesDao.upsert(systemUser, project, createStateForm()))
-    val second = rightOrErrors(ProjectExpectedStatesDao.upsert(systemUser, project, createStateForm()))
+    val state = rightOrErrors(ProjectDesiredStatesDao.upsert(systemUser, project, createStateForm()))
+    val second = rightOrErrors(ProjectDesiredStatesDao.upsert(systemUser, project, createStateForm()))
     second.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "delete" in {
     val project = createProject()
-    val state = createProjectExpectedState(project)
-    ProjectExpectedStatesDao.delete(systemUser, project)
-    ProjectExpectedStatesDao.findByProjectId(Authorization.All, project.id) must be(None)
+    val state = createProjectDesiredState(project)
+    ProjectDesiredStatesDao.delete(systemUser, project)
+    ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) must be(None)
   }
 
 }

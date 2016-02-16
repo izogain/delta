@@ -14,7 +14,7 @@ object SettingsDao {
   private[this] val BaseQuery = Query(s"""
     select settings.sync_master_sha,
            settings.tag_master,
-           settings.set_expected_state,
+           settings.set_desired_state,
            settings.build_docker_image,
            settings.scale
       from settings
@@ -23,16 +23,16 @@ object SettingsDao {
 
   private[this] val InsertQuery = """
     insert into settings
-    (id, project_id, sync_master_sha, tag_master, set_expected_state, build_docker_image, scale, updated_by_user_id)
+    (id, project_id, sync_master_sha, tag_master, set_desired_state, build_docker_image, scale, updated_by_user_id)
     values
-    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_expected_state}, {build_docker_image}, {scale}, {updated_by_user_id})
+    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_desired_state}, {build_docker_image}, {scale}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update settings
        set sync_master_sha = {sync_master_sha},
            tag_master = {tag_master},
-           set_expected_state = {set_expected_state},
+           set_desired_state = {set_desired_state},
            build_docker_image = {build_docker_image},
            scale = {scale},
            updated_by_user_id = {updated_by_user_id}
@@ -67,7 +67,7 @@ object SettingsDao {
         'project_id -> projectId,
         'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
         'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
-        'set_expected_state -> form.setExpectedState.getOrElse(defaults.setExpectedState),
+        'set_desired_state -> form.setDesiredState.getOrElse(defaults.setDesiredState),
         'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
         'scale -> form.buildDockerImage.getOrElse(defaults.scale),
         'updated_by_user_id -> createdBy.id
@@ -81,7 +81,7 @@ object SettingsDao {
         'project_id -> projectId,
         'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
         'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
-        'set_expected_state -> form.setExpectedState.getOrElse(settings.setExpectedState),
+        'set_desired_state -> form.setDesiredState.getOrElse(settings.setDesiredState),
         'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage), 
         'scale -> form.buildDockerImage.getOrElse(settings.scale),
        'updated_by_user_id -> createdBy.id

@@ -13,19 +13,19 @@ import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
-  val SuccessfulCompletionMessage = "completed PursueExpectedState"
+  val SuccessfulCompletionMessage = "completed PursueDesiredState"
   
   trait Message
 
   object Messages {
     case class Data(id: String) extends Message
-    case object PursueExpectedState extends Message
+    case object PursueDesiredState extends Message
   }
 
   val All = Seq(
     functions.SyncMasterSha,
     functions.TagMaster,
-    functions.SetExpectedState,
+    functions.SetDesiredState,
     functions.BuildDockerImage,
     functions.Scale
   )
@@ -47,12 +47,12 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     /**
       * For any project that is not active (defined by not having an
       * event logged in last n seconds), we send a message to bring
-      * that project to its expected state.
+      * that project to its desired state.
       */
-    case msg @ SupervisorActor.Messages.PursueExpectedState => withVerboseErrorHandler(msg) {
+    case msg @ SupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-        log.started("PursueExpectedState")
+        log.started("PursueDesiredState")
         run(project, settings, SupervisorActor.All)
         log.message(SupervisorActor.SuccessfulCompletionMessage)
       }
@@ -130,7 +130,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     format(f) match {
       case "SyncMasterSha" => settings.syncMasterSha
       case "TagMaster" => settings.tagMaster
-      case "SetExpectedState" => settings.setExpectedState
+      case "SetDesiredState" => settings.setDesiredState
       case "BuildDockerImage" => settings.buildDockerImage
       case "Scale" => settings.scale
       case other => sys.error(s"Cannot determine setting for function[$other]")

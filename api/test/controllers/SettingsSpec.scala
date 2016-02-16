@@ -21,7 +21,7 @@ class SettingsSpec extends PlaySpecification with MockClient {
 
     settings.syncMasterSha must beEqualTo(true)
     settings.tagMaster must beEqualTo(true)
-    settings.setExpectedState must beEqualTo(true)
+    settings.setDesiredState must beEqualTo(true)
   }
 
   "PUT /projects/:id/settings for a new project" in new WithServer(port=port) {
@@ -31,39 +31,39 @@ class SettingsSpec extends PlaySpecification with MockClient {
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = Some(false),
         tagMaster = Some(false),
-        setExpectedState = Some(false),
+        setDesiredState = Some(false),
         buildDockerImage = Some(false)
       ))
     )
     settings.syncMasterSha must beEqualTo(false)
     settings.tagMaster must beEqualTo(false)
-    settings.setExpectedState must beEqualTo(false)
+    settings.setDesiredState must beEqualTo(false)
     settings.buildDockerImage must beEqualTo(false)
 
     val settings2 = await(
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = None,
         tagMaster = None,
-        setExpectedState = None,
+        setDesiredState = None,
         buildDockerImage = None
       ))
     )
     settings2.syncMasterSha must beEqualTo(false)
     settings2.tagMaster must beEqualTo(false)
-    settings2.setExpectedState must beEqualTo(false)
+    settings2.setDesiredState must beEqualTo(false)
     settings2.buildDockerImage must beEqualTo(false)
 
     val settings3 = await(
       client.projects.putSettingsById(project.id, SettingsForm(
         syncMasterSha = Some(true),
         tagMaster = Some(true),
-        setExpectedState = Some(true),
+        setDesiredState = Some(true),
         buildDockerImage = Some(true)
       ))
     )
     settings3.syncMasterSha must beEqualTo(true)
     settings3.tagMaster must beEqualTo(true)
-    settings3.setExpectedState must beEqualTo(true)
+    settings3.setDesiredState must beEqualTo(true)
     settings3.buildDockerImage must beEqualTo(true)
   }
 }

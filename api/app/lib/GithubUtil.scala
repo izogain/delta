@@ -17,7 +17,7 @@ object GithubUtil {
           case Nil => Left(s"URI path cannot be empty for uri[$uri]")
           case owner :: Nil => Left(s"Invalid uri path[$uri] missing project name")
           case owner :: project :: Nil => Right(Repo(owner, project))
-          case _ => Left(s"Invalid uri path[$u] - expected exactly two path components")
+          case _ => Left(s"Invalid uri path[$u] - desired exactly two path components")
         }
       }
     }
