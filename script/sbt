@@ -43,18 +43,26 @@ if subproject == ""
 end
 
 # Select out the names of the configuration variables coming from the environment
-application_conf_file = File.join(File.dirname(__FILE__), "..", subproject, "conf", "application.conf")
-if !File.exists?(application_conf_file)
-  puts "ERROR: Could not find name application conf file. Expected at[%s]" % application_conf_file
-  exit(1)
+files = []
+
+base_conf_file = File.join(File.dirname(__FILE__), "..", subproject, "conf", "base.conf")
+if File.exists?(base_conf_file)
+  files << base_conf_file
 end
 
-names = IO.readlines(application_conf_file).map do |line|
-  (key, value) = line.split("=").map(&:strip)
-  if value && (md = value.match(/^\$\{\?(.+)\}$/))
-    md[1]
-  else
-    ""
+application_conf_file = File.join(File.dirname(__FILE__), "..", subproject, "conf", "application.conf")
+if File.exists?(application_conf_file)
+  files << application_conf_file
+end
+
+names = []
+
+files.each do |file|
+  IO.readlines(file).map do |line|
+    (key, value) = line.split("=").map(&:strip)
+    if value && (md = value.match(/^\$\{\?(.+)\}$/))
+      names << md[1]
+    end
   end
 end.select { |v| !v.empty? }
 
