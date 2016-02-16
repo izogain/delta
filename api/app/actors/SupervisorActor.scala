@@ -27,7 +27,7 @@ object SupervisorActor {
     functions.TagMaster,
     functions.SetExpectedState,
     functions.BuildDockerImage,
-    functions.BringUpAws
+    functions.ScaleUp
   )
 
 }

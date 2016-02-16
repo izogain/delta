@@ -12,7 +12,7 @@ import scala.concurrent.Future
   * compares the two to see if there are any instances we need to
   * bring up in production. If so, deploys those versions.
   */
-object BringUpAws extends SupervisorFunction {
+object ScaleUp extends SupervisorFunction {
 
   override def run(
     project: Project
@@ -46,7 +46,7 @@ object BringUpAws extends SupervisorFunction {
     }
   }
 
-  override def isEnabled(settings: Settings) = true // TODO: settings.bringUpAws
+  override def isEnabled(settings: Settings) = true // TODO: settings.scaleUp
 
 }
 
