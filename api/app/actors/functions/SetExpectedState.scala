@@ -2,7 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{ProjectExpectedStatesDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
-import io.flow.delta.lib.Text
+import io.flow.delta.api.lib.StateFormatter
 import io.flow.delta.v0.models.{Project, Settings, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future
@@ -53,7 +53,7 @@ case class SetExpectedState(project: Project) extends Github {
             val targetVersions = Seq(Version(latestTag.name, instances = instances))
 
             if (state.versions == targetVersions) {
-              SupervisorResult.NoChange("Expected state remains: " + label(targetVersions))
+              SupervisorResult.NoChange("Expected state remains: " + StateFormatter.label(targetVersions))
             } else {
               setVersions(targetVersions)
             }
@@ -72,14 +72,7 @@ case class SetExpectedState(project: Project) extends Github {
         versions = versions
       )
     )
-    SupervisorResult.Change("Expected state changed to: " + label(versions))
-  }
-
-  def label(versions: Seq[Version]): String = {
-    versions.map { v =>
-      val label = Text.pluralize(v.instances, "instance", "instances")
-      s"${v.name}: $label"
-    }.mkString(", ")
+    SupervisorResult.Change("Expected state changed to: " + StateFormatter.label(versions))
   }
 
 }
