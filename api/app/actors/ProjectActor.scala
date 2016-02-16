@@ -83,11 +83,11 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
           if (diff.lastInstances > diff.desiredInstances) {
             val instances = diff.lastInstances - diff.desiredInstances
-            println(s"project[${project.id}] Bring down ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
+            println(s"project[${project.id}] Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}")
 
           } else if (diff.lastInstances < diff.desiredInstances) {
             val instances = diff.desiredInstances - diff.lastInstances
-            println(s"project[${project.id}] Bring up ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
+            println(s"project[${project.id}] Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}")
           }
 
         }
