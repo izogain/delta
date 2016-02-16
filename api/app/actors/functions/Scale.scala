@@ -15,6 +15,8 @@ import scala.concurrent.Future
   */
 object Scale extends SupervisorFunction {
 
+  private[this] val MinutesUntilStale = 10
+
   override def run(
     project: Project
   ) (
@@ -25,17 +27,12 @@ object Scale extends SupervisorFunction {
     Future {
       (actual, expected) match {
         case (Some(act), Some(exp)) => {
-          Deployer.isRecent(act) match {
+          Scale.isRecent(act.timestamp) match {
             case false => {
               SupervisorResult.NoChange(s"Actual state is too old. Last updated at ${act.timestamp}")
             }
             case true => {
-              val deployer = Deployer(project, act, exp)
-              deployer.up() match {
-                case SupervisorResult.NoChange(desc) => deployer.down()
-                case r: SupervisorResult.Change => r
-                case r: SupervisorResult.Error => r
-              }
+              Deployer(project, act, exp).scale()
             }
           }
         }
@@ -52,5 +49,10 @@ object Scale extends SupervisorFunction {
     }
   }
 
+  def isRecent(ts: DateTime): Boolean = {
+    val now = new DateTime()
+    ts.isAfter(now.minusMinutes(MinutesUntilStale))
+  }
+  
 }
 
