@@ -3,8 +3,9 @@ package io.flow.delta.actors
 import db.{ImagesDao, UsersDao}
 import io.flow.delta.api.lib.Repo
 import io.flow.delta.v0.models._
-import io.flow.docker.registry.v0.Client
+import io.flow.docker.registry.v0.{Authorization, Client}
 import io.flow.play.actors.Util
+import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext
@@ -37,7 +38,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
-  private[this] val client = new Client
+  private[this] lazy val client = new Client(
+    auth = Some(
+      Authorization.Basic(
+        username = DefaultConfig.requiredString("docker.username"),
+        password = Some(DefaultConfig.requiredString("docker.password"))
+      )
+    )
+  )
+
   private[this] val IntervalSeconds = 30
 
   override val logPrefix = "DockerHubActor"
