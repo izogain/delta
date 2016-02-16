@@ -15,8 +15,8 @@ object EC2ContainerService extends Settings {
   /**
   * Name creation helper functions
   **/
-  def getClusterName(projectName: String): String = {
-    return s"$projectName-cluster"
+  def getClusterName(projectId: String): String = {
+    return s"$projectId-cluster"
   }
 
   def getBaseName(imageName: String, imageVersion: String): String = {
@@ -41,41 +41,35 @@ object EC2ContainerService extends Settings {
   /**
   * Functions that interact with AWS ECS
   **/
-  def createCluster(projectName: String): String = {
-    val name = getClusterName(projectName)
+  def createCluster(projectId: String): String = {
+    val name = getClusterName(projectId)
     client.createCluster(new CreateClusterRequest().withClusterName(name))
     return name
   }
 
-  def scaleUp(imageName: String, imageVersion: String, projectName: String, count: Int = maxScaleUpDesiredCount) {
-    val cluster = getClusterName(projectName)
-    scaleDownRunningServices(cluster)
+  // scale to the desired count - can be up or down
+  def scale(imageName: String, imageVersion: String, projectId: String, desiredCount: Long) {
+    val cluster = getClusterName(projectId)
+    val service = getServiceName(imageName, imageVersion)
 
-    // Scale up the new service
-    val newService = getServiceName(imageName, imageVersion)
+    val resp = client.describeServices(
+      new DescribeServicesRequest()
+      .withCluster(cluster)
+      .withServices(Seq(service).asJava)
+    )
+
+    // if service doesn't exist in the cluster
+    if (resp.getFailures().size() > 0) {
+      val taskDefinition = registerTaskDefinition(imageName, imageVersion, projectId)
+      createService(imageName, imageVersion, projectId, taskDefinition)
+    }
+
     client.updateService(
       new UpdateServiceRequest()
       .withCluster(cluster)
-      .withService(newService)
-      .withDesiredCount(count)
+      .withService(service)
+      .withDesiredCount(desiredCount.toInt)
     )
-  }
-
-  def scaleDownRunningServices(cluster: String) {
-    // As part of scaling up a new service, we need to scale down the old service
-    // Until traffic management gets better, set desired count of old service to 0
-    client.describeServices(
-      new DescribeServicesRequest()
-      .withCluster(cluster)
-    ).getServices().asScala.foreach{service =>
-      if (service.getRunningCount() > 0) {
-        client.updateService(
-          new UpdateServiceRequest()
-          .withCluster(cluster)
-          .withDesiredCount(0)
-        )
-      }
-    }
   }
 
   def getClusterInfo(projectId: String): Seq[Version] = {
@@ -104,8 +98,8 @@ object EC2ContainerService extends Settings {
     }
   }
 
-  def getServiceInfo(imageName: String, imageVersion: String, projectName: String): Service = {
-    val cluster = getClusterName(projectName)
+  def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Service = {
+    val cluster = getClusterName(projectId)
     val service = getServiceName(imageName, imageVersion)
 
     // should only be one thing, since we are passing cluster and service
@@ -116,10 +110,14 @@ object EC2ContainerService extends Settings {
     ).getServices().asScala.head
   }
 
-  def registerTaskDefinition(imageName: String, imageVersion: String, projectName: String): String = {
+  def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): String = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val registryPorts = RegistryClient.ports(projectName)
+    val registryPorts = RegistryClient.ports(projectId)
+    val commandSeq = registryPorts.service.id match {
+      case "nodejs" => Seq[String]().asJava
+      case _ => Seq("production").asJava
+    }
 
     client.registerTaskDefinition(
       new RegisterTaskDefinitionRequest()
@@ -128,7 +126,7 @@ object EC2ContainerService extends Settings {
         Seq(
           new ContainerDefinition()
           .withName(containerName)
-          .withImage(imageName)
+          .withImage(imageName + ":" + imageVersion)
           .withMemory(containerMemory)
           .withPortMappings(
             Seq(
@@ -137,7 +135,7 @@ object EC2ContainerService extends Settings {
               .withHostPort(registryPorts.external.toInt)
             ).asJava
           )
-          .withCommand(Seq("production").asJava)
+          .withCommand(commandSeq)
         ).asJava
       )
     )
@@ -145,11 +143,11 @@ object EC2ContainerService extends Settings {
     return taskName
   }
 
-  def createService(imageName: String, imageVersion: String, projectName: String, taskDefinition: String): String = {
-    val clusterName = getClusterName(projectName)
+  def createService(imageName: String, imageVersion: String, projectId: String, taskDefinition: String): String = {
+    val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectName)
+    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
     return client.createService(
       new CreateServiceRequest()
@@ -163,7 +161,7 @@ object EC2ContainerService extends Settings {
           new LoadBalancer()
           .withContainerName(containerName)
           .withLoadBalancerName(loadBalancerName)
-          .withContainerPort(RegistryClient.ports(projectName).internal.toInt)
+          .withContainerPort(RegistryClient.ports(projectId).internal.toInt)
         ).asJava
       )
     ).getService().getServiceName()
