@@ -55,9 +55,9 @@ object EC2ContainerService extends Settings {
     val newService = getServiceName(imageName, imageVersion)
     client.updateService(
       new UpdateServiceRequest()
-        .withCluster(cluster)
-        .withService(newService)
-        .withDesiredCount(count)
+      .withCluster(cluster)
+      .withService(newService)
+      .withDesiredCount(count)
     )
   }
 
@@ -66,13 +66,13 @@ object EC2ContainerService extends Settings {
     // Until traffic management gets better, set desired count of old service to 0
     client.describeServices(
       new DescribeServicesRequest()
-        .withCluster(cluster)
+      .withCluster(cluster)
     ).getServices().asScala.foreach{service =>
       if (service.getRunningCount() > 0) {
         client.updateService(
           new UpdateServiceRequest()
-            .withCluster(cluster)
-            .withDesiredCount(0)
+          .withCluster(cluster)
+          .withDesiredCount(0)
         )
       }
     }
@@ -80,14 +80,20 @@ object EC2ContainerService extends Settings {
 
   def getClusterInfo(projectId: String): Seq[Version] = {
     val cluster = getClusterName(projectId)
-    client.describeServices(
-      new DescribeServicesRequest()
+
+    client.listServices(
+      new ListServicesRequest()
+      .withCluster(cluster)
+    ).getServiceArns().asScala.map{serviceArn =>
+      val service = client.describeServices(
+        new DescribeServicesRequest()
         .withCluster(cluster)
-    ).getServices().asScala.map{service =>
-      // val image = "flowcommerce/helloworld:0.0.2"
+        .withServices(Seq(serviceArn).asJava)
+      ).getServices().asScala.head
+
       val image = client.describeTaskDefinition(
         new DescribeTaskDefinitionRequest()
-          .withTaskDefinition(service.getTaskDefinition)
+        .withTaskDefinition(service.getTaskDefinition)
       ).getTaskDefinition().getContainerDefinitions().asScala.head.getImage()
 
       // image name = "flow/user:0.0.1"
@@ -105,8 +111,8 @@ object EC2ContainerService extends Settings {
     // should only be one thing, since we are passing cluster and service
     client.describeServices(
       new DescribeServicesRequest()
-        .withCluster(cluster)
-        .withServices(Seq(service).asJava)
+      .withCluster(cluster)
+      .withServices(Seq(service).asJava)
     ).getServices().asScala.head
   }
 
@@ -117,23 +123,23 @@ object EC2ContainerService extends Settings {
 
     client.registerTaskDefinition(
       new RegisterTaskDefinitionRequest()
-        .withFamily(taskName)
-        .withContainerDefinitions(
-          Seq(
-            new ContainerDefinition()
-              .withName(containerName)
-              .withImage(imageName)
-              .withMemory(containerMemory)
-              .withPortMappings(
-                Seq(
-                  new PortMapping()
-                    .withContainerPort(registryPorts.internal.toInt)
-                    .withHostPort(registryPorts.external.toInt)
-                ).asJava
-              )
-              .withCommand(Seq("production").asJava)
-          ).asJava
-        )
+      .withFamily(taskName)
+      .withContainerDefinitions(
+        Seq(
+          new ContainerDefinition()
+          .withName(containerName)
+          .withImage(imageName)
+          .withMemory(containerMemory)
+          .withPortMappings(
+            Seq(
+              new PortMapping()
+              .withContainerPort(registryPorts.internal.toInt)
+              .withHostPort(registryPorts.external.toInt)
+            ).asJava
+          )
+          .withCommand(Seq("production").asJava)
+        ).asJava
+      )
     )
 
     return taskName
@@ -147,19 +153,19 @@ object EC2ContainerService extends Settings {
 
     return client.createService(
       new CreateServiceRequest()
-        .withServiceName(serviceName)
-        .withCluster(clusterName)
-        .withDesiredCount(createServiceDesiredCount)
-        .withRole(serviceRole)
-        .withTaskDefinition(taskDefinition)
-        .withLoadBalancers(
-          Seq(
-            new LoadBalancer()
-              .withContainerName(containerName)
-              .withLoadBalancerName(loadBalancerName)
-              .withContainerPort(RegistryClient.ports(projectName).internal.toInt)
-          ).asJava
-        )
+      .withServiceName(serviceName)
+      .withCluster(clusterName)
+      .withDesiredCount(createServiceDesiredCount)
+      .withRole(serviceRole)
+      .withTaskDefinition(taskDefinition)
+      .withLoadBalancers(
+        Seq(
+          new LoadBalancer()
+          .withContainerName(containerName)
+          .withLoadBalancerName(loadBalancerName)
+          .withContainerPort(RegistryClient.ports(projectName).internal.toInt)
+        ).asJava
+      )
     ).getService().getServiceName()
   }
 
