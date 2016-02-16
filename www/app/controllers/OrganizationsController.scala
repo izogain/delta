@@ -70,6 +70,7 @@ class OrganizationsController @javax.inject.Inject() (
         OrganizationsController.uiForm.fill(
           OrganizationsController.UiForm(
             id = "",
+            organization="",
             returnUrl = returnUrl
           )
         )
@@ -116,6 +117,7 @@ class OrganizationsController @javax.inject.Inject() (
             OrganizationsController.uiForm.fill(
               OrganizationsController.UiForm(
                 id = organization.id,
+                organization = organization.id,
                 returnUrl = None
               )
             )
@@ -165,12 +167,13 @@ object OrganizationsController {
 
   case class UiForm(
     id: String,
+    organization: String,
     returnUrl: Option[String]
   ) {
     // TODO: cheat for now - build ui in separate PR
     val organizationForm = OrganizationForm(
       id = id,
-      docker = Docker(provider=DockerProvider.DockerHub, organization="flowcommerce")
+      docker = Docker(provider=DockerProvider.DockerHub, organization=organization)
     )
 
   }
@@ -178,6 +181,7 @@ object OrganizationsController {
   private val uiForm = Form(
     mapping(
       "id" -> nonEmptyText,
+      "organization" -> nonEmptyText,
       "return_url" -> optional(text)
     )(UiForm.apply)(UiForm.unapply)
   )

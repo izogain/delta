@@ -1,9 +1,10 @@
 package io.flow.delta.actors
 
+import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
-import db.{TokensDao, UsersDao, ProjectLastStatesDao}
+import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
 import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
 import io.flow.delta.v0.models.{Project, StateForm}
 import io.flow.delta.lib.Text
@@ -13,6 +14,7 @@ import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 object ProjectActor {
 
@@ -29,6 +31,7 @@ object ProjectActor {
     case object CreateHooks extends Message
 
     case class Scale(diffs: Seq[StateDiff]) extends Message
+    case class MonitorScale(imageName: String, imageVersion: String) extends Message
   }
 
 }
@@ -47,9 +50,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        withRepo { repo =>
-          captureLastState(project, repo)
-        }
+        captureLastState(project)
       }
     }
 
@@ -69,7 +70,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case m @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(m.toString) {
+    case msg @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withRepo { repo =>
           createHooks(project, repo)
@@ -77,28 +78,59 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case m @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(m.toString) {
+    case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         diffs.foreach { diff =>
+          val org = OrganizationsDao.findById(Authorization.All, project.organization.id).get
+          val imageName = s"${org.docker.organization}/${project.id}"
+          val imageVersion = diff.versionName
 
           if (diff.lastInstances > diff.desiredInstances) {
             val instances = diff.lastInstances - diff.desiredInstances
-            println(s"project[${project.id}] Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}")
-
+            log.run(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+              EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+            }
           } else if (diff.lastInstances < diff.desiredInstances) {
             val instances = diff.desiredInstances - diff.lastInstances
-            println(s"project[${project.id}] Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}")
+            log.run(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+              EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+            }
           }
 
+          monitorScale(project, imageName, imageVersion)
         }
       }
     }
-      
+
+    case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg.toString) {
+      withProject { project =>
+        monitorScale(project, imageName, imageVersion)
+      }
+    }
+
     case m: Any => logUnhandledMessage(m)
 
   }
 
-  def captureLastState(project: Project, repo: Repo) {
+  def monitorScale(project: Project, imageName: String, imageVersion: String) {
+    val ecsService = EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
+    val running = ecsService.getRunningCount
+    val desired = ecsService.getDesiredCount
+    val pending = ecsService.getPendingCount
+    val status = ecsService.getStatus
+
+    if (running == desired) {
+      log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
+    } else {
+      log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
+
+      Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
+        self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
+      }
+    }
+  }
+
+  def captureLastState(project: Project) {
     // We want to get:
     //  0.0.1: 2 instances
     //  0.0.2: 1 instance

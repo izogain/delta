@@ -22,7 +22,7 @@ object MainActor {
 
     case class BuildDockerImage(projectId: String, version: String)
     case class CheckLastState(projectId: String)
-    
+
     case class ProjectCreated(id: String)
     case class ProjectUpdated(id: String)
     case class ProjectDeleted(id: String)
@@ -52,7 +52,6 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
-  private[this] val deployImageActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val dockerHubActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val supervisorActors = scala.collection.mutable.Map[String, ActorRef]()
@@ -137,7 +136,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     case msg @ MainActor.Messages.ProjectLastStateUpdated(projectId) => withVerboseErrorHandler(msg) {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
     }
-      
+
     case msg: Any => logUnhandledMessage(msg)
 
   }
@@ -156,18 +155,6 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       val ref = Akka.system.actorOf(Props[UserActor], name = s"$name:userActor:$id")
       ref ! UserActor.Messages.Data(id)
       userActors += (id -> ref)
-      ref
-    }
-  }
-
-  /**
-    * @param imageId e.g. "flowcommerce/user:0.0.1"
-    */
-  def upsertImageActor(projectId: String, imageId: String): ActorRef = {
-    deployImageActors.lift(imageId).getOrElse {
-      val ref = Akka.system.actorOf(Props[DeployImageActor], name = s"$name:deployImageActor:$imageId")
-      ref ! DeployImageActor.Messages.Data(imageId)
-      deployImageActors += (imageId -> ref)
       ref
     }
   }
