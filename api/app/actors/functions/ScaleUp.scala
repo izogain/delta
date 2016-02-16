@@ -26,7 +26,7 @@ object ScaleUp extends SupervisorFunction {
         case (Some(act), Some(exp)) => {
           Deployer.isRecent(act) match {
             case false => {
-              SupervisorResult.NoChange(s"Actual state last updated at ${act.timestamp} is not recent")
+              SupervisorResult.NoChange(s"Actual state is too old. Last updated at ${act.timestamp}")
             }
             case true => {
               Deployer(project, act, exp).up()
