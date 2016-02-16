@@ -516,20 +516,20 @@ package io.flow.delta.v0.anorm.parsers {
   object ProjectState {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      expectedPrefix = s"$prefix${sep}expected",
-      actualPrefix = s"$prefix${sep}actual"
+      desiredPrefix = s"$prefix${sep}desired",
+      lastPrefix = s"$prefix${sep}last"
     )
 
     def parser(
-      expectedPrefix: String = "expected",
-      actualPrefix: String = "actual"
+      desiredPrefix: String = "desired",
+      lastPrefix: String = "last"
     ): RowParser[io.flow.delta.v0.models.ProjectState] = {
-      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(expectedPrefix).? ~
-      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(actualPrefix).? map {
-        case expected ~ actual => {
+      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(desiredPrefix).? ~
+      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(lastPrefix).? map {
+        case desired ~ last => {
           io.flow.delta.v0.models.ProjectState(
-            expected = expected,
-            actual = actual
+            desired = desired,
+            last = last
           )
         }
       }
@@ -622,7 +622,7 @@ package io.flow.delta.v0.anorm.parsers {
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       syncMasterSha = s"$prefix${sep}sync_master_sha",
       tagMaster = s"$prefix${sep}tag_master",
-      setExpectedState = s"$prefix${sep}set_expected_state",
+      setDesiredState = s"$prefix${sep}set_desired_state",
       buildDockerImage = s"$prefix${sep}build_docker_image",
       scale = s"$prefix${sep}scale"
     )
@@ -630,20 +630,20 @@ package io.flow.delta.v0.anorm.parsers {
     def parser(
       syncMasterSha: String = "sync_master_sha",
       tagMaster: String = "tag_master",
-      setExpectedState: String = "set_expected_state",
+      setDesiredState: String = "set_desired_state",
       buildDockerImage: String = "build_docker_image",
       scale: String = "scale"
     ): RowParser[io.flow.delta.v0.models.Settings] = {
       SqlParser.bool(syncMasterSha) ~
       SqlParser.bool(tagMaster) ~
-      SqlParser.bool(setExpectedState) ~
+      SqlParser.bool(setDesiredState) ~
       SqlParser.bool(buildDockerImage) ~
       SqlParser.bool(scale) map {
-        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ scale => {
+        case syncMasterSha ~ tagMaster ~ setDesiredState ~ buildDockerImage ~ scale => {
           io.flow.delta.v0.models.Settings(
             syncMasterSha = syncMasterSha,
             tagMaster = tagMaster,
-            setExpectedState = setExpectedState,
+            setDesiredState = setDesiredState,
             buildDockerImage = buildDockerImage,
             scale = scale
           )
@@ -658,7 +658,7 @@ package io.flow.delta.v0.anorm.parsers {
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       syncMasterSha = s"$prefix${sep}sync_master_sha",
       tagMaster = s"$prefix${sep}tag_master",
-      setExpectedState = s"$prefix${sep}set_expected_state",
+      setDesiredState = s"$prefix${sep}set_desired_state",
       buildDockerImage = s"$prefix${sep}build_docker_image",
       scale = s"$prefix${sep}scale"
     )
@@ -666,20 +666,20 @@ package io.flow.delta.v0.anorm.parsers {
     def parser(
       syncMasterSha: String = "sync_master_sha",
       tagMaster: String = "tag_master",
-      setExpectedState: String = "set_expected_state",
+      setDesiredState: String = "set_desired_state",
       buildDockerImage: String = "build_docker_image",
       scale: String = "scale"
     ): RowParser[io.flow.delta.v0.models.SettingsForm] = {
       SqlParser.bool(syncMasterSha).? ~
       SqlParser.bool(tagMaster).? ~
-      SqlParser.bool(setExpectedState).? ~
+      SqlParser.bool(setDesiredState).? ~
       SqlParser.bool(buildDockerImage).? ~
       SqlParser.bool(scale).? map {
-        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ scale => {
+        case syncMasterSha ~ tagMaster ~ setDesiredState ~ buildDockerImage ~ scale => {
           io.flow.delta.v0.models.SettingsForm(
             syncMasterSha = syncMasterSha,
             tagMaster = tagMaster,
-            setExpectedState = setExpectedState,
+            setDesiredState = setDesiredState,
             buildDockerImage = buildDockerImage,
             scale = scale
           )

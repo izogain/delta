@@ -117,10 +117,10 @@
     },
     
     "project_state": {
-      "description": "Returns the latest expected and actual states for this project",
+      "description": "Returns the desired and last states for this project",
       "fields": [
-        { "name": "expected", "type": "state", "required": false },
-        { "name": "actual", "type": "state", "required": false }
+        { "name": "desired", "type": "state", "required": false },
+        { "name": "last", "type": "state", "required": false }
       ]
     },
 
@@ -129,9 +129,9 @@
       "fields": [
 	{ "name": "sync_master_sha", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
 	{ "name": "tag_master", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
-	{ "name": "set_expected_state", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
+	{ "name": "set_desired_state", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
 	{ "name": "build_docker_image", "type": "boolean", "default": true, "description": "If enabled, we will automatically monitor building a docker image for each new tag" },
-	{ "name": "scale", "type": "boolean", "default": true, "description": "If enabled, we will automatically scale instances up or down to match current expected state" }
+	{ "name": "scale", "type": "boolean", "default": true, "description": "If enabled, we will automatically scale instances up or down to match current desired state" }
       ]
     },
     
@@ -139,14 +139,14 @@
       "fields": [
 	{ "name": "sync_master_sha", "type": "boolean", "required": false },
 	{ "name": "tag_master", "type": "boolean", "required": false },
-	{ "name": "set_expected_state", "type": "boolean", "required": false },
+	{ "name": "set_desired_state", "type": "boolean", "required": false },
 	{ "name": "build_docker_image", "type": "boolean", "required": false },
 	{ "name": "scale", "type": "boolean", "required": false }
       ]
     },
 
     "state": {
-      "description": "Used to describe the actual state of a project in AWS. Specifically which versions are running",
+      "description": "Used to describe the last state of a project in AWS. Specifically which versions are running",
       "fields": [
         { "name": "timestamp", "type": "date-time-iso8601", "example": "Date / time that this state was captured" },
         { "name": "versions", "type": "[version]" }
@@ -523,7 +523,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/expected",
+          "path": "/:id/state/desired",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },
@@ -533,7 +533,7 @@
 
         {
           "method": "POST",
-          "path": "/:id/state/expected",
+          "path": "/:id/state/desired",
           "responses": {
             "200": { "type": "[state_form]" },
             "401": { "type": "unit" },
@@ -543,7 +543,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/actual",
+          "path": "/:id/state/last",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },

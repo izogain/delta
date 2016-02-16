@@ -116,11 +116,11 @@ package io.flow.delta.v0.models {
   )
 
   /**
-   * Returns the latest expected and actual states for this project
+   * Returns the desired and last states for this project
    */
   case class ProjectState(
-    expected: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
-    actual: _root_.scala.Option[io.flow.delta.v0.models.State] = None
+    desired: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
+    last: _root_.scala.Option[io.flow.delta.v0.models.State] = None
   )
 
   case class ProjectSummary(
@@ -146,7 +146,7 @@ package io.flow.delta.v0.models {
   case class Settings(
     syncMasterSha: Boolean = true,
     tagMaster: Boolean = true,
-    setExpectedState: Boolean = true,
+    setDesiredState: Boolean = true,
     buildDockerImage: Boolean = true,
     scale: Boolean = true
   )
@@ -154,7 +154,7 @@ package io.flow.delta.v0.models {
   case class SettingsForm(
     syncMasterSha: _root_.scala.Option[Boolean] = None,
     tagMaster: _root_.scala.Option[Boolean] = None,
-    setExpectedState: _root_.scala.Option[Boolean] = None,
+    setDesiredState: _root_.scala.Option[Boolean] = None,
     buildDockerImage: _root_.scala.Option[Boolean] = None,
     scale: _root_.scala.Option[Boolean] = None
   )
@@ -168,8 +168,8 @@ package io.flow.delta.v0.models {
   )
 
   /**
-   * Used to describe the actual state of a project in AWS. Specifically which
-   * versions are running
+   * Used to describe the last state of a project in AWS. Specifically which versions
+   * are running
    */
   case class State(
     timestamp: _root_.org.joda.time.DateTime,
@@ -983,19 +983,19 @@ package io.flow.delta.v0.models {
 
     implicit def jsonReadsDeltaProjectState: play.api.libs.json.Reads[ProjectState] = {
       (
-        (__ \ "expected").readNullable[io.flow.delta.v0.models.State] and
-        (__ \ "actual").readNullable[io.flow.delta.v0.models.State]
+        (__ \ "desired").readNullable[io.flow.delta.v0.models.State] and
+        (__ \ "last").readNullable[io.flow.delta.v0.models.State]
       )(ProjectState.apply _)
     }
 
     def jsObjectProjectState(obj: io.flow.delta.v0.models.ProjectState) = {
-      (obj.expected match {
+      (obj.desired match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("expected" -> jsObjectState(x))
+        case Some(x) => play.api.libs.json.Json.obj("desired" -> jsObjectState(x))
       }) ++
-      (obj.actual match {
+      (obj.last match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("actual" -> jsObjectState(x))
+        case Some(x) => play.api.libs.json.Json.obj("last" -> jsObjectState(x))
       })
     }
 
@@ -1071,7 +1071,7 @@ package io.flow.delta.v0.models {
       (
         (__ \ "sync_master_sha").read[Boolean] and
         (__ \ "tag_master").read[Boolean] and
-        (__ \ "set_expected_state").read[Boolean] and
+        (__ \ "set_desired_state").read[Boolean] and
         (__ \ "build_docker_image").read[Boolean] and
         (__ \ "scale").read[Boolean]
       )(Settings.apply _)
@@ -1081,7 +1081,7 @@ package io.flow.delta.v0.models {
       play.api.libs.json.Json.obj(
         "sync_master_sha" -> play.api.libs.json.JsBoolean(obj.syncMasterSha),
         "tag_master" -> play.api.libs.json.JsBoolean(obj.tagMaster),
-        "set_expected_state" -> play.api.libs.json.JsBoolean(obj.setExpectedState),
+        "set_desired_state" -> play.api.libs.json.JsBoolean(obj.setDesiredState),
         "build_docker_image" -> play.api.libs.json.JsBoolean(obj.buildDockerImage),
         "scale" -> play.api.libs.json.JsBoolean(obj.scale)
       )
@@ -1099,7 +1099,7 @@ package io.flow.delta.v0.models {
       (
         (__ \ "sync_master_sha").readNullable[Boolean] and
         (__ \ "tag_master").readNullable[Boolean] and
-        (__ \ "set_expected_state").readNullable[Boolean] and
+        (__ \ "set_desired_state").readNullable[Boolean] and
         (__ \ "build_docker_image").readNullable[Boolean] and
         (__ \ "scale").readNullable[Boolean]
       )(SettingsForm.apply _)
@@ -1114,9 +1114,9 @@ package io.flow.delta.v0.models {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("tag_master" -> play.api.libs.json.JsBoolean(x))
       }) ++
-      (obj.setExpectedState match {
+      (obj.setDesiredState match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("set_expected_state" -> play.api.libs.json.JsBoolean(x))
+        case Some(x) => play.api.libs.json.Json.obj("set_desired_state" -> play.api.libs.json.JsBoolean(x))
       }) ++
       (obj.buildDockerImage match {
         case None => play.api.libs.json.Json.obj()
@@ -2018,10 +2018,10 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def getStateAndExpectedById(
+      override def getStateAndDesiredById(
         id: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/expected").map {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/desired").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2029,10 +2029,10 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def postStateAndExpectedById(
+      override def postStateAndDesiredById(
         id: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]] = {
-        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/expected").map {
+        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/desired").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.StateForm]", r, _.validate[Seq[io.flow.delta.v0.models.StateForm]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2040,10 +2040,10 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def getStateAndActualById(
+      override def getStateAndLastById(
         id: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/actual").map {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/state/last").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2656,15 +2656,15 @@ package io.flow.delta.v0 {
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.ProjectState]
 
-    def getStateAndExpectedById(
+    def getStateAndDesiredById(
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]
 
-    def postStateAndExpectedById(
+    def postStateAndDesiredById(
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]]
 
-    def getStateAndActualById(
+    def getStateAndLastById(
       id: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]
   }

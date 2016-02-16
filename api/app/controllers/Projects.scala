@@ -1,6 +1,6 @@
 package controllers
 
-import db.{ProjectsDao, ProjectExpectedStatesDao, ProjectActualStatesDao, SettingsDao}
+import db.{ProjectsDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
 import io.flow.play.clients.UserTokensClient
@@ -122,18 +122,18 @@ class Projects @javax.inject.Inject() (
       Ok(
         Json.toJson(
           ProjectState(
-            expected = ProjectExpectedStatesDao.findByProjectId(authorization(request), id),
-            actual = ProjectActualStatesDao.findByProjectId(authorization(request), id)
+            desired = ProjectDesiredStatesDao.findByProjectId(authorization(request), id),
+            last = ProjectLastStatesDao.findByProjectId(authorization(request), id)
           )
         )
       )
     }
   }
 
-  def getStateAndExpectedById(id: String) = TODO
+  def getStateAndDesiredById(id: String) = TODO
 
-  def postStateAndExpectedById(id: String) = TODO
+  def postStateAndDesiredById(id: String) = TODO
 
-  def getStateAndActualById(id: String) = TODO
+  def getStateAndLastById(id: String) = TODO
 
 }

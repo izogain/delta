@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.{ProjectExpectedStatesDao, TagsDao, UsersDao}
+import db.{ProjectDesiredStatesDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
 import io.flow.delta.v0.models.{Project, StateForm, Version}
@@ -8,10 +8,10 @@ import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future
 
 /**
-  * For projects that have auto deploy turned on, we set the expected
+  * For projects that have auto deploy turned on, we set the desired
   * state to 100% of traffic on the latest tag.
   */
-object SetExpectedState extends SupervisorFunction {
+object SetDesiredState extends SupervisorFunction {
 
   val DefaultNumberInstances = 2
 
@@ -21,13 +21,13 @@ object SetExpectedState extends SupervisorFunction {
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
     Future {
-      SetExpectedState(project).run
+      SetDesiredState(project).run
     }
   }
 
 }
 
-case class SetExpectedState(project: Project) extends Github {
+case class SetDesiredState(project: Project) extends Github {
 
   def run(): SupervisorResult = {
     // TODO: Make sure tag is actually the latest in semver ordering.
@@ -42,24 +42,24 @@ case class SetExpectedState(project: Project) extends Github {
       }
 
       case Some(latestTag) => {
-        ProjectExpectedStatesDao.findByProjectId(Authorization.All, project.id) match {
+        ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) match {
           case None => {
-            setVersions(Seq(Version(latestTag.name, instances = SetExpectedState.DefaultNumberInstances)))
+            setVersions(Seq(Version(latestTag.name, instances = SetDesiredState.DefaultNumberInstances)))
           }
           case Some(state) => {
             // TODO: Maybe turn this into a sum? Not sure... The goal
             // here is to understand how many instance we should
             // create based on what we are already running.
-            //  - If expected state was: 0.0.1 - 3 instances, and we
-            //    are publishing 0.0.2, we want the new expected state
+            //  - If desired state was: 0.0.1 - 3 instances, and we
+            //    are publishing 0.0.2, we want the new desired state
             //    to be 0.0.2 - 3 instances
             val instances: Long = state.versions.headOption.map(_.instances).getOrElse {
-              SetExpectedState.DefaultNumberInstances
+              SetDesiredState.DefaultNumberInstances
             }
             val targetVersions = Seq(Version(latestTag.name, instances = instances))
 
             if (state.versions == targetVersions) {
-              SupervisorResult.NoChange("Expected state remains: " + StateFormatter.label(targetVersions))
+              SupervisorResult.NoChange("Desired state remains: " + StateFormatter.label(targetVersions))
             } else {
               setVersions(targetVersions)
             }
@@ -71,14 +71,14 @@ case class SetExpectedState(project: Project) extends Github {
 
   def setVersions(versions: Seq[Version]): SupervisorResult = {
     assert(!versions.isEmpty, "Must have at least one version")
-    ProjectExpectedStatesDao.upsert(
+    ProjectDesiredStatesDao.upsert(
       UsersDao.systemUser,
       project,
       StateForm(
         versions = versions
       )
     )
-    SupervisorResult.Change("Expected state changed to: " + StateFormatter.label(versions))
+    SupervisorResult.Change("Desired state changed to: " + StateFormatter.label(versions))
   }
 
 }

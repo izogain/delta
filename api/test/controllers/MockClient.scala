@@ -28,14 +28,14 @@ trait MockClient extends db.Helpers {
       Await.result(f, duration)
     ) match {
       case Success(response) => {
-        sys.error("Expected function to fail but it succeeded with: " + response)
+        sys.error("Desired function to fail but it succeeded with: " + response)
       }
       case Failure(ex) =>  ex match {
         case e: ErrorsResponse => {
           e
         }
         case e => {
-          sys.error(s"Expected an exception of type[ErrorsResponse] but got[$e]")
+          sys.error(s"Desired an exception of type[ErrorsResponse] but got[$e]")
         }
       }
     }
@@ -64,14 +64,14 @@ trait MockClient extends db.Helpers {
       f
     ) match {
       case Success(response) => {
-        org.specs2.execute.Failure(s"Expected HTTP[$code] but got HTTP 2xx")
+        org.specs2.execute.Failure(s"Desired HTTP[$code] but got HTTP 2xx")
       }
       case Failure(ex) => ex match {
         case UnitResponse(code) => {
           org.specs2.execute.Success()
         }
         case e => {
-          org.specs2.execute.Failure(s"Unexpected error: $e")
+          org.specs2.execute.Failure(s"Undesired error: $e")
         }
       }
     }

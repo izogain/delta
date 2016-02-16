@@ -26,14 +26,14 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Current State</th>
-          <th>Target State</th>
+          <th>Last State</th>
+          <th>Desired State</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>@stateTable(state.actual)</td>
-          <td>@stateTable(state.expected)</td>
+          <td>@stateTable(state.last)</td>
+          <td>@stateTable(state.desired)</td>
         </tr>
       </tbody>
     </table>
@@ -72,7 +72,7 @@
       <ul>
         <li> @setting(project.id, "syncMasterSha", settings.syncMasterSha)</li>
         <li> @setting(project.id, "tagMaster", settings.tagMaster)</li>
-        <li> @setting(project.id, "setExpectedState", settings.setExpectedState)</li>
+        <li> @setting(project.id, "setDesiredState", settings.setDesiredState)</li>
         <li> @setting(project.id, "buildDockerImage", settings.buildDockerImage)</li>
         <li> @setting(project.id, "scale", settings.scale)</li>
       </ul>

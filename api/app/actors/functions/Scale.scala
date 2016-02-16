@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.{ProjectActualStatesDao, ProjectExpectedStatesDao}
+import db.{ProjectLastStatesDao, ProjectDesiredStatesDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import scala.concurrent.Future
 
 /**
-  * If we have both an expected state and a recent actual state,
+  * If we have both an desired state and a recent actual state,
   * compares the two to see if there are any instances we need to
   * scale up or down in production. Scale Up will always happen first;
   * scale down only initiatied after Scale Up is complete.
@@ -22,10 +22,10 @@ object Scale extends SupervisorFunction {
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    val actual = ProjectActualStatesDao.findByProjectId(Authorization.All, project.id)
-    val expected = ProjectExpectedStatesDao.findByProjectId(Authorization.All, project.id)
+    val actual = ProjectLastStatesDao.findByProjectId(Authorization.All, project.id)
+    val desired = ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id)
     Future {
-      (actual, expected) match {
+      (actual, desired) match {
         case (Some(act), Some(exp)) => {
           Scale.isRecent(act.timestamp) match {
             case false => {
@@ -40,10 +40,10 @@ object Scale extends SupervisorFunction {
           SupervisorResult.NoChange(s"Actual state is not known")
         }
         case (Some(_), None) => {
-          SupervisorResult.NoChange(s"Expected state is not known")
+          SupervisorResult.NoChange(s"Desired state is not known")
         }
         case (None, None) => {
-          SupervisorResult.NoChange(s"Actual state and expected state are not known")
+          SupervisorResult.NoChange(s"Actual state and desired state are not known")
         }
       }
     }

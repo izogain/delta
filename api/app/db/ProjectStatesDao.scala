@@ -10,15 +10,15 @@ import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
 
-object ProjectExpectedStatesDao extends ProjectStatesDao("project_expected_states", "pes") {
+object ProjectDesiredStatesDao extends ProjectStatesDao("project_desired_states", "pds") {
 
   override def onChange(projectId: String) {
-    MainActor.ref ! MainActor.Messages.ProjectExpectedStateUpdated(projectId)
+    MainActor.ref ! MainActor.Messages.ProjectDesiredStateUpdated(projectId)
   }
 
 }
 
-object ProjectActualStatesDao extends ProjectStatesDao("project_actual_states", "pes")
+object ProjectLastStatesDao extends ProjectStatesDao("project_last_states", "pls")
 
 class ProjectStatesDao(table: String, idPrefix: String) {
 
