@@ -73,7 +73,7 @@ if File.exists?(key_file)
     (key, value) = line.strip.split("=", 2).map(&:strip)
     if names.include?(key) && value && !value.empty?
       puts " - setting env var %s" % key
-      "%s=%s" % [key, value]
+      "%s=\"%s\"" % [key, value]
     else
       ""
     end
