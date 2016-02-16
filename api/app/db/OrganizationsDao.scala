@@ -16,6 +16,8 @@ object OrganizationsDao {
   private[this] val BaseQuery = Query(s"""
     select organizations.id,
            organizations.user_id,
+           organizations.docker as docker_provider,
+           organizations.name as docker_organization,
            users.id as user_id,
            users.email as user_email,
            users.first_name as name_first,
@@ -26,9 +28,9 @@ object OrganizationsDao {
 
   private[this] val InsertQuery = """
     insert into organizations
-    (id, user_id, updated_by_user_id)
+    (id, user_id, docker, name, updated_by_user_id)
     values
-    ({id}, {user_id}, {updated_by_user_id})
+    ({id}, {user_id}, {docker}, {name}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -85,6 +87,8 @@ object OrganizationsDao {
     SQL(InsertQuery).on(
       'id -> form.id.trim,
       'user_id -> createdBy.id,
+      'docker -> form.docker.provider.toString,
+      'name -> form.docker.organization.trim,
       'updated_by_user_id -> createdBy.id
     ).execute()
 
@@ -161,7 +165,7 @@ object OrganizationsDao {
           io.flow.delta.v0.anorm.parsers.Organization.parser().*
         )
     }
-  
+
   }
 
 }

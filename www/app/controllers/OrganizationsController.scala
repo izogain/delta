@@ -1,7 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{Organization, OrganizationForm}
+import io.flow.delta.v0.models.{Organization, OrganizationForm, Docker, DockerProvider}
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.{Pagination, PaginatedCollection}
@@ -20,7 +20,7 @@ class OrganizationsController @javax.inject.Inject() (
 ) extends BaseController(userTokensClient, deltaClientProvider) {
 
   import scala.concurrent.ExecutionContext.Implicits.global
- 
+
   override def section = None
 
   def redirectToDashboard(org: String) = Identified { implicit request =>
@@ -167,9 +167,10 @@ object OrganizationsController {
     id: String,
     returnUrl: Option[String]
   ) {
-
+    // TODO: cheat for now - build ui in separate PR
     val organizationForm = OrganizationForm(
-      id = id
+      id = id,
+      docker = Docker(provider=DockerProvider.DockerHub, organization="flowcommerce")
     )
 
   }

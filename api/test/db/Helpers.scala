@@ -68,7 +68,8 @@ trait Helpers {
 
   def createOrganizationForm() = {
     OrganizationForm(
-      id = createTestKey()
+      id = createTestKey(),
+      docker = Docker(provider=DockerProvider.DockerHub, organization="flowcommerce")
     )
   }
 
@@ -294,5 +295,5 @@ trait Helpers {
       version = createTestVersion()
     )
   }
-  
+
 }
