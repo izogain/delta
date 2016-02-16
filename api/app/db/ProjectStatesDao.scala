@@ -18,7 +18,14 @@ object ProjectDesiredStatesDao extends ProjectStatesDao("project_desired_states"
 
 }
 
-object ProjectLastStatesDao extends ProjectStatesDao("project_last_states", "pls")
+object ProjectLastStatesDao extends ProjectStatesDao("project_last_states", "pls") {
+
+  override def onChange(projectId: String) {
+    MainActor.ref ! MainActor.Messages.ProjectLastStateUpdated(projectId)
+  }
+
+}
+
 
 class ProjectStatesDao(table: String, idPrefix: String) {
 
