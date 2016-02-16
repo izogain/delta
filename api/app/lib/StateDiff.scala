@@ -7,49 +7,49 @@ import org.joda.time.DateTime
 /**
   * Represents a difference in the number of instances of a single version of a project.
   */
-case class StateDiff(versionName: String, actualInstances: Long, desiredInstances: Long)
+case class StateDiff(versionName: String, lastInstances: Long, desiredInstances: Long)
 
 object StateDiff {
 
   /**
-    * Compares actual to desired, returning a list of StateDiff
+    * Compares last to desired, returning a list of StateDiff
     * records wherever an instance needs to be brought up.
     */
-  def up(actual: State, desired: State): Seq[StateDiff] = {
-    diff(actual, desired).filter { d => d.desiredInstances > d.actualInstances }
+  def up(last: State, desired: State): Seq[StateDiff] = {
+    diff(last, desired).filter { d => d.desiredInstances > d.lastInstances }
   }
 
   /**
-    * Compares actual to desired, returning a list of StateDiff
+    * Compares last to desired, returning a list of StateDiff
     * records wherever an instance needs to be brought down.
     */
-  def down(actual: State, desired: State): Seq[StateDiff] = {
-    diff(actual, desired).filter { d => d.desiredInstances < d.actualInstances }
+  def down(last: State, desired: State): Seq[StateDiff] = {
+    diff(last, desired).filter { d => d.desiredInstances < d.lastInstances }
   }
 
   /**
-    * Compares actual state to desired state, returning a list of
+    * Compares last state to desired state, returning a list of
     * StateDiff objects for any differences. Excludes any versions
-    * where actual state is the desired state - e.g. if actual ==
+    * where last state is the desired state - e.g. if last ==
     * desired, you will get back Nil.
     */
-  private[this] def diff(actual: State, desired: State): Seq[StateDiff] = {
+  private[this] def diff(last: State, desired: State): Seq[StateDiff] = {
     desired.versions.flatMap { expVersion =>
-      val actualInstances: Long = actual.versions.find { _.name == expVersion.name }.map(_.instances).getOrElse(0)
-      actualInstances == expVersion.instances match {
+      val lastInstances: Long = last.versions.find { _.name == expVersion.name }.map(_.instances).getOrElse(0)
+      lastInstances == expVersion.instances match {
         case true => {
-          // Desired number of instances matches actual. Nothing to do
+          // Desired number of instances matches last. Nothing to do
           None
         }
         case false => {
-          Some(StateDiff(expVersion.name, actualInstances, expVersion.instances))
+          Some(StateDiff(expVersion.name, lastInstances, expVersion.instances))
         }
       }
-    } ++ actual.versions.flatMap { actualVersion =>
-      desired.versions.find { _.name == actualVersion.name } match {
+    } ++ last.versions.flatMap { lastVersion =>
+      desired.versions.find { _.name == lastVersion.name } match {
         case None => {
-          // A version in actual that is not in desired
-          Some(StateDiff(actualVersion.name, actualVersion.instances, 0))
+          // A version in last that is not in desired
+          Some(StateDiff(lastVersion.name, lastVersion.instances, 0))
         }
         case Some(_) => {
           // Already picked up in earlier loop

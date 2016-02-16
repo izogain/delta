@@ -4,8 +4,9 @@ import org.joda.time.DateTime
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import db.{TokensDao, UsersDao, ProjectLastStatesDao}
-import io.flow.delta.api.lib.{GithubHelper, Repo}
-import io.flow.delta.v0.models.{Project,StateForm}
+import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
+import io.flow.delta.v0.models.{Project, StateForm}
+import io.flow.delta.lib.Text
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
 import play.api.Logger
@@ -26,6 +27,8 @@ object ProjectActor {
     case object ConfigureECS extends Message // One-time ECS setup
 
     case object CreateHooks extends Message
+
+    case class Scale(diffs: Seq[StateDiff]) extends Message
   }
 
 }
@@ -74,6 +77,23 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
+    case m @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(m.toString) {
+      withProject { project =>
+        diffs.foreach { diff =>
+
+          if (diff.lastInstances > diff.desiredInstances) {
+            val instances = diff.lastInstances - diff.desiredInstances
+            println(s"project[${project.id}] Bring down ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
+
+          } else if (diff.lastInstances < diff.desiredInstances) {
+            val instances = diff.desiredInstances - diff.lastInstances
+            println(s"project[${project.id}] Bring up ${Text.pluralize(instances, "instance", "instances")}  instances of ${diff.versionName}")
+          }
+
+        }
+      }
+    }
+      
     case m: Any => logUnhandledMessage(m)
 
   }
