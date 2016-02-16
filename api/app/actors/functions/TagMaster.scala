@@ -1,12 +1,12 @@
 package io.flow.delta.actors.functions
 
-import db.{ShasDao, SettingsDao, TagsDao, UsersDao}
+import db.{ShasDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.GithubUtil
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
 import play.api.Logger
 import play.libs.Akka
@@ -28,8 +28,6 @@ object TagMaster extends SupervisorFunction {
   ): Future[SupervisorResult] = {
     TagMaster(project).run
   }
-
-  override def isEnabled(settings: Settings) = settings.tagMaster
 
 }
 

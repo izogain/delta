@@ -15,16 +15,17 @@ object SettingsDao {
     select settings.sync_master_sha,
            settings.tag_master,
            settings.set_expected_state,
-           settings.build_docker_image
+           settings.build_docker_image,
+           settings.scale
       from settings
       join projects on projects.id = settings.project_id
   """)
 
   private[this] val InsertQuery = """
     insert into settings
-    (id, project_id, sync_master_sha, tag_master, set_expected_state, build_docker_image, updated_by_user_id)
+    (id, project_id, sync_master_sha, tag_master, set_expected_state, build_docker_image, scale, updated_by_user_id)
     values
-    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_expected_state}, {build_docker_image}, {updated_by_user_id})
+    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_expected_state}, {build_docker_image}, {scale}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -33,6 +34,7 @@ object SettingsDao {
            tag_master = {tag_master},
            set_expected_state = {set_expected_state},
            build_docker_image = {build_docker_image},
+           scale = {scale},
            updated_by_user_id = {updated_by_user_id}
      where project_id = {project_id}
   """
@@ -42,32 +44,32 @@ object SettingsDao {
   private[this] val idGenerator = IdGenerator("set")
 
   /**
-    * Each project has 0 or 1 settings records... Upsert creates if
-    * necessary, then updates
+    * Each project has 0 or 1 settings records. Upsert will update or
+    * create settings to match the specified form for this project.
     */
   def upsert(createdBy: User, projectId: String, form: SettingsForm): Settings = {
-    val settings = findByProjectId(Authorization.All, projectId).getOrElse {
-      val defaults = Settings()
-      create(createdBy, projectId, defaults)
-      defaults
+    findByProjectId(Authorization.All, projectId) match {
+      case None => create(createdBy, projectId, form)
+      case Some(settings) => update(createdBy, projectId, settings, form)
     }
-
-    update(createdBy, projectId, settings, form)
 
     findByProjectId(Authorization.All, projectId).getOrElse {
       sys.error("Failed to upsert settings")
     }
   }
 
-  private[this] def create(createdBy: User, projectId: String, settings: Settings) {
+  private[this] def create(createdBy: User, projectId: String, form: SettingsForm) {
+    val defaults = Settings()
+
     DB.withConnection { implicit c =>
       SQL(InsertQuery).on(
         'id -> idGenerator.randomId(),
         'project_id -> projectId,
-        'sync_master_sha -> settings.syncMasterSha,
-        'tag_master -> settings.tagMaster,
-        'set_expected_state -> settings.setExpectedState,
-        'build_docker_image -> settings.buildDockerImage,
+        'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
+        'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
+        'set_expected_state -> form.setExpectedState.getOrElse(defaults.setExpectedState),
+        'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
+        'scale -> form.buildDockerImage.getOrElse(defaults.scale),
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
@@ -80,8 +82,9 @@ object SettingsDao {
         'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
         'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
         'set_expected_state -> form.setExpectedState.getOrElse(settings.setExpectedState),
-        'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage),
-        'updated_by_user_id -> createdBy.id
+        'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage), 
+        'scale -> form.buildDockerImage.getOrElse(settings.scale),
+       'updated_by_user_id -> createdBy.id
       ).execute()
     }
   }

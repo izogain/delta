@@ -5,7 +5,7 @@ import io.flow.delta.api.lib.GithubUtil
 
 import io.flow.postgresql.Authorization
 import db.{ShasDao, UsersDao}
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.v0.models.Project
 import scala.concurrent.Future
 
 object SyncMasterSha extends SupervisorFunction {
@@ -18,7 +18,6 @@ object SyncMasterSha extends SupervisorFunction {
     SyncMasterSha(project).run
   }
 
-  override def isEnabled(settings: Settings) = settings.syncMasterSha
 }
 
 /**

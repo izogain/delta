@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import db.{ImagesDao, ProjectExpectedStatesDao}
 import io.flow.delta.actors.{MainActor, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.v0.models.Project
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -27,8 +27,6 @@ object BuildDockerImage extends SupervisorFunction {
       BuildDockerImage(project).run
     }
   }
-
-  override def isEnabled(settings: Settings) = settings.buildDockerImage
 
 }
 

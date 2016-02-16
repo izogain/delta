@@ -130,7 +130,8 @@
 	{ "name": "sync_master_sha", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
 	{ "name": "tag_master", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
 	{ "name": "set_expected_state", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
-	{ "name": "build_docker_image", "type": "boolean", "default": true, "description": "If enabled, we will automatically monitor building a docker image for each new tag" }
+	{ "name": "build_docker_image", "type": "boolean", "default": true, "description": "If enabled, we will automatically monitor building a docker image for each new tag" },
+	{ "name": "scale", "type": "boolean", "default": true, "description": "If enabled, we will automatically scale instances up or down to match current expected state" }
       ]
     },
     
@@ -139,7 +140,8 @@
 	{ "name": "sync_master_sha", "type": "boolean", "required": false },
 	{ "name": "tag_master", "type": "boolean", "required": false },
 	{ "name": "set_expected_state", "type": "boolean", "required": false },
-	{ "name": "build_docker_image", "type": "boolean", "required": false }
+	{ "name": "build_docker_image", "type": "boolean", "required": false },
+	{ "name": "state", "type": "boolean", "required": false }
       ]
     },
 
