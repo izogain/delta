@@ -660,7 +660,7 @@ package io.flow.delta.v0.anorm.parsers {
       tagMaster = s"$prefix${sep}tag_master",
       setExpectedState = s"$prefix${sep}set_expected_state",
       buildDockerImage = s"$prefix${sep}build_docker_image",
-      state = s"$prefix${sep}state"
+      scale = s"$prefix${sep}scale"
     )
 
     def parser(
@@ -668,20 +668,20 @@ package io.flow.delta.v0.anorm.parsers {
       tagMaster: String = "tag_master",
       setExpectedState: String = "set_expected_state",
       buildDockerImage: String = "build_docker_image",
-      state: String = "state"
+      scale: String = "scale"
     ): RowParser[io.flow.delta.v0.models.SettingsForm] = {
       SqlParser.bool(syncMasterSha).? ~
       SqlParser.bool(tagMaster).? ~
       SqlParser.bool(setExpectedState).? ~
       SqlParser.bool(buildDockerImage).? ~
-      SqlParser.bool(state).? map {
-        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ state => {
+      SqlParser.bool(scale).? map {
+        case syncMasterSha ~ tagMaster ~ setExpectedState ~ buildDockerImage ~ scale => {
           io.flow.delta.v0.models.SettingsForm(
             syncMasterSha = syncMasterSha,
             tagMaster = tagMaster,
             setExpectedState = setExpectedState,
             buildDockerImage = buildDockerImage,
-            state = state
+            scale = scale
           )
         }
       }

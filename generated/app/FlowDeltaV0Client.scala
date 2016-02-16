@@ -156,7 +156,7 @@ package io.flow.delta.v0.models {
     tagMaster: _root_.scala.Option[Boolean] = None,
     setExpectedState: _root_.scala.Option[Boolean] = None,
     buildDockerImage: _root_.scala.Option[Boolean] = None,
-    state: _root_.scala.Option[Boolean] = None
+    scale: _root_.scala.Option[Boolean] = None
   )
 
   case class Sha(
@@ -1101,7 +1101,7 @@ package io.flow.delta.v0.models {
         (__ \ "tag_master").readNullable[Boolean] and
         (__ \ "set_expected_state").readNullable[Boolean] and
         (__ \ "build_docker_image").readNullable[Boolean] and
-        (__ \ "state").readNullable[Boolean]
+        (__ \ "scale").readNullable[Boolean]
       )(SettingsForm.apply _)
     }
 
@@ -1122,9 +1122,9 @@ package io.flow.delta.v0.models {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("build_docker_image" -> play.api.libs.json.JsBoolean(x))
       }) ++
-      (obj.state match {
+      (obj.scale match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("state" -> play.api.libs.json.JsBoolean(x))
+        case Some(x) => play.api.libs.json.Json.obj("scale" -> play.api.libs.json.JsBoolean(x))
       })
     }
 

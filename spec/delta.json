@@ -141,7 +141,7 @@
 	{ "name": "tag_master", "type": "boolean", "required": false },
 	{ "name": "set_expected_state", "type": "boolean", "required": false },
 	{ "name": "build_docker_image", "type": "boolean", "required": false },
-	{ "name": "state", "type": "boolean", "required": false }
+	{ "name": "scale", "type": "boolean", "required": false }
       ]
     },
 
