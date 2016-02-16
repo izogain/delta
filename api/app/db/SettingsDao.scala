@@ -46,28 +46,27 @@ object SettingsDao {
     * necessary, then updates
     */
   def upsert(createdBy: User, projectId: String, form: SettingsForm): Settings = {
-    val settings = findByProjectId(Authorization.All, projectId).getOrElse {
-      val defaults = Settings()
-      create(createdBy, projectId, defaults)
-      defaults
+    findByProjectId(Authorization.All, projectId) match {
+      case None => create(createdBy, projectId, form)
+      case Some(settings) => update(createdBy, projectId, settings, form)
     }
-
-    update(createdBy, projectId, settings, form)
 
     findByProjectId(Authorization.All, projectId).getOrElse {
       sys.error("Failed to upsert settings")
     }
   }
 
-  private[this] def create(createdBy: User, projectId: String, settings: Settings) {
+  private[this] def create(createdBy: User, projectId: String, form: SettingsForm) {
+    val defaults = Settings()
+
     DB.withConnection { implicit c =>
       SQL(InsertQuery).on(
         'id -> idGenerator.randomId(),
         'project_id -> projectId,
-        'sync_master_sha -> settings.syncMasterSha,
-        'tag_master -> settings.tagMaster,
-        'set_expected_state -> settings.setExpectedState,
-        'build_docker_image -> settings.buildDockerImage,
+        'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
+        'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
+        'set_expected_state -> form.setExpectedState.getOrElse(defaults.setExpectedState),
+        'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
