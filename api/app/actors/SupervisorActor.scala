@@ -1,11 +1,10 @@
 package io.flow.delta.actors
 
-import db.SettingsDao
 import akka.actor.Actor
+import db.{ProjectDesiredStatesDao, SettingsDao}
 import io.flow.delta.v0.models.{Project, Settings}
 import io.flow.play.actors.Util
 import io.flow.postgresql.Authorization
-import play.api.Logger
 import play.libs.Akka
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -19,6 +18,8 @@ object SupervisorActor {
 
   object Messages {
     case class Data(id: String) extends Message
+
+    case class CheckTag(name: String) extends Message
     case object PursueDesiredState extends Message
   }
 
@@ -55,6 +56,23 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
         log.started("PursueDesiredState")
         run(project, settings, SupervisorActor.All)
         log.message(SupervisorActor.SuccessfulCompletionMessage)
+      }
+    }
+
+    /**
+      * Indicates that something has happened for the tag with
+      * specified name (e.g. 0.0.2). If this tag is in the project's
+      * desired state, triggers PursueDesiredState. Otherwise a
+      * no-op.
+      */
+    case msg @ SupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
+      withProject { project =>
+        ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id).map { state =>
+          state.versions.find(_.name == name) match {
+            case None => // Version with specified name does not exist
+            case Some(_) => self ! SupervisorActor.Messages.PursueDesiredState
+          }
+        }
       }
     }
 
