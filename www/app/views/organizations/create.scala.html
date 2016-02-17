@@ -9,8 +9,20 @@
   <div class="container">
 
     @helper.form(action = routes.OrganizationsController.postCreate()) {
+      <fieldset>
+        @helper.inputText(
+            form("id"),
+            '_label -> "Organization ID",
+            '_error -> form.error("id")
+        )
 
-      @organizationForm(form, routes.OrganizationsController.index())
+        @helper.inputText(
+            form("organization"),
+            '_label -> "Docker Hub Organization name",
+            '_error -> form.error("organization")
+        )
+      </fieldset>
+      <button class="btn btn-large btn-primary" type="submit">Submit</button>
 
     }
 
