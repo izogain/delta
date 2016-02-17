@@ -27,5 +27,14 @@ class SemverSpec extends Specification {
     Semver(0, 1, 2).label must beEqualTo("0.1.2")
   }
 
+  "sortKey" in {
+    Seq(
+      Semver(0, 1, 2),
+      Semver(0, 1, 10),
+      Semver(20, 9, 0)
+    ).sorted.map(_.label) must beEqualTo(
+      Seq("0.1.2", "0.1.10", "20.9.0")
+    )
+  }
 
 }
