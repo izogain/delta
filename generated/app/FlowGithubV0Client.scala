@@ -1203,6 +1203,7 @@ package io.flow.github.v0 {
 
     object Repositories extends Repositories {
       override def getUserAndRepos(
+        page: Long = 1,
         visibility: io.flow.github.v0.models.Visibility = io.flow.github.v0.models.Visibility("all"),
         affiliation: _root_.scala.Option[String] = None,
         `type`: _root_.scala.Option[String] = None,
@@ -1210,6 +1211,7 @@ package io.flow.github.v0 {
         direction: String = "asc"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Repository]] = {
         val queryParameters = Seq(
+          Some("page" -> page.toString),
           Some("visibility" -> visibility.toString),
           affiliation.map("affiliation" -> _),
           `type`.map("type" -> _),
@@ -1226,11 +1228,13 @@ package io.flow.github.v0 {
 
       override def getUsersAndReposByUsername(
         username: String,
+        page: Long = 1,
         `type`: String = "owner",
         sort: String = "full_name",
         direction: String = "asc"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Repository]] = {
         val queryParameters = Seq(
+          Some("page" -> page.toString),
           Some("type" -> `type`),
           Some("sort" -> sort),
           Some("direction" -> direction)
@@ -1245,11 +1249,13 @@ package io.flow.github.v0 {
 
       override def getOrgsAndReposByOrg(
         org: String,
+        page: Long = 1,
         `type`: String = "all",
         sort: String = "full_name",
         direction: String = "asc"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.github.v0.models.Repository]] = {
         val queryParameters = Seq(
+          Some("page" -> page.toString),
           Some("type" -> `type`),
           Some("sort" -> sort),
           Some("direction" -> direction)
@@ -1488,6 +1494,7 @@ package io.flow.github.v0 {
 
   trait Repositories {
     def getUserAndRepos(
+      page: Long = 1,
       visibility: io.flow.github.v0.models.Visibility = io.flow.github.v0.models.Visibility("all"),
       affiliation: _root_.scala.Option[String] = None,
       `type`: _root_.scala.Option[String] = None,
@@ -1500,6 +1507,7 @@ package io.flow.github.v0 {
      */
     def getUsersAndReposByUsername(
       username: String,
+      page: Long = 1,
       `type`: String = "owner",
       sort: String = "full_name",
       direction: String = "asc"
@@ -1510,6 +1518,7 @@ package io.flow.github.v0 {
      */
     def getOrgsAndReposByOrg(
       org: String,
+      page: Long = 1,
       `type`: String = "all",
       sort: String = "full_name",
       direction: String = "asc"

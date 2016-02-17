@@ -2,7 +2,8 @@
   "name": "delta",
 
   "imports": [
-    { "uri": "http://www.apidoc.me/flow/common/0.0.9/service.json" }
+    { "uri": "http://www.apidoc.me/flow/common/0.0.9/service.json" },
+    { "uri": "http://www.apidoc.me/flow/github/0.0.3/service.json" }
   ],
 
   "unions": {
@@ -700,7 +701,7 @@
 	    { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
           ],
           "responses": {
-	    "200": { "type": "[repository]" },
+	    "200": { "type": "[io.flow.github.v0.models.repository]" },
 	    "401": { "type": "unit" },
             "422": { "type": "[io.flow.common.v0.models.error]" }
           }

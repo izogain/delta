@@ -138,7 +138,9 @@ class ProjectsController @javax.inject.Inject() (
     withOrganization(request, orgId) { org =>
       deltaClient(request).repositories.getGithub(
         organizationId = Some(org.id),
-        name = Some(name)
+        name = Some(name),
+        limit = Pagination.DefaultLimit+1,
+        offset = repositoriesPage * Pagination.DefaultLimit
       ).flatMap { selected =>
         selected.headOption match {
           case None => Future {
@@ -150,8 +152,8 @@ class ProjectsController @javax.inject.Inject() (
                 organization = org.id,
                 name = repo.name,
                 scms = Scms.Github,
-                visibility = repo.visibility,
-                uri = repo.uri
+                visibility = if (repo.`private`) { Visibility.Private } else { Visibility.Public },
+                uri = repo.htmlUrl
               )
             ).map { project =>
               Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project added")
