@@ -117,7 +117,7 @@ class OrganizationsController @javax.inject.Inject() (
             OrganizationsController.uiForm.fill(
               OrganizationsController.UiForm(
                 id = organization.id,
-                organization = organization.id,
+                organization = organization.docker.organization,
                 returnUrl = None
               )
             )

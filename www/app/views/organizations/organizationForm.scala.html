@@ -1,16 +1,22 @@
 @(form: Form[controllers.OrganizationsController.UiForm],
-  cancelUrl: play.api.mvc.Call
+  cancelUrl: play.api.mvc.Call,
+  id: Option[String]
 )(implicit flash: Flash, messages: Messages)
 
 <fieldset>
 
   <input type="hidden" name="return_url" value='@form("return_url").value'/>
 
-    @helper.inputText(
-        form("id"),
-        '_label -> "Id",
-        '_error -> form.error("id")
-    )
+    @if(id.isEmpty) {
+      <input type="hidden" name="id" value='@id.get'/>
+  
+    } else {    
+      @helper.inputText(
+          form("id"),
+          '_label -> "Id",
+          '_error -> form.error("id")
+      )
+    }
 
     @helper.inputText(
         form("organization"),
