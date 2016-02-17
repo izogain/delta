@@ -68,6 +68,18 @@ package io.flow.docker.registry.v0.models {
     name: String
   )
 
+  case class V2Tag(
+    creator: Long,
+    fullSize: Long,
+    id: Long,
+    name: String,
+    repository: Long,
+    lastUpdated: String,
+    lastUpdater: Long,
+    imageId: _root_.scala.Option[Long] = None,
+    v2: Boolean
+  )
+
 }
 
 package io.flow.docker.registry.v0.models {
@@ -314,6 +326,44 @@ package io.flow.docker.registry.v0.models {
         }
       }
     }
+
+    implicit def jsonReadsDockerRegistryV2Tag: play.api.libs.json.Reads[V2Tag] = {
+      (
+        (__ \ "creator").read[Long] and
+        (__ \ "full_size").read[Long] and
+        (__ \ "id").read[Long] and
+        (__ \ "name").read[String] and
+        (__ \ "repository").read[Long] and
+        (__ \ "last_updated").read[String] and
+        (__ \ "last_updater").read[Long] and
+        (__ \ "image_id").readNullable[Long] and
+        (__ \ "v2").read[Boolean]
+      )(V2Tag.apply _)
+    }
+
+    def jsObjectV2Tag(obj: io.flow.docker.registry.v0.models.V2Tag) = {
+      play.api.libs.json.Json.obj(
+        "creator" -> play.api.libs.json.JsNumber(obj.creator),
+        "full_size" -> play.api.libs.json.JsNumber(obj.fullSize),
+        "id" -> play.api.libs.json.JsNumber(obj.id),
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "repository" -> play.api.libs.json.JsNumber(obj.repository),
+        "last_updated" -> play.api.libs.json.JsString(obj.lastUpdated),
+        "last_updater" -> play.api.libs.json.JsNumber(obj.lastUpdater),
+        "v2" -> play.api.libs.json.JsBoolean(obj.v2)
+      ) ++ (obj.imageId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("image_id" -> play.api.libs.json.JsNumber(x))
+      })
+    }
+
+    implicit def jsonWritesDockerRegistryV2Tag: play.api.libs.json.Writes[V2Tag] = {
+      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.V2Tag] {
+        def writes(obj: io.flow.docker.registry.v0.models.V2Tag) = {
+          jsObjectV2Tag(obj)
+        }
+      }
+    }
   }
 }
 
@@ -378,6 +428,8 @@ package io.flow.docker.registry.v0 {
 
     def tags: Tags = Tags
 
+    def v2Tags: V2Tags = V2Tags
+
     object DockerRepositories extends DockerRepositories {
       override def get(
         org: String,
@@ -413,6 +465,19 @@ package io.flow.docker.registry.v0 {
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.Tag]] = {
         _executeRequest("GET", s"/v1/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/tags").map {
           case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("Seq[io.flow.docker.registry.v0.models.Tag]", r, _.validate[Seq[io.flow.docker.registry.v0.models.Tag]])
+          case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
+        }
+      }
+    }
+
+    object V2Tags extends V2Tags {
+      override def get(
+        org: String,
+        repo: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.V2Tag]] = {
+        _executeRequest("GET", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/tags").map {
+          case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("Seq[io.flow.docker.registry.v0.models.V2Tag]", r, _.validate[Seq[io.flow.docker.registry.v0.models.V2Tag]])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
         }
@@ -511,6 +576,7 @@ package io.flow.docker.registry.v0 {
     trait Client {
       def dockerRepositories: io.flow.docker.registry.v0.DockerRepositories
       def tags: io.flow.docker.registry.v0.Tags
+      def v2Tags: io.flow.docker.registry.v0.V2Tags
     }
 
   }
@@ -533,6 +599,13 @@ package io.flow.docker.registry.v0 {
       org: String,
       repo: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.Tag]]
+  }
+
+  trait V2Tags {
+    def get(
+      org: String,
+      repo: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.V2Tag]]
   }
 
   package errors {

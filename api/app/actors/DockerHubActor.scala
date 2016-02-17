@@ -1,10 +1,10 @@
 package io.flow.delta.actors
 
-import db.{OrganizationsDao, ImagesDao, UsersDao}
+import db.{ImagesDao, UsersDao}
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
-import io.flow.docker.registry.v0.{Authorization, Client}
+import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
@@ -37,16 +37,7 @@ object DockerHubActor {
 
 class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
- implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
-
-  private[this] lazy val client = new Client(
-    auth = Some(
-      Authorization.Basic(
-        username = DefaultConfig.requiredString("docker.username"),
-        password = Some(DefaultConfig.requiredString("docker.password"))
-      )
-    )
-  )
+  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
   private[this] lazy val v2client = new Client(
     defaultHeaders = Seq(
@@ -68,9 +59,13 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       withProject { project =>
         withOrganization { org =>
           v2client.DockerRepositories.postAutobuild(
-            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id, s"${org.id}/${project.id}")
+            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
           ).map { dockerHubBuild =>
             log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+          }.recover {
+            case err => {
+              log.message(s"Error creating Docker Hub repository and automated build: $err")
+            }
           }
 
           syncImages(org.docker, project)
@@ -102,7 +97,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   def syncImages(docker: Docker, project: Project) {
     println(s"syncImages(${docker.organization}, ${project.id})")
     for {
-      tags <- client.tags.get(docker.organization, project.id)
+      tags <- v2client.V2Tags.get(docker.organization, project.id)
     } yield {
       tags.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
@@ -133,7 +128,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def createBuildForm(org: String, name: String, vcsRepoName: String): BuildForm = {
+  def createBuildForm(org: String, name: String): BuildForm = {
     val fullName = s"$org/$name"
     BuildForm(
       active = true,
@@ -144,7 +139,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       name = name,
       namespace = org,
       provider = "github",
-      vcsRepoName = vcsRepoName
+      vcsRepoName = fullName
     )
   }
 
