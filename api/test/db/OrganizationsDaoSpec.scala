@@ -1,7 +1,7 @@
 package db
 
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.Role
+import io.flow.delta.v0.models.{Docker, DockerProvider, OrganizationForm, Role}
 import io.flow.common.v0.models.Name
 import org.scalatest._
 import play.api.test._
@@ -19,6 +19,18 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       sys.error("Failed to create org")
     }
     organization.id must be(form.id)
+    organization.docker must be(form.docker)
+  }
+
+  "update docker organization" in {
+    val org = createOrganization()
+    val form = OrganizationForm(id = org.id, docker = Docker(provider=DockerProvider.DockerHub, organization="updated"))
+
+    val updated = OrganizationsDao.update(systemUser, org, form).right.getOrElse {
+      sys.error("Failed to update org")
+    }
+    updated.id must be(form.id)
+    updated.docker.organization must be("updated")
   }
 
   "creation users added as admin of org" in {

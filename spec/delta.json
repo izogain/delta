@@ -2,7 +2,8 @@
   "name": "delta",
 
   "imports": [
-    { "uri": "http://www.apidoc.me/flow/common/0.0.9/service.json" }
+    { "uri": "http://www.apidoc.me/flow/common/0.0.9/service.json" },
+    { "uri": "http://www.apidoc.me/flow/github/0.0.3/service.json" }
   ],
 
   "unions": {
@@ -76,7 +77,7 @@
       "fields": [
 	{ "name": "id", "type": "string" },
 	{ "name": "user", "type": "user_summary", "description": "The user that created this organization" },
-  { "name": "docker", "type": "docker" }
+        { "name": "docker", "type": "docker", "description": "Required information to locate docker images for projects associated with this organization." }
       ]
     },
 
@@ -89,7 +90,7 @@
     "organization_form": {
       "fields": [
 	{ "name": "id", "type": "string" },
-  { "name": "docker", "type": "docker" }
+        { "name": "docker", "type": "docker" }
       ]
     },
 
@@ -700,7 +701,7 @@
 	    { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
           ],
           "responses": {
-	    "200": { "type": "[repository]" },
+	    "200": { "type": "[io.flow.github.v0.models.repository]" },
 	    "401": { "type": "unit" },
             "422": { "type": "[io.flow.common.v0.models.error]" }
           }

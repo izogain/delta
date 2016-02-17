@@ -71,9 +71,9 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
           val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get.docker.organization
 
           for {
-            checkDockerHubRepo <- v2client.DockerRepositories.getV2AndRepositoriesByOrgAndRepo(org, repo.project)//checkDockerHubRepository(project, repo, org.docker.organization)
+            checkDockerHubRepo <- v2client.DockerRepositories.getV2AndRepositoriesByOrgAndRepo(org, repo.project)
             if "" == checkDockerHubRepo.name
-            createDockerHubRepo <- v2client.DockerRepositories.postV2AndRepositoriesAndAutobuildByOrgAndRepo(org, repo.project, createBuildForm(project, repo, org))//createDockerHubRepository(project, repo, org.docker.organization)
+            createDockerHubRepo <- v2client.DockerRepositories.postV2AndRepositoriesAndAutobuildByOrgAndRepo(org, repo.project, createBuildForm(project, repo, org))
           } yield {
             //no-op
           }

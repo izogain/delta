@@ -18,6 +18,18 @@
     }
   </div>
 
+  <ul>
+    <li> @{organization.docker.provider match {
+            case io.flow.delta.v0.models.DockerProvider.DockerHub => {
+              Html(s"Docker Hub Organization: <a href='https://hub.docker.com/r/${organization.docker.organization}/'>${organization.docker.organization}</a>")
+            }
+            case io.flow.delta.v0.models.DockerProvider.UNDEFINED(name) => {
+              Html(s"$name: ${organization.docker.organization}")
+            }
+         }}
+    </li>
+  </ul>
+  
   <h3>Projects</h3>
   @if(projects.isEmpty) {
     <em>This organization does not have any projects</em>

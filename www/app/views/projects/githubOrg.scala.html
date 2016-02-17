@@ -1,7 +1,7 @@
 @(
   data: io.flow.delta.www.lib.UiData,
   org: io.flow.delta.v0.models.Organization,
-  repositories: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Repository],
+  repositories: io.flow.play.util.PaginatedCollection[io.flow.github.v0.models.Repository],
   errorMessages: Seq[String] = Nil
 )(implicit flash: Flash, messages: Messages)
 
@@ -18,8 +18,8 @@
       <table class="table">
         @repositories.items.map { repo =>
           <tr>
-            <td><a class="postForm" href="@routes.ProjectsController.postGithubOrg(org.id, repo.name, repositories.page)">@{repo.name}</a></td>
-            <td>@repo.uri</td>
+            <td><a class="postForm" href="@routes.ProjectsController.postGithubOrg(org.id, repo.name, repositories.page)">@{repo.owner.login}/@{repo.name}</a></td>
+            <td>@repo.description</td>
           </tr>
         }
       </table>

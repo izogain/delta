@@ -16,8 +16,8 @@ object OrganizationsDao {
   private[this] val BaseQuery = Query(s"""
     select organizations.id,
            organizations.user_id,
-           organizations.docker as docker_provider,
-           organizations.name as docker_organization,
+           organizations.docker_provider,
+           organizations.docker_organization,
            users.id as user_id,
            users.email as user_email,
            users.first_name as name_first,
@@ -28,14 +28,16 @@ object OrganizationsDao {
 
   private[this] val InsertQuery = """
     insert into organizations
-    (id, user_id, docker, name, updated_by_user_id)
+    (id, user_id, docker_provider, docker_organization, updated_by_user_id)
     values
-    ({id}, {user_id}, {docker}, {name}, {updated_by_user_id})
+    ({id}, {user_id}, {docker_provider}, {docker_organization}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update organizations
-       set updated_by_user_id = {updated_by_user_id}
+       set updated_by_user_id = {updated_by_user_id},
+           docker_provider = {docker_provider},
+           docker_organization = {docker_organization}
      where id = {id}
   """
 
@@ -87,8 +89,8 @@ object OrganizationsDao {
     SQL(InsertQuery).on(
       'id -> form.id.trim,
       'user_id -> createdBy.id,
-      'docker -> form.docker.provider.toString,
-      'name -> form.docker.organization.trim,
+      'docker_provider -> form.docker.provider.toString,
+      'docker_organization -> form.docker.organization.trim,
       'updated_by_user_id -> createdBy.id
     ).execute()
 
@@ -109,13 +111,15 @@ object OrganizationsDao {
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'id -> organization.id,
+            'docker_provider -> form.docker.provider.toString,
+            'docker_organization -> form.docker.organization.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
 
         Right(
           findById(Authorization.All, organization.id).getOrElse {
-            sys.error("Failed to create organization")
+            sys.error("Failed to update organization")
           }
         )
       }
@@ -125,10 +129,17 @@ object OrganizationsDao {
 
   def delete(deletedBy: User, organization: Organization) {
     Pager.create { offset =>
+      ProjectsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
+    }.foreach { project =>
+      ProjectsDao.delete(deletedBy, project)
+    }
+
+    Pager.create { offset =>
       MembershipsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
     }.foreach { membership =>
       MembershipsDao.delete(deletedBy, membership)
     }
+
     Delete.delete("organizations", deletedBy.id, organization.id)
   }
 
