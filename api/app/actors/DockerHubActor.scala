@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import db.{OrganizationsDao, ImagesDao, UsersDao}
-import io.flow.delta.api.lib.Repo
+import io.flow.delta.api.lib.{Repo, Semver}
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
 import io.flow.docker.registry.v0.{Authorization, Client}
@@ -107,8 +107,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     for {
       tags <- client.tags.get(repo.owner, repo.project)
     } yield {
-      println(" - docker hub image tags: " + tags)
-      tags.foreach { tag =>
+      tags.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
           upsertImage(project.id, repo, tag.name)
         ) match {
