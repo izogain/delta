@@ -8,7 +8,7 @@ import play.api.test.Helpers._
 import org.scalatestplus.play._
 import java.util.UUID
 
-class ProjectDesiredStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
+class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -55,6 +55,20 @@ class ProjectDesiredStatesDaoSpec extends PlaySpec with OneAppPerSuite with Help
     val state = createProjectDesiredState(project)
     ProjectDesiredStatesDao.delete(systemUser, project)
     ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) must be(None)
+  }
+
+  "saving prunes records w/ zero instances" in {
+    val form = StateForm(
+      versions = Seq(
+        Version(name = "0.0.1", instances = 0),
+        Version(name = "0.0.2", instances = 2)
+      )
+    )
+    
+    val project = createProject()
+    val state = rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, form))
+    state.versions.map(_.name) must be(Seq("0.0.2"))
+    state.versions.map(_.instances) must be(Seq(2))
   }
 
 }
