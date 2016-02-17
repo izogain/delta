@@ -8,14 +8,11 @@ import io.flow.docker.registry.v0.{Authorization, Client}
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
-import play.api.Logger
 import play.api.libs.concurrent.Akka
-import play.api.libs.json.Json
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import play.api.Play.current
 import scala.util.{Failure, Success, Try}
-import play.api.libs.ws._
 
 object DockerHubActor {
 
@@ -74,13 +71,11 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
           OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).map {
             org =>
               val dockerHubOrg = org.docker.organization
-              for {
-                dockerHubBuild <- v2client.DockerRepositories.postAutobuild(
+              v2client.DockerRepositories.postAutobuild(
                   dockerHubOrg, repo.project, createBuildForm(project, repo, dockerHubOrg)
-                )
-              } yield {
+              ).map { dockerHubBuild =>
                 log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
-              }
+            }
           }
 
           syncImages(project, repo)
