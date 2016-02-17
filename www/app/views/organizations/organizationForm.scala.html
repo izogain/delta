@@ -8,14 +8,15 @@
   <input type="hidden" name="return_url" value='@form("return_url").value'/>
 
     @if(id.isEmpty) {
-      <input type="hidden" name="id" value='@id.get'/>
-  
-    } else {    
       @helper.inputText(
           form("id"),
           '_label -> "Id",
           '_error -> form.error("id")
       )
+
+    } else {    
+      <input type="hidden" name="id" value='@id.get'/>
+ 
     }
 
     @helper.inputText(
