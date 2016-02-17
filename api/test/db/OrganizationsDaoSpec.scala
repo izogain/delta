@@ -81,6 +81,20 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       )
     }
 
+    "requires valid docker provider" in {
+      val form = createOrganizationForm()
+      OrganizationsDao.validate(form.copy(docker = Docker(provider = DockerProvider.UNDEFINED("other"), organization="flow"))) must be(
+        Seq("Docker provider not found")
+      )
+    }
+
+    "requires docker organization" in {
+      val form = createOrganizationForm()
+      OrganizationsDao.validate(form.copy(docker = Docker(provider = DockerProvider.DockerHub, organization=" "))) must be(
+        Seq("Docker organization is required")
+      )
+    }
+
   }
 
   "authorization for organizations" in {

@@ -1,7 +1,7 @@
 package db
 
 import io.flow.common.v0.models.User
-import io.flow.delta.v0.models.{MembershipForm, Organization, OrganizationForm, Role}
+import io.flow.delta.v0.models.{DockerProvider, MembershipForm, Organization, OrganizationForm, Role}
 import io.flow.postgresql.{Authorization, Query, Pager, OrderBy}
 import io.flow.play.util.UrlKey
 import anorm._
@@ -47,7 +47,7 @@ object OrganizationsDao {
     form: OrganizationForm,
     existing: Option[Organization] = None
   ): Seq[String] = {
-    if (form.id.trim == "") {
+    val idErrors = if (form.id.trim == "") {
       Seq("Id cannot be empty")
 
     } else {
@@ -66,6 +66,18 @@ object OrganizationsDao {
         case errors => errors
       }
     }
+
+    val dockerProviderErrors = form.docker.provider match {
+      case DockerProvider.UNDEFINED(_) => Seq("Docker provider not found")
+      case _ => Nil
+    }
+
+    val dockerOrganizationErrors = form.docker.organization.trim match {
+      case "" => Seq("Docker organization is required")
+      case _ => Nil
+    }
+
+    idErrors ++ dockerProviderErrors ++ dockerOrganizationErrors
   }
 
   def create(createdBy: User, form: OrganizationForm): Either[Seq[String], Organization] = {
