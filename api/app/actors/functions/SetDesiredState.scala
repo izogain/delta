@@ -30,11 +30,10 @@ object SetDesiredState extends SupervisorFunction {
 case class SetDesiredState(project: Project) extends Github {
 
   def run(): SupervisorResult = {
-    // TODO: Make sure tag is actually the latest in semver ordering.
     TagsDao.findAll(
       Authorization.All,
       projectId = Some(project.id),
-      orderBy = OrderBy("-tags.created_at"),
+      orderBy = OrderBy("-tags.sort_key"),
       limit = 1
     ).headOption match {
       case None => {
