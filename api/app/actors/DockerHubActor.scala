@@ -65,7 +65,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
         withRepo { repo =>
           val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get
 
-          // TODO: iterate over solution and add routes to an API
+          // TODO: add routes to an API
           for {
             checkDockerHubRepo <- checkDockerHubRepository(project, repo, org.docker.organization)
             if checkDockerHubRepo.status != 200
@@ -143,7 +143,8 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
             Logger.info(s"Docker Hub repository [${org}/${repo.project}] not found, will try to create.")
           case 200 =>
             Logger.info(s"Docker Hub repository [${org}/${repo.project}] already exists, nothing to create.")
-          case _ => //no-op?
+          case _ =>
+            Logger.info(s"Did not successfully check Docker Hub repository [${org}/${repo.project}]. Response Body: ${response.body}")
         }
         response
     }
@@ -179,9 +180,9 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     WS.url(s"https://hub.docker.com/v2/repositories/${org}/${repo.project}/autobuild/").withHeaders(("Authorization", DefaultConfig.requiredString("docker.jwt.token"))).post(payload).map {
       response =>
         response.status match {
-          case 401 => Logger.warn(s"Unable to create Docker Hub repository [${org}/${repo.project}].")
+          case 401 => Logger.warn(s"Unable to create Docker Hub repository [${org}/${repo.project}]. Error is: ${response.body}")
           case 201 => Logger.info(s"Docker Hub repository [${org}/${repo.project}] created.")
-          case _ => //no-op?
+          case _ => Logger.info(s"Did not successfully create Docker Hub repository [${org}/${repo.project}]. Response Body: ${response.body}")
         }
         response
     }
