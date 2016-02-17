@@ -3,6 +3,7 @@ package io.flow.delta.actors
 import db.{OrganizationsDao, ImagesDao, UsersDao}
 import io.flow.delta.api.lib.Repo
 import io.flow.delta.v0.models._
+import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
 import io.flow.docker.registry.v0.{Authorization, Client}
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
@@ -50,6 +51,10 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     )
   )
 
+  private[this] lazy val v2client = new Client(
+    defaultHeaders = Seq(("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token")}"))
+  )
+
   private[this] val IntervalSeconds = 30
 
   override val logPrefix = "DockerHubActor"
@@ -63,13 +68,12 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withRepo { repo =>
-          val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get
+          val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get.docker.organization
 
-          // TODO: add routes to an API
           for {
-            checkDockerHubRepo <- checkDockerHubRepository(project, repo, org.docker.organization)
-            if checkDockerHubRepo.status != 200
-            createDockerHubRepo <- createDockerHubRepository(project, repo, org.docker.organization)
+            checkDockerHubRepo <- v2client.DockerRepositories.getV2AndRepositoriesByOrgAndRepo(org, repo.project)//checkDockerHubRepository(project, repo, org.docker.organization)
+            if "" == checkDockerHubRepo.name
+            createDockerHubRepo <- v2client.DockerRepositories.postV2AndRepositoriesAndAutobuildByOrgAndRepo(org, repo.project, createBuildForm(project, repo, org))//createDockerHubRepository(project, repo, org.docker.organization)
           } yield {
             //no-op
           }
@@ -134,57 +138,34 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  // Rudimentary Docker Hub V2 API call - check if docker hub repository exists
-  def checkDockerHubRepository(project: Project, repo: Repo, org: String): Future[WSResponse] = {
-    WS.url(s"https://hub.docker.com/v2/repositories/${org}/${repo.project}/").withHeaders(("Authorization", DefaultConfig.requiredString("docker.jwt.token"))).get().map {
-      response =>
-        response.status match {
-          case 400 =>
-            Logger.info(s"Docker Hub repository [${org}/${repo.project}] not found, will try to create.")
-          case 200 =>
-            Logger.info(s"Docker Hub repository [${org}/${repo.project}] already exists, nothing to create.")
-          case _ =>
-            Logger.info(s"Did not successfully check Docker Hub repository [${org}/${repo.project}]. Response Body: ${response.body}")
-        }
-        response
-    }
+  def createBuildForm(project: Project, repo: Repo, org: String): BuildForm = {
+    BuildForm.apply(
+      active = true,
+      buildTags = createBuildTags,
+      description = s"Automated build for ${org}",
+      dockerhubRepoName = s"${org}/${repo.project}",
+      isPrivate = true,
+      name = repo.project,
+      namespace = org,
+      provider = "github",
+      vcsRepoName = s"${org}/${repo.project}"
+    )
   }
 
-  /*
-   * Rudimentary Docker Hub V2 API call - create docker hub repository (automated build)
-   */
-  def createDockerHubRepository(project: Project, repo: Repo, org: String): Future[WSResponse] = {
-    val payload = Json.parse(
-      s"""
-         |{
-         |    "name":"${repo.project}",
-         |    "namespace":"${org}",
-         |    "description":"Automated build for ${org}",
-         |    "vcs_repo_name":"${org}/${repo.project}",
-         |    "provider":"github",
-         |    "dockerhub_repo_name":"${org}/${repo.project}",
-         |    "is_private":true,
-         |    "active":true,
-         |    "build_tags":
-         |    [
-         |        {
-         |            "name":"{sourceref}","source_type":"Tag","source_name":"/^[0-9.]+$$/","dockerfile_location":"/"
-         |        },
-         |        {
-         |            "name":"{sourceref}","source_type":"Branch","source_name":"/^([^m]|.[^a]|..[^s]|...[^t]|....[^e]|.....[^r]|.{0,5}$$|.{7,})/","dockerfile_location":"/"
-         |        }
-         |    ]
-         |}
-         |
-                      """.stripMargin)
-    WS.url(s"https://hub.docker.com/v2/repositories/${org}/${repo.project}/autobuild/").withHeaders(("Authorization", DefaultConfig.requiredString("docker.jwt.token"))).post(payload).map {
-      response =>
-        response.status match {
-          case 401 => Logger.warn(s"Unable to create Docker Hub repository [${org}/${repo.project}]. Error is: ${response.body}")
-          case 201 => Logger.info(s"Docker Hub repository [${org}/${repo.project}] created.")
-          case _ => Logger.info(s"Did not successfully create Docker Hub repository [${org}/${repo.project}]. Response Body: ${response.body}")
-        }
-        response
-    }
+  def createBuildTags(): Seq[BuildTag] = {
+    Seq(
+      BuildTag(
+        dockerfileLocation = "/",
+        name = "{sourceref}",
+        sourceName = "/^[0-9.]+$$/",
+        sourceType = "Tag"
+      ),
+      BuildTag(
+        dockerfileLocation = "/",
+        name = "{sourceref}",
+        sourceName = "/^([^m]|.[^a]|..[^s]|...[^t]|....[^e]|.....[^r]|.{0,5}$$|.{7,})/",
+        sourceType = "Branch"
+      )
+    )
   }
 }
