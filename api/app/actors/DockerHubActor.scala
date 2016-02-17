@@ -52,7 +52,9 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   )
 
   private[this] lazy val v2client = new Client(
-    defaultHeaders = Seq(("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}"))
+    defaultHeaders = Seq(
+      ("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
+    )
   )
 
   private[this] val IntervalSeconds = 30
@@ -68,12 +70,17 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withRepo { repo =>
-          val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get.docker.organization
 
-          for {
-            createDockerHubRepo <- v2client.DockerRepositories.postAutobuild(org, repo.project, createBuildForm(project, repo, org))
-          } yield {
-            //anything to do with the response
+          OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).map {
+            org =>
+              val dockerHubOrg = org.docker.organization
+              for {
+                dockerHubBuild <- v2client.DockerRepositories.postAutobuild(
+                  dockerHubOrg, repo.project, createBuildForm(project, repo, dockerHubOrg)
+                )
+              } yield {
+                log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+              }
           }
 
           syncImages(project, repo)
@@ -137,16 +144,16 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   }
 
   def createBuildForm(project: Project, repo: Repo, org: String): BuildForm = {
-    BuildForm.apply(
+    BuildForm(
       active = true,
-      buildTags = createBuildTags,
-      description = s"Automated build for ${org}",
-      dockerhubRepoName = s"${org}/${repo.project}",
+      buildTags = createBuildTags(),
+      description = s"Automated build for $org",
+      dockerhubRepoName = s"$org/${repo.project}",
       isPrivate = true,
       name = repo.project,
       namespace = org,
       provider = "github",
-      vcsRepoName = s"${org}/${repo.project}"
+      vcsRepoName = s"$org/${repo.project}"
     )
   }
 
