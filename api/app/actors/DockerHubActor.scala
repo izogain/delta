@@ -65,12 +65,12 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
         withRepo { repo =>
           val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get
 
+          // TODO: iterate over solution and add routes to an API
           for {
             checkDockerHubRepo <- checkDockerHubRepository(project, repo, org.docker.organization)
             if checkDockerHubRepo.status != 200
             createDockerHubRepo <- createDockerHubRepository(project, repo, org.docker.organization)
           } yield {
-            println(s"DUUUUUDE(${createDockerHubRepo.body})")
             syncImages(project, repo)
 
             ImagesDao.findByProjectIdAndVersion(project.id, version) match {
@@ -132,12 +132,8 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
+  // Rudimentary Docker Hub V2 API call - check if docker hub repository exists
   def checkDockerHubRepository(project: Project, repo: Repo, org: String): Future[WSResponse] = {
-    // TODO: add routes to an API
-    // TODO: since Docker Hub API documentation is scarce, ensure other response codes are handled
-
-    // rudimentary Docker Hub V2 API calls to
-    // Check if docker hub repository exists
     WS.url(s"https://hub.docker.com/v2/repositories/${org}/${repo.project}/").withHeaders(("Authorization", DefaultConfig.requiredString("docker.jwt.token"))).get().map {
       response =>
         response.status match {
@@ -151,6 +147,9 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
+  /*
+   * Rudimentary Docker Hub V2 API call - create docker hub repository (automated build)
+   */
   def createDockerHubRepository(project: Project, repo: Repo, org: String): Future[WSResponse] = {
     val payload = Json.parse(
       s"""
