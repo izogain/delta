@@ -6,12 +6,17 @@
 
   <input type="hidden" name="return_url" value='@form("return_url").value'/>
 
-  @helper.inputText(
+    @helper.inputText(
         form("id"),
         '_label -> "Id",
         '_error -> form.error("id")
     )
 
+    @helper.inputText(
+        form("organization"),
+        '_label -> "Docker Hub Organization name",
+        '_error -> form.error("organization")
+    )
 </fieldset>
 
 
@@ -19,4 +24,3 @@
   <button class="btn btn-large btn-primary" type="submit">Submit</button>
   <a href="@cancelUrl" class="btn">Cancel</a>
 </div>
-
