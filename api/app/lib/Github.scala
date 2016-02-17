@@ -9,7 +9,8 @@ import io.flow.github.oauth.v0.models.AccessTokenForm
 import io.flow.github.v0.{Client => GithubClient}
 import io.flow.github.v0.errors.UnitResponse
 import io.flow.github.v0.models.{User => GithubUser}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.Duration
 import play.api.Logger
 
 case class GithubUserData(
@@ -135,8 +136,43 @@ trait Github {
     */
   def getGithubUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], GithubUserData]]
 
-  def repositories(user: User)(implicit ec: ExecutionContext): Future[Seq[Repository]]
+  def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]]
 
+  /**
+    * Recursively calls the github API until we either:
+    *  - consume all records
+    *  - meet the specified limit/offset
+    */
+  def repositories(
+    user: User,
+    offset: Long = 0,
+    limit: Long = 25,
+    resultsSoFar: Seq[Repository] = Nil,
+    page: Long = 1
+  ) (
+    acceptsFilter: Repository => Boolean = { _ => true }
+  ) (
+    implicit ec: ExecutionContext
+  ): Seq[Repository] = {
+    val thisPage = Await.result(
+      githubRepos(user, page),
+      Duration(1, "second")
+    )
+
+    println("THIS PAGE: " + thisPage)
+
+    if (thisPage.isEmpty) {
+      resultsSoFar
+    } else {
+      val all = resultsSoFar ++ thisPage.filter { acceptsFilter(_) }
+      if (all.size >= offset + limit) {
+        all.drop(offset.toInt).take(limit.toInt)
+        } else {
+        repositories(user, offset, limit, all, page + 1)(acceptsFilter)
+      }
+    }
+  }
+  
   /**
     * For this user, returns the oauth token if available
     */
@@ -187,11 +223,11 @@ class DefaultGithub @javax.inject.Inject() () extends Github {
     }
   }
 
-  override def repositories(user: User)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
     oauthToken(user) match {
       case None => Future { Nil }
       case Some(token) => {
-        GithubHelper.apiClient(token).repositories.getUserAndRepos().map { repos =>
+        GithubHelper.apiClient(token).repositories.getUserAndRepos(page).map { repos =>
           repos.map { repo =>
             Repository(
               name = repo.name,
@@ -221,7 +257,7 @@ class MockGithub() extends Github {
     }
   }
 
-  override def repositories(user: User)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
     Future {
       MockGithubData.repositories(user)
     }
