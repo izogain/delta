@@ -8,22 +8,22 @@ package io.flow.docker.registry.v0.models {
   case class Build(
     active: Boolean,
     buildName: String,
-    buildTags: Seq[io.flow.docker.registry.v0.models.BuildTags],
+    buildTags: Seq[io.flow.docker.registry.v0.models.BuildTag],
     deploykey: io.flow.docker.registry.v0.models.Deploykey,
     dockerUrl: String,
-    hookId: Long,
+    hookId: _root_.scala.Option[Long] = None,
     provider: String,
     repoId: Long,
     repoType: String,
     repoWebUrl: String,
     repository: Long,
     sourceUrl: String,
-    webhookId: Long
+    webhookId: _root_.scala.Option[Long] = None
   )
 
   case class BuildForm(
     active: Boolean,
-    buildTags: Seq[io.flow.docker.registry.v0.models.BuildTags],
+    buildTags: Seq[io.flow.docker.registry.v0.models.BuildTag],
     description: String,
     dockerhubRepoName: String,
     isPrivate: Boolean,
@@ -33,24 +33,24 @@ package io.flow.docker.registry.v0.models {
     vcsRepoName: String
   )
 
-  case class BuildTags(
+  case class BuildTag(
     dockerfileLocation: String,
-    id: Long,
     name: String,
     sourceName: String,
-    sourceType: String
+    sourceType: String,
+    id: _root_.scala.Option[Long] = None
   )
 
   case class Deploykey(
     provider: String,
-    providerKeyId: Long,
+    providerKeyId: String,
     publicKey: String
   )
 
   case class DockerRepository(
     canEdit: Boolean,
     description: String,
-    fullDescription: String,
+    fullDescription: _root_.scala.Option[String] = None,
     hasStarred: Boolean,
     isAutomated: Boolean,
     isPrivate: Boolean,
@@ -102,17 +102,17 @@ package io.flow.docker.registry.v0.models {
       (
         (__ \ "active").read[Boolean] and
         (__ \ "build_name").read[String] and
-        (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTags]] and
+        (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTag]] and
         (__ \ "deploykey").read[io.flow.docker.registry.v0.models.Deploykey] and
         (__ \ "docker_url").read[String] and
-        (__ \ "hook_id").read[Long] and
+        (__ \ "hook_id").readNullable[Long] and
         (__ \ "provider").read[String] and
         (__ \ "repo_id").read[Long] and
         (__ \ "repo_type").read[String] and
         (__ \ "repo_web_url").read[String] and
         (__ \ "repository").read[Long] and
         (__ \ "source_url").read[String] and
-        (__ \ "webhook_id").read[Long]
+        (__ \ "webhook_id").readNullable[Long]
       )(Build.apply _)
     }
 
@@ -123,15 +123,20 @@ package io.flow.docker.registry.v0.models {
         "build_tags" -> play.api.libs.json.Json.toJson(obj.buildTags),
         "deploykey" -> jsObjectDeploykey(obj.deploykey),
         "docker_url" -> play.api.libs.json.JsString(obj.dockerUrl),
-        "hook_id" -> play.api.libs.json.JsNumber(obj.hookId),
         "provider" -> play.api.libs.json.JsString(obj.provider),
         "repo_id" -> play.api.libs.json.JsNumber(obj.repoId),
         "repo_type" -> play.api.libs.json.JsString(obj.repoType),
         "repo_web_url" -> play.api.libs.json.JsString(obj.repoWebUrl),
         "repository" -> play.api.libs.json.JsNumber(obj.repository),
-        "source_url" -> play.api.libs.json.JsString(obj.sourceUrl),
-        "webhook_id" -> play.api.libs.json.JsNumber(obj.webhookId)
-      )
+        "source_url" -> play.api.libs.json.JsString(obj.sourceUrl)
+      ) ++ (obj.hookId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("hook_id" -> play.api.libs.json.JsNumber(x))
+      }) ++
+      (obj.webhookId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("webhook_id" -> play.api.libs.json.JsNumber(x))
+      })
     }
 
     implicit def jsonWritesDockerRegistryBuild: play.api.libs.json.Writes[Build] = {
@@ -145,7 +150,7 @@ package io.flow.docker.registry.v0.models {
     implicit def jsonReadsDockerRegistryBuildForm: play.api.libs.json.Reads[BuildForm] = {
       (
         (__ \ "active").read[Boolean] and
-        (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTags]] and
+        (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTag]] and
         (__ \ "description").read[String] and
         (__ \ "dockerhub_repo_name").read[String] and
         (__ \ "is_private").read[Boolean] and
@@ -178,30 +183,32 @@ package io.flow.docker.registry.v0.models {
       }
     }
 
-    implicit def jsonReadsDockerRegistryBuildTags: play.api.libs.json.Reads[BuildTags] = {
+    implicit def jsonReadsDockerRegistryBuildTag: play.api.libs.json.Reads[BuildTag] = {
       (
         (__ \ "dockerfile_location").read[String] and
-        (__ \ "id").read[Long] and
         (__ \ "name").read[String] and
         (__ \ "source_name").read[String] and
-        (__ \ "source_type").read[String]
-      )(BuildTags.apply _)
+        (__ \ "source_type").read[String] and
+        (__ \ "id").readNullable[Long]
+      )(BuildTag.apply _)
     }
 
-    def jsObjectBuildTags(obj: io.flow.docker.registry.v0.models.BuildTags) = {
+    def jsObjectBuildTag(obj: io.flow.docker.registry.v0.models.BuildTag) = {
       play.api.libs.json.Json.obj(
         "dockerfile_location" -> play.api.libs.json.JsString(obj.dockerfileLocation),
-        "id" -> play.api.libs.json.JsNumber(obj.id),
         "name" -> play.api.libs.json.JsString(obj.name),
         "source_name" -> play.api.libs.json.JsString(obj.sourceName),
         "source_type" -> play.api.libs.json.JsString(obj.sourceType)
-      )
+      ) ++ (obj.id match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("id" -> play.api.libs.json.JsNumber(x))
+      })
     }
 
-    implicit def jsonWritesDockerRegistryBuildTags: play.api.libs.json.Writes[BuildTags] = {
-      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.BuildTags] {
-        def writes(obj: io.flow.docker.registry.v0.models.BuildTags) = {
-          jsObjectBuildTags(obj)
+    implicit def jsonWritesDockerRegistryBuildTag: play.api.libs.json.Writes[BuildTag] = {
+      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.BuildTag] {
+        def writes(obj: io.flow.docker.registry.v0.models.BuildTag) = {
+          jsObjectBuildTag(obj)
         }
       }
     }
@@ -209,7 +216,7 @@ package io.flow.docker.registry.v0.models {
     implicit def jsonReadsDockerRegistryDeploykey: play.api.libs.json.Reads[Deploykey] = {
       (
         (__ \ "provider").read[String] and
-        (__ \ "provider_key_id").read[Long] and
+        (__ \ "provider_key_id").read[String] and
         (__ \ "public_key").read[String]
       )(Deploykey.apply _)
     }
@@ -217,7 +224,7 @@ package io.flow.docker.registry.v0.models {
     def jsObjectDeploykey(obj: io.flow.docker.registry.v0.models.Deploykey) = {
       play.api.libs.json.Json.obj(
         "provider" -> play.api.libs.json.JsString(obj.provider),
-        "provider_key_id" -> play.api.libs.json.JsNumber(obj.providerKeyId),
+        "provider_key_id" -> play.api.libs.json.JsString(obj.providerKeyId),
         "public_key" -> play.api.libs.json.JsString(obj.publicKey)
       )
     }
@@ -234,7 +241,7 @@ package io.flow.docker.registry.v0.models {
       (
         (__ \ "can_edit").read[Boolean] and
         (__ \ "description").read[String] and
-        (__ \ "full_description").read[String] and
+        (__ \ "full_description").readNullable[String] and
         (__ \ "has_starred").read[Boolean] and
         (__ \ "is_automated").read[Boolean] and
         (__ \ "is_private").read[Boolean] and
@@ -252,7 +259,6 @@ package io.flow.docker.registry.v0.models {
       play.api.libs.json.Json.obj(
         "can_edit" -> play.api.libs.json.JsBoolean(obj.canEdit),
         "description" -> play.api.libs.json.JsString(obj.description),
-        "full_description" -> play.api.libs.json.JsString(obj.fullDescription),
         "has_starred" -> play.api.libs.json.JsBoolean(obj.hasStarred),
         "is_automated" -> play.api.libs.json.JsBoolean(obj.isAutomated),
         "is_private" -> play.api.libs.json.JsBoolean(obj.isPrivate),
@@ -263,7 +269,10 @@ package io.flow.docker.registry.v0.models {
         "star_count" -> play.api.libs.json.JsNumber(obj.starCount),
         "status" -> play.api.libs.json.JsNumber(obj.status),
         "user" -> play.api.libs.json.JsString(obj.user)
-      )
+      ) ++ (obj.fullDescription match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("full_description" -> play.api.libs.json.JsString(x))
+      })
     }
 
     implicit def jsonWritesDockerRegistryDockerRepository: play.api.libs.json.Writes[DockerRepository] = {
@@ -360,25 +369,26 @@ package io.flow.docker.registry.v0 {
     def tags: Tags = Tags
 
     object DockerRepositories extends DockerRepositories {
-      override def getV2AndRepositoriesByOrgAndRepo(
+      override def get(
         org: String,
         repo: String
-      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.DockerRepository]] = {
-        _executeRequest("GET", s"/docker_repositories/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/").map {
-          case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("Seq[io.flow.docker.registry.v0.models.DockerRepository]", r, _.validate[Seq[io.flow.docker.registry.v0.models.DockerRepository]])
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.DockerRepository] = {
+        _executeRequest("GET", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/").map {
+          case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.DockerRepository", r, _.validate[io.flow.docker.registry.v0.models.DockerRepository])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
-          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
+          case r if r.status == 404 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
         }
       }
 
-      override def postV2AndRepositoriesAndAutobuildByOrgAndRepo(
+      override def postAutobuild(
         org: String,
         repo: String,
         buildForm: io.flow.docker.registry.v0.models.BuildForm
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.Build] = {
         val payload = play.api.libs.json.Json.toJson(buildForm)
 
-        _executeRequest("POST", s"/docker_repositories/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
+        _executeRequest("POST", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
           case r if r.status == 201 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.Build", r, _.validate[io.flow.docker.registry.v0.models.Build])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 401")
@@ -496,12 +506,12 @@ package io.flow.docker.registry.v0 {
   }
 
   trait DockerRepositories {
-    def getV2AndRepositoriesByOrgAndRepo(
+    def get(
       org: String,
       repo: String
-    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.DockerRepository]]
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.DockerRepository]
 
-    def postV2AndRepositoriesAndAutobuildByOrgAndRepo(
+    def postAutobuild(
       org: String,
       repo: String,
       buildForm: io.flow.docker.registry.v0.models.BuildForm

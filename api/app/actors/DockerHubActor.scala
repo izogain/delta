@@ -1,8 +1,9 @@
 package io.flow.delta.actors
 
-import db.{ImagesDao, UsersDao}
+import db.{OrganizationsDao, ImagesDao, UsersDao}
 import io.flow.delta.api.lib.Repo
 import io.flow.delta.v0.models._
+import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
 import io.flow.docker.registry.v0.{Authorization, Client}
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
@@ -47,6 +48,12 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     )
   )
 
+  private[this] lazy val v2client = new Client(
+    defaultHeaders = Seq(
+      ("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
+    )
+  )
+
   private[this] val IntervalSeconds = 30
 
   override val logPrefix = "DockerHubActor"
@@ -60,6 +67,17 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withRepo { repo =>
+
+          OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).map {
+            org =>
+              val dockerHubOrg = org.docker.organization
+              v2client.DockerRepositories.postAutobuild(
+                  dockerHubOrg, repo.project, createBuildForm(project, repo, dockerHubOrg)
+              ).map { dockerHubBuild =>
+                log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+            }
+          }
+
           syncImages(project, repo)
 
           ImagesDao.findByProjectIdAndVersion(project.id, version) match {
@@ -120,4 +138,34 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
+  def createBuildForm(project: Project, repo: Repo, org: String): BuildForm = {
+    BuildForm(
+      active = true,
+      buildTags = createBuildTags(),
+      description = s"Automated build for $org/${repo.project}",
+      dockerhubRepoName = s"$org/${repo.project}",
+      isPrivate = true,
+      name = repo.project,
+      namespace = org,
+      provider = "github",
+      vcsRepoName = s"$org/${repo.project}"
+    )
+  }
+
+  def createBuildTags(): Seq[BuildTag] = {
+    Seq(
+      BuildTag(
+        dockerfileLocation = "/",
+        name = "{sourceref}",
+        sourceName = "/^[0-9.]+$$/",
+        sourceType = "Tag"
+      ),
+      BuildTag(
+        dockerfileLocation = "/",
+        name = "{sourceref}",
+        sourceName = "/^([^m]|.[^a]|..[^s]|...[^t]|....[^e]|.....[^r]|.{0,5}$$|.{7,})/",
+        sourceType = "Branch"
+      )
+    )
+  }
 }
