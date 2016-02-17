@@ -58,9 +58,6 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withOrganization { org =>
-          println(s"ORG: ${org.docker.organization}")
-          println(s"PRJID: ${ project.id}")
-          println(s"ORG/PRJ: ${org.id}/${project.id}")
           v2client.DockerRepositories.postAutobuild(
             org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
           ).map { dockerHubBuild =>
