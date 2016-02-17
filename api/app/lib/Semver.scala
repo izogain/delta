@@ -6,23 +6,15 @@ case class Semver(major: Int, minor: Int, micro: Int) extends Ordered[Semver] {
     Seq(major, minor, micro).mkString(".")
   }
 
+  val sortKey: String = "%s.%s.%s".format(Semver.Pad + major, Semver.Pad + minor, Semver.Pad + micro)
+  
   def next(): Semver = {
     Semver(major, minor, micro + 1)
   }
 
   def compare(other: Semver) = {
-    if (major == other.major) {
-      if (minor == other.minor) {
-        micro.compare(other.micro)
-      } else {
-        minor.compare(other.minor)
-      }
-    } else {
-      major.compare(other.major)
-    }
+    sortKey.compare(other.sortKey)
   }
-
-  val sortKey: String = "%s.%s.%s".format(Semver.Pad + major, Semver.Pad + minor, Semver.Pad + micro)
 
 }
 
