@@ -5,6 +5,7 @@ import io.flow.common.v0.models.json._
 import io.flow.delta.api.lib.Github
 import io.flow.delta.v0.models.json._
 import io.flow.github.v0.models.Repository
+import io.flow.github.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
 import play.api.mvc._
@@ -22,7 +23,7 @@ class Repositories @javax.inject.Inject() (
     name: Option[String] = None,
     organizationId: Option[String] = None,
     existingProject: Option[Boolean] = None,
-    limit: Long = 25,
+    limit: Long = 5,
     offset: Long = 0
   ) = Identified { request =>
     if (!existingProject.isEmpty && organizationId.isEmpty) {
@@ -33,7 +34,10 @@ class Repositories @javax.inject.Inject() (
       val org = organizationId.flatMap { OrganizationsDao.findById(auth, _)}
 
       val results = github.repositories(request.user, offset, limit) { r =>
-        (r.name.isEmpty || name == Some(r.name)) &&
+        (name match {
+          case None => true
+          case Some(n) => n == r.name
+        }) &&
         (org match {
           case None => true
           case Some(org) => {

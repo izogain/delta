@@ -1,13 +1,14 @@
 package io.flow.delta.api.lib
 
 import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao}
-import io.flow.delta.v0.models.{GithubUserForm, Repository, UserForm, Visibility}
+import io.flow.delta.v0.models.{GithubUserForm, UserForm, Visibility}
 import io.flow.common.v0.models.{Name, User}
 import io.flow.play.util.{DefaultConfig, IdGenerator}
 import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
 import io.flow.github.v0.{Client => GithubClient}
 import io.flow.github.v0.errors.UnitResponse
+import io.flow.github.v0.models.{Repository => GithubRepository}
 import io.flow.github.v0.models.{User => GithubUser}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -136,7 +137,10 @@ trait Github {
     */
   def getGithubUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], GithubUserData]]
 
-  def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]]
+  /**
+    * Fetches one page of repositories from the Github API
+    */
+  def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
 
   /**
     * Recursively calls the github API until we either:
@@ -145,29 +149,27 @@ trait Github {
     */
   def repositories(
     user: User,
-    offset: Long = 0,
-    limit: Long = 25,
-    resultsSoFar: Seq[Repository] = Nil,
-    page: Long = 1
+    offset: Long,
+    limit: Long,
+    resultsSoFar: Seq[GithubRepository] = Nil,
+    page: Long = 1  // internal parameter
   ) (
-    acceptsFilter: Repository => Boolean = { _ => true }
+    acceptsFilter: GithubRepository => Boolean = { _ => true }
   ) (
     implicit ec: ExecutionContext
-  ): Seq[Repository] = {
+  ): Seq[GithubRepository] = {
     val thisPage = Await.result(
       githubRepos(user, page),
-      Duration(1, "second")
+      Duration(3, "seconds")
     )
 
-    println("THIS PAGE: " + thisPage)
-
     if (thisPage.isEmpty) {
-      resultsSoFar
+      resultsSoFar.drop(offset.toInt).take(limit.toInt)
     } else {
       val all = resultsSoFar ++ thisPage.filter { acceptsFilter(_) }
       if (all.size >= offset + limit) {
         all.drop(offset.toInt).take(limit.toInt)
-        } else {
+      } else {
         repositories(user, offset, limit, all, page + 1)(acceptsFilter)
       }
     }
@@ -223,19 +225,11 @@ class DefaultGithub @javax.inject.Inject() () extends Github {
     }
   }
 
-  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     oauthToken(user) match {
       case None => Future { Nil }
       case Some(token) => {
-        GithubHelper.apiClient(token).repositories.getUserAndRepos(page).map { repos =>
-          repos.map { repo =>
-            Repository(
-              name = repo.name,
-              visibility = if (repo.`private`) { Visibility.Private } else { Visibility.Public },
-              uri = repo.htmlUrl
-            )
-          }
-        }
+        GithubHelper.apiClient(token).repositories.getUserAndRepos(page)
       }
     }
   }
@@ -257,7 +251,7 @@ class MockGithub() extends Github {
     }
   }
 
-  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[Repository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     Future {
       MockGithubData.repositories(user)
     }
@@ -273,7 +267,7 @@ object MockGithubData {
 
   private[this] var githubUserByCodes = scala.collection.mutable.Map[String, GithubUserData]()
   private[this] var userTokens = scala.collection.mutable.Map[String, String]()
-  private[this] var repositories = scala.collection.mutable.Map[String, Repository]()
+  private[this] var repositories = scala.collection.mutable.Map[String, GithubRepository]()
 
   def addUser(githubUser: GithubUser, code: String, token: Option[String] = None) {
     githubUserByCodes +== (
@@ -300,11 +294,11 @@ object MockGithubData {
     userTokens.lift(user.id)
   }
 
-  def addRepository(user: User, repository: Repository) = {
+  def addRepository(user: User, repository: GithubRepository) = {
     repositories +== (user.id -> repository)
   }
 
-  def repositories(user: User): Seq[Repository] = {
+  def repositories(user: User): Seq[GithubRepository] = {
     repositories.lift(user.id) match {
       case None => Nil
       case Some(repo) => Seq(repo)
