@@ -22,10 +22,13 @@ case class Semver(major: Int, minor: Int, micro: Int) extends Ordered[Semver] {
     }
   }
 
+  val sortKey: String = "%s.%s.%s".format(Semver.Pad + major, Semver.Pad + minor, Semver.Pad + micro)
+
 }
 
 object Semver {
 
+  val Pad = 10000
   private[this] val Pattern = """^(\d+)\.(\d+)\.(\d+)$""".r
 
   def parse(value: String): Option[Semver] = {

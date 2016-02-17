@@ -33,9 +33,9 @@ object TagsDao {
 
   private[this] val InsertQuery = """
     insert into tags
-    (id, project_id, name, hash, updated_by_user_id)
+    (id, project_id, name, hash, sort_key, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {hash}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {hash}, {sort_key}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -43,6 +43,7 @@ object TagsDao {
        set project_id = {project_id},
            name = {name},
            hash = {hash},
+           sort_key = {sort_key},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
   """
@@ -125,6 +126,7 @@ object TagsDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'hash -> form.hash.trim,
+            'sort_key -> generateSortKey(form.name.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -152,6 +154,7 @@ object TagsDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'hash -> form.hash.trim,
+            'sort_key -> generateSortKey(form.name.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -167,6 +170,13 @@ object TagsDao {
       case errors => {
         Left(errors)
       }
+    }
+  }
+
+  private[this] def generateSortKey(name: String): String = {
+    Semver.parse(name) match {
+      case None => sys.error(s"Tag[$name] is not semver")
+      case Some(semver) => semver.sortKey
     }
   }
 
@@ -191,7 +201,7 @@ object TagsDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     name: Option[String] = None,
-    orderBy: OrderBy = OrderBy("lower(tags.name), tags.created_at"),
+    orderBy: OrderBy = OrderBy("-tags.sort_key, tags.created_at"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[Tag] = {

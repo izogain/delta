@@ -864,7 +864,7 @@
             { "name": "name", "type": "string", "description": "Find tags with this name.", "required": false, "example": "0.0.1" },
             { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
-            { "name": "sort", "type": "string", "default": "-tags.created_at" }
+            { "name": "sort", "type": "string", "default": "-tags.sort_key" }
 	  ],
           "responses": {
             "200": { "type": "[tag]" },
