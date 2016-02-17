@@ -9,7 +9,7 @@ package io.flow.docker.registry.v0.models {
     active: Boolean,
     buildName: String,
     buildTags: Seq[io.flow.docker.registry.v0.models.BuildTag],
-    deploykey: io.flow.docker.registry.v0.models.Deploykey,
+    deploykey: _root_.scala.Option[io.flow.docker.registry.v0.models.Deploykey] = None,
     dockerUrl: String,
     hookId: _root_.scala.Option[Long] = None,
     provider: String,
@@ -42,9 +42,9 @@ package io.flow.docker.registry.v0.models {
   )
 
   case class Deploykey(
-    provider: String,
-    providerKeyId: String,
-    publicKey: String
+    provider: _root_.scala.Option[String] = None,
+    providerKeyId: _root_.scala.Option[String] = None,
+    publicKey: _root_.scala.Option[String] = None
   )
 
   case class DockerRepository(
@@ -103,7 +103,7 @@ package io.flow.docker.registry.v0.models {
         (__ \ "active").read[Boolean] and
         (__ \ "build_name").read[String] and
         (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTag]] and
-        (__ \ "deploykey").read[io.flow.docker.registry.v0.models.Deploykey] and
+        (__ \ "deploykey").readNullable[io.flow.docker.registry.v0.models.Deploykey] and
         (__ \ "docker_url").read[String] and
         (__ \ "hook_id").readNullable[Long] and
         (__ \ "provider").read[String] and
@@ -121,7 +121,6 @@ package io.flow.docker.registry.v0.models {
         "active" -> play.api.libs.json.JsBoolean(obj.active),
         "build_name" -> play.api.libs.json.JsString(obj.buildName),
         "build_tags" -> play.api.libs.json.Json.toJson(obj.buildTags),
-        "deploykey" -> jsObjectDeploykey(obj.deploykey),
         "docker_url" -> play.api.libs.json.JsString(obj.dockerUrl),
         "provider" -> play.api.libs.json.JsString(obj.provider),
         "repo_id" -> play.api.libs.json.JsNumber(obj.repoId),
@@ -129,7 +128,11 @@ package io.flow.docker.registry.v0.models {
         "repo_web_url" -> play.api.libs.json.JsString(obj.repoWebUrl),
         "repository" -> play.api.libs.json.JsNumber(obj.repository),
         "source_url" -> play.api.libs.json.JsString(obj.sourceUrl)
-      ) ++ (obj.hookId match {
+      ) ++ (obj.deploykey match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("deploykey" -> jsObjectDeploykey(x))
+      }) ++
+      (obj.hookId match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("hook_id" -> play.api.libs.json.JsNumber(x))
       }) ++
@@ -215,18 +218,25 @@ package io.flow.docker.registry.v0.models {
 
     implicit def jsonReadsDockerRegistryDeploykey: play.api.libs.json.Reads[Deploykey] = {
       (
-        (__ \ "provider").read[String] and
-        (__ \ "provider_key_id").read[String] and
-        (__ \ "public_key").read[String]
+        (__ \ "provider").readNullable[String] and
+        (__ \ "provider_key_id").readNullable[String] and
+        (__ \ "public_key").readNullable[String]
       )(Deploykey.apply _)
     }
 
     def jsObjectDeploykey(obj: io.flow.docker.registry.v0.models.Deploykey) = {
-      play.api.libs.json.Json.obj(
-        "provider" -> play.api.libs.json.JsString(obj.provider),
-        "provider_key_id" -> play.api.libs.json.JsString(obj.providerKeyId),
-        "public_key" -> play.api.libs.json.JsString(obj.publicKey)
-      )
+      (obj.provider match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("provider" -> play.api.libs.json.JsString(x))
+      }) ++
+      (obj.providerKeyId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("provider_key_id" -> play.api.libs.json.JsString(x))
+      }) ++
+      (obj.publicKey match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("public_key" -> play.api.libs.json.JsString(x))
+      })
     }
 
     implicit def jsonWritesDockerRegistryDeploykey: play.api.libs.json.Writes[Deploykey] = {
