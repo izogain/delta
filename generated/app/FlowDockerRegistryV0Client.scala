@@ -11,14 +11,14 @@ package io.flow.docker.registry.v0.models {
     buildTags: Seq[io.flow.docker.registry.v0.models.BuildTag],
     deploykey: io.flow.docker.registry.v0.models.Deploykey,
     dockerUrl: String,
-    hookId: Long,
+    hookId: _root_.scala.Option[Long] = None,
     provider: String,
     repoId: Long,
     repoType: String,
     repoWebUrl: String,
     repository: Long,
     sourceUrl: String,
-    webhookId: Long
+    webhookId: _root_.scala.Option[Long] = None
   )
 
   case class BuildForm(
@@ -43,7 +43,7 @@ package io.flow.docker.registry.v0.models {
 
   case class Deploykey(
     provider: String,
-    providerKeyId: Long,
+    providerKeyId: String,
     publicKey: String
   )
 
@@ -105,14 +105,14 @@ package io.flow.docker.registry.v0.models {
         (__ \ "build_tags").read[Seq[io.flow.docker.registry.v0.models.BuildTag]] and
         (__ \ "deploykey").read[io.flow.docker.registry.v0.models.Deploykey] and
         (__ \ "docker_url").read[String] and
-        (__ \ "hook_id").read[Long] and
+        (__ \ "hook_id").readNullable[Long] and
         (__ \ "provider").read[String] and
         (__ \ "repo_id").read[Long] and
         (__ \ "repo_type").read[String] and
         (__ \ "repo_web_url").read[String] and
         (__ \ "repository").read[Long] and
         (__ \ "source_url").read[String] and
-        (__ \ "webhook_id").read[Long]
+        (__ \ "webhook_id").readNullable[Long]
       )(Build.apply _)
     }
 
@@ -123,15 +123,20 @@ package io.flow.docker.registry.v0.models {
         "build_tags" -> play.api.libs.json.Json.toJson(obj.buildTags),
         "deploykey" -> jsObjectDeploykey(obj.deploykey),
         "docker_url" -> play.api.libs.json.JsString(obj.dockerUrl),
-        "hook_id" -> play.api.libs.json.JsNumber(obj.hookId),
         "provider" -> play.api.libs.json.JsString(obj.provider),
         "repo_id" -> play.api.libs.json.JsNumber(obj.repoId),
         "repo_type" -> play.api.libs.json.JsString(obj.repoType),
         "repo_web_url" -> play.api.libs.json.JsString(obj.repoWebUrl),
         "repository" -> play.api.libs.json.JsNumber(obj.repository),
-        "source_url" -> play.api.libs.json.JsString(obj.sourceUrl),
-        "webhook_id" -> play.api.libs.json.JsNumber(obj.webhookId)
-      )
+        "source_url" -> play.api.libs.json.JsString(obj.sourceUrl)
+      ) ++ (obj.hookId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("hook_id" -> play.api.libs.json.JsNumber(x))
+      }) ++
+      (obj.webhookId match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("webhook_id" -> play.api.libs.json.JsNumber(x))
+      })
     }
 
     implicit def jsonWritesDockerRegistryBuild: play.api.libs.json.Writes[Build] = {
@@ -211,7 +216,7 @@ package io.flow.docker.registry.v0.models {
     implicit def jsonReadsDockerRegistryDeploykey: play.api.libs.json.Reads[Deploykey] = {
       (
         (__ \ "provider").read[String] and
-        (__ \ "provider_key_id").read[Long] and
+        (__ \ "provider_key_id").read[String] and
         (__ \ "public_key").read[String]
       )(Deploykey.apply _)
     }
@@ -219,7 +224,7 @@ package io.flow.docker.registry.v0.models {
     def jsObjectDeploykey(obj: io.flow.docker.registry.v0.models.Deploykey) = {
       play.api.libs.json.Json.obj(
         "provider" -> play.api.libs.json.JsString(obj.provider),
-        "provider_key_id" -> play.api.libs.json.JsNumber(obj.providerKeyId),
+        "provider_key_id" -> play.api.libs.json.JsString(obj.providerKeyId),
         "public_key" -> play.api.libs.json.JsString(obj.publicKey)
       )
     }
