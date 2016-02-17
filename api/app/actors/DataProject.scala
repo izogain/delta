@@ -1,8 +1,8 @@
 package io.flow.delta.actors
 
-import db.ProjectsDao
+import db.{OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.{GithubUtil, Repo}
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.{Organization, Project}
 import io.flow.postgresql.Authorization
 import play.api.Logger
 
@@ -27,6 +27,18 @@ trait DataProject {
     */
   def withProject[T](f: Project => T): Option[T] = {
     dataProject.map { f(_) }
+  }
+
+  /**
+    * Invokes the specified function w/ the current organization, but only
+    * if we have one
+    */
+  def withOrganization[T](f: Organization => T): Option[T] = {
+    dataProject.flatMap { project =>
+      OrganizationsDao.findById(Authorization.All, project.organization.id).map { org =>
+        f(org)
+      }
+    }
   }
 
   /**

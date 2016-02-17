@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import db.{OrganizationsDao, ImagesDao, UsersDao}
-import io.flow.delta.api.lib.{Repo, Semver}
+import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
 import io.flow.docker.registry.v0.{Authorization, Client}
@@ -66,29 +66,26 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
-        withRepo { repo =>
-
-          OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).map {
-            org =>
-              val dockerHubOrg = org.docker.organization
-              v2client.DockerRepositories.postAutobuild(
-                  dockerHubOrg, repo.project, createBuildForm(project, repo, dockerHubOrg)
-              ).map { dockerHubBuild =>
-                log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
-            }
+        withOrganization { org =>
+          v2client.DockerRepositories.postAutobuild(
+            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id, s"${org.id}/${project.id}")
+          ).map { dockerHubBuild =>
+            log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
           }
 
-          syncImages(project, repo)
+          syncImages(org.docker, project)
+
+          val imageFullName = s"${org.docker.organization}/${project.id}:$version"
 
           ImagesDao.findByProjectIdAndVersion(project.id, version) match {
             case Some(image) => {
-              log.checkpoint(s"Docker hub image $repo:$version is ready - image id[${image.id}]")
+              log.checkpoint(s"Docker hub image $imageFullName is ready - image id[${image.id}]")
               // Don't fire an event; the ImagesDao will already have
               // raised ImageCreated
             }
 
             case None => {
-              log.checkpoint(s"Docker hub image $repo:$version is not ready. Will check again in $IntervalSeconds seconds")
+              log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
               Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
                 self ! DockerHubActor.Messages.Build(version)
               }
@@ -102,14 +99,14 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
  }
 
 
-  def syncImages(project: Project, repo: Repo) {
-    println(s"syncImages(${project.id})")
+  def syncImages(docker: Docker, project: Project) {
+    println(s"syncImages(${docker.organization}, ${project.id})")
     for {
-      tags <- client.tags.get(repo.owner, repo.project)
+      tags <- client.tags.get(docker.organization, project.id)
     } yield {
       tags.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
-          upsertImage(project.id, repo, tag.name)
+          upsertImage(docker, project.id, tag.name)
         ) match {
           case Success(_) => // No-op
           case Failure(ex) => {
@@ -120,16 +117,15 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  /**
-    * For each tag found in docker hub, creates a local images
-    * record. Allows us to query the local database to see if an image
-    * exists.
-    */
-  def upsertImage(projectId: String, repo: Repo, version: String) {
+  def upsertImage(docker: Docker, projectId: String, version: String) {
     ImagesDao.findByProjectIdAndVersion(projectId, version).getOrElse {
       ImagesDao.create(
         UsersDao.systemUser,
-        ImageForm(projectId, repo.toString, version)
+        ImageForm(
+          projectId = projectId,
+          name = s"${docker.organization}/${projectId}",
+          version = version
+        )
       ) match {
         case Left(msgs) => sys.error(msgs.mkString(", "))
         case Right(img) => // no-op
@@ -137,17 +133,18 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def createBuildForm(project: Project, repo: Repo, org: String): BuildForm = {
+  def createBuildForm(org: String, name: String, vcsRepoName: String): BuildForm = {
+    val fullName = s"$org/$name"
     BuildForm(
       active = true,
       buildTags = createBuildTags(),
-      description = s"Automated build for $org/${repo.project}",
-      dockerhubRepoName = s"$org/${repo.project}",
+      description = s"Automated build for $fullName",
+      dockerhubRepoName = fullName,
       isPrivate = true,
-      name = repo.project,
+      name = name,
       namespace = org,
       provider = "github",
-      vcsRepoName = s"$org/${repo.project}"
+      vcsRepoName = vcsRepoName
     )
   }
 
