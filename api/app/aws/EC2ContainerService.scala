@@ -2,7 +2,7 @@ package io.flow.delta.aws
 
 import io.flow.delta.v0.models.Version
 
-import util.RegistryClient
+import io.flow.delta.api.lib.RegistryClient
 
 import com.amazonaws.services.ecs.AmazonECSClient
 import com.amazonaws.services.ecs.model._
@@ -113,7 +113,7 @@ object EC2ContainerService extends Settings {
   def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): String = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val registryPorts = RegistryClient.ports(projectId)
+    val registryPorts = RegistryClient.getById(projectId).ports.head
     val commandSeq = registryPorts.service.id match {
       case "nodejs" => Seq[String]().asJava
       case _ => Seq("production").asJava
@@ -161,7 +161,7 @@ object EC2ContainerService extends Settings {
           new LoadBalancer()
           .withContainerName(containerName)
           .withLoadBalancerName(loadBalancerName)
-          .withContainerPort(RegistryClient.ports(projectId).internal.toInt)
+          .withContainerPort(RegistryClient.getById(projectId).ports.head.internal.toInt)
         ).asJava
       )
     ).getService().getServiceName()

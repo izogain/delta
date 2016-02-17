@@ -1,6 +1,6 @@
 package io.flow.delta.aws
 
-import util.RegistryClient
+import io.flow.delta.api.lib.RegistryClient
 
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model._
@@ -16,7 +16,7 @@ object ElasticLoadBalancer extends Settings {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
     val name = getLoadBalancerName(id)
-    val externalPort = RegistryClient.ports(id).external
+    val externalPort = RegistryClient.getById(id).ports.head.external
     createLoadBalancer(name, externalPort)
     configureHealthCheck(name, externalPort)
     return name
