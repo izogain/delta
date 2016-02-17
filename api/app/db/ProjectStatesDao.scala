@@ -80,13 +80,12 @@ class ProjectStatesDao(table: String, idPrefix: String) {
       case Nil => {
 
         val id = idGenerator.randomId()
-        val sortedVersions = form.versions.sortBy { v => (v.name, v.instances) }
 
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
             'project_id -> project.id,
-            'versions -> Json.toJson(sortedVersions).toString,
+            'versions -> Json.toJson(normalize(form.versions)).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -113,11 +112,10 @@ class ProjectStatesDao(table: String, idPrefix: String) {
   private[this] def update(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
     validate(createdBy, project, form) match {
       case Nil => {
-        val sortedVersions = form.versions.sortBy { v => (v.name, v.instances) }
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'project_id -> project.id,
-            'versions -> Json.toJson(sortedVersions).toString,
+            'versions -> Json.toJson(normalize(form.versions)).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -134,6 +132,17 @@ class ProjectStatesDao(table: String, idPrefix: String) {
     }
   }
 
+  /**
+    * Only include versions w at least 1 instance
+    * Sort deterministically
+    */
+  private[this] def normalize(versions: Seq[Version]): Seq[Version] = {
+    versions.
+      filter { v => v.instances > 0 }.
+      sortBy { v => (v.name, v.instances) }
+  }
+  
+ 
   def delete(deletedBy: User, project: Project) {
     lookupId(project.id).map { id =>
       Delete.delete(table, deletedBy.id, id)
