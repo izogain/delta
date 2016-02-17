@@ -170,7 +170,6 @@ object OrganizationsController {
     organization: String,
     returnUrl: Option[String]
   ) {
-    // TODO: cheat for now - build ui in separate PR
     val organizationForm = OrganizationForm(
       id = id,
       docker = Docker(provider=DockerProvider.DockerHub, organization=organization)
