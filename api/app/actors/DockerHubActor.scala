@@ -157,7 +157,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       BuildTag(
         dockerfileLocation = "/",
         name = "{sourceref}",
-        sourceName = "/^[0-9.]+$$/",
+        sourceName = "/^[0-9]+\\.[0-9]+\\.[0-9]+$/",
         sourceType = "Tag"
       )
     )
