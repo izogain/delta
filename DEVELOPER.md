@@ -28,12 +28,12 @@ In one screen:
 
     $ sbt
     sbt> project api
-    sbt> run 6111
+    sbt> run 6091
 
 In another screen:
 
     $ sbt
     sbt> project www
-    sbt> run 6110
+    sbt> run 6090
 
-Goto http://localhost:6110 in your browser
+Goto http://localhost:6090 in your browser
