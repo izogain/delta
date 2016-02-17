@@ -58,10 +58,17 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         withOrganization { org =>
+          println(s"ORG: ${org.docker.organization}")
+          println(s"PRJID: ${ project.id}")
+          println(s"ORG/PRJ: ${org.id}/${project.id}")
           v2client.DockerRepositories.postAutobuild(
-            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id, s"${org.id}/${project.id}")
+            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
           ).map { dockerHubBuild =>
             log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+          }.recover {
+            case err => {
+              log.message(s"Error creating Docker Hub repository and automated build: $err")
+            }
           }
 
           syncImages(org.docker, project)
@@ -124,7 +131,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def createBuildForm(org: String, name: String, vcsRepoName: String): BuildForm = {
+  def createBuildForm(org: String, name: String): BuildForm = {
     val fullName = s"$org/$name"
     BuildForm(
       active = true,
@@ -135,7 +142,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
       name = name,
       namespace = org,
       provider = "github",
-      vcsRepoName = vcsRepoName
+      vcsRepoName = fullName
     )
   }
 
