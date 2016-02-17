@@ -69,6 +69,13 @@ package io.flow.docker.registry.v0.models {
   )
 
   case class V2Tag(
+    count: Long,
+    next: _root_.scala.Option[Long] = None,
+    previous: _root_.scala.Option[Long] = None,
+    results: Seq[io.flow.docker.registry.v0.models.V2TagDetails]
+  )
+
+  case class V2TagDetails(
     creator: Long,
     fullSize: Long,
     id: Long,
@@ -329,6 +336,37 @@ package io.flow.docker.registry.v0.models {
 
     implicit def jsonReadsDockerRegistryV2Tag: play.api.libs.json.Reads[V2Tag] = {
       (
+        (__ \ "count").read[Long] and
+        (__ \ "next").readNullable[Long] and
+        (__ \ "previous").readNullable[Long] and
+        (__ \ "results").read[Seq[io.flow.docker.registry.v0.models.V2TagDetails]]
+      )(V2Tag.apply _)
+    }
+
+    def jsObjectV2Tag(obj: io.flow.docker.registry.v0.models.V2Tag) = {
+      play.api.libs.json.Json.obj(
+        "count" -> play.api.libs.json.JsNumber(obj.count),
+        "results" -> play.api.libs.json.Json.toJson(obj.results)
+      ) ++ (obj.next match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("next" -> play.api.libs.json.JsNumber(x))
+      }) ++
+      (obj.previous match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("previous" -> play.api.libs.json.JsNumber(x))
+      })
+    }
+
+    implicit def jsonWritesDockerRegistryV2Tag: play.api.libs.json.Writes[V2Tag] = {
+      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.V2Tag] {
+        def writes(obj: io.flow.docker.registry.v0.models.V2Tag) = {
+          jsObjectV2Tag(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsDockerRegistryV2TagDetails: play.api.libs.json.Reads[V2TagDetails] = {
+      (
         (__ \ "creator").read[Long] and
         (__ \ "full_size").read[Long] and
         (__ \ "id").read[Long] and
@@ -338,10 +376,10 @@ package io.flow.docker.registry.v0.models {
         (__ \ "last_updater").read[Long] and
         (__ \ "image_id").readNullable[Long] and
         (__ \ "v2").read[Boolean]
-      )(V2Tag.apply _)
+      )(V2TagDetails.apply _)
     }
 
-    def jsObjectV2Tag(obj: io.flow.docker.registry.v0.models.V2Tag) = {
+    def jsObjectV2TagDetails(obj: io.flow.docker.registry.v0.models.V2TagDetails) = {
       play.api.libs.json.Json.obj(
         "creator" -> play.api.libs.json.JsNumber(obj.creator),
         "full_size" -> play.api.libs.json.JsNumber(obj.fullSize),
@@ -357,10 +395,10 @@ package io.flow.docker.registry.v0.models {
       })
     }
 
-    implicit def jsonWritesDockerRegistryV2Tag: play.api.libs.json.Writes[V2Tag] = {
-      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.V2Tag] {
-        def writes(obj: io.flow.docker.registry.v0.models.V2Tag) = {
-          jsObjectV2Tag(obj)
+    implicit def jsonWritesDockerRegistryV2TagDetails: play.api.libs.json.Writes[V2TagDetails] = {
+      new play.api.libs.json.Writes[io.flow.docker.registry.v0.models.V2TagDetails] {
+        def writes(obj: io.flow.docker.registry.v0.models.V2TagDetails) = {
+          jsObjectV2TagDetails(obj)
         }
       }
     }
@@ -452,8 +490,9 @@ package io.flow.docker.registry.v0 {
 
         _executeRequest("POST", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
           case r if r.status == 201 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.Build", r, _.validate[io.flow.docker.registry.v0.models.Build])
+          case r if r.status == 400 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
-          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 401")
+          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 400, 401")
         }
       }
     }
@@ -475,9 +514,9 @@ package io.flow.docker.registry.v0 {
       override def get(
         org: String,
         repo: String
-      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.V2Tag]] = {
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.V2Tag] = {
         _executeRequest("GET", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/tags").map {
-          case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("Seq[io.flow.docker.registry.v0.models.V2Tag]", r, _.validate[Seq[io.flow.docker.registry.v0.models.V2Tag]])
+          case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.V2Tag", r, _.validate[io.flow.docker.registry.v0.models.V2Tag])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401")
         }
@@ -605,7 +644,7 @@ package io.flow.docker.registry.v0 {
     def get(
       org: String,
       repo: String
-    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.docker.registry.v0.models.V2Tag]]
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.V2Tag]
   }
 
   package errors {

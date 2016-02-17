@@ -63,9 +63,8 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
           ).map { dockerHubBuild =>
             log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
           }.recover {
-            case err => {
-              log.message(s"Error creating Docker Hub repository and automated build: $err")
-            }
+            case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
+            case err => log.message(s"Error creating Docker Hub repository and automated build: $err")
           }
 
           syncImages(org.docker, project)
@@ -99,7 +98,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     for {
       tags <- v2client.V2Tags.get(docker.organization, project.id)
     } yield {
-      tags.filter(t => Semver.isSemver(t.name)).foreach { tag =>
+      tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
           upsertImage(docker, project.id, tag.name)
         ) match {
