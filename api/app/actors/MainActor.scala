@@ -41,7 +41,7 @@ object MainActor {
 
     case class UserCreated(id: String)
 
-    case class ImageCreated(projectId: String, id: String, name: String)
+    case class ImageCreated(projectId: String, id: String, version: String)
 
   }
 }
@@ -117,8 +117,8 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       upsertSupervisorActor(projectId) ! SupervisorActor.Messages.CheckTag(name)
     }
 
-    case msg @ MainActor.Messages.ImageCreated(projectId, id, name) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.CheckTag(name)
+    case msg @ MainActor.Messages.ImageCreated(projectId, id, version) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.CheckTag(version)
     }
 
     case msg @ MainActor.Messages.BuildDockerImage(projectId, version) => withVerboseErrorHandler(msg) {
