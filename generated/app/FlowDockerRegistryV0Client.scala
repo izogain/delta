@@ -362,11 +362,11 @@ package io.flow.docker.registry.v0 {
     def tags: Tags = Tags
 
     object DockerRepositories extends DockerRepositories {
-      override def getV2AndRepositoriesByOrgAndRepo(
+      override def get(
         org: String,
         repo: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.DockerRepository] = {
-        _executeRequest("GET", s"/docker_repositories/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/").map {
+        _executeRequest("GET", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/").map {
           case r if r.status == 200 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.DockerRepository", r, _.validate[io.flow.docker.registry.v0.models.DockerRepository])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
@@ -374,14 +374,14 @@ package io.flow.docker.registry.v0 {
         }
       }
 
-      override def postV2AndRepositoriesAndAutobuildByOrgAndRepo(
+      override def postAutobuild(
         org: String,
         repo: String,
         buildForm: io.flow.docker.registry.v0.models.BuildForm
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.Build] = {
         val payload = play.api.libs.json.Json.toJson(buildForm)
 
-        _executeRequest("POST", s"/docker_repositories/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
+        _executeRequest("POST", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
           case r if r.status == 201 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.Build", r, _.validate[io.flow.docker.registry.v0.models.Build])
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 401")
@@ -499,12 +499,12 @@ package io.flow.docker.registry.v0 {
   }
 
   trait DockerRepositories {
-    def getV2AndRepositoriesByOrgAndRepo(
+    def get(
       org: String,
       repo: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.DockerRepository]
 
-    def postV2AndRepositoriesAndAutobuildByOrgAndRepo(
+    def postAutobuild(
       org: String,
       repo: String,
       buildForm: io.flow.docker.registry.v0.models.BuildForm

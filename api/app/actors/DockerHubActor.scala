@@ -52,7 +52,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   )
 
   private[this] lazy val v2client = new Client(
-    defaultHeaders = Seq(("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token")}"))
+    defaultHeaders = Seq(("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}"))
   )
 
   private[this] val IntervalSeconds = 30
@@ -71,11 +71,9 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
           val org = OrganizationsDao.findById(io.flow.postgresql.Authorization.All, project.organization.id).get.docker.organization
 
           for {
-            checkDockerHubRepo <- v2client.DockerRepositories.getV2AndRepositoriesByOrgAndRepo(org, repo.project)
-            if "" == checkDockerHubRepo.name
-            createDockerHubRepo <- v2client.DockerRepositories.postV2AndRepositoriesAndAutobuildByOrgAndRepo(org, repo.project, createBuildForm(project, repo, org))
+            createDockerHubRepo <- v2client.DockerRepositories.postAutobuild(org, repo.project, createBuildForm(project, repo, org))
           } yield {
-            //no-op
+            //anything to do with the response
           }
 
           syncImages(project, repo)
