@@ -147,7 +147,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     BuildForm(
       active = true,
       buildTags = createBuildTags(),
-      description = s"Automated build for $org",
+      description = s"Automated build for $org/${repo.project}",
       dockerhubRepoName = s"$org/${repo.project}",
       isPrivate = true,
       name = repo.project,
