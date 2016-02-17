@@ -14,6 +14,7 @@ import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 
 object ProjectActor {
@@ -57,16 +58,24 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg) {
       withProject { project =>
-        val lc = createLaunchConfiguration(project)
-        val elb = createLoadBalancer(project)
-        createAutoScalingGroup(project, lc, elb)
+        Try(
+          configureEc2(project)
+        ) match {
+          case Success(_) => // do nothing
+          case Failure(e) => log.completed("Error configuring EC2", Some(e))
+        }
       }
     }
 
     // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg) {
       withProject { project =>
-        createCluster(project)
+        Try(
+          configureEcs(project)
+        ) match {
+          case Success(_) => // do nothing
+          case Failure(e) => log.completed("Error configuring EC2", Some(e))
+        }
       }
     }
 
@@ -81,35 +90,64 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
         diffs.foreach { diff =>
-          val org = OrganizationsDao.findById(Authorization.All, project.organization.id).get
-          val imageName = s"${org.docker.organization}/${project.id}"
-          val imageVersion = diff.versionName
-
-          if (diff.lastInstances > diff.desiredInstances) {
-            val instances = diff.lastInstances - diff.desiredInstances
-            log.run(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-              EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
-            }
-          } else if (diff.lastInstances < diff.desiredInstances) {
-            val instances = diff.desiredInstances - diff.lastInstances
-            log.run(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-              EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
-            }
+          Try(
+            scale(project, diff)
+          ) match {
+            case Success(_) => // do nothing
+            case Failure(e) => log.completed("Scale attempt ended with failure", Some(e))
           }
-
-          monitorScale(project, imageName, imageVersion)
         }
       }
     }
 
     case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg.toString) {
       withProject { project =>
-        monitorScale(project, imageName, imageVersion)
+        Try(
+          monitorScale(project, imageName, imageVersion)
+        ) match {
+          case Success(_) => // do nothing
+          case Failure(e) => log.completed("Monitor Scale attempt ended with failure", Some(e))
+        }
       }
     }
 
     case m: Any => logUnhandledMessage(m)
 
+  }
+
+  def configureEc2(project: Project) {
+    log.run(s"Configuring EC2") {
+      val lc = createLaunchConfiguration(project)
+      val elb = createLoadBalancer(project)
+      createAutoScalingGroup(project, lc, elb)
+    }
+  }
+
+  def configureEcs(project: Project) {
+    log.run(s"Configuring ECS") {
+      // Only one thing for now, but room to add more stuff later...
+      createCluster(project)
+    }
+  }
+
+  def scale(project: Project, diff: StateDiff) {
+    val org = OrganizationsDao.findById(Authorization.All, project.organization.id).get
+    val imageName = s"${org.docker.organization}/${project.id}"
+    val imageVersion = diff.versionName
+
+    if (diff.lastInstances > diff.desiredInstances) {
+      val instances = diff.lastInstances - diff.desiredInstances
+      log.run(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+      }
+    } else if (diff.lastInstances < diff.desiredInstances) {
+      val instances = diff.desiredInstances - diff.lastInstances
+      log.run(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+      }
+    }
+
+    monitorScale(project, imageName, imageVersion)
   }
 
   def monitorScale(project: Project, imageName: String, imageVersion: String) {
