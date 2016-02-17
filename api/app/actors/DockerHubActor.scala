@@ -37,9 +37,9 @@ object DockerHubActor {
 
 class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
- implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
+  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
- private[this] lazy val v2client = new Client(
+  private[this] lazy val v2client = new Client(
     defaultHeaders = Seq(
       ("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
     )
