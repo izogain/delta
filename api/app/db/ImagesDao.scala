@@ -112,7 +112,7 @@ object ImagesDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, id)
+        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, id, form.name.trim)
 
         Right(
           findById(id).getOrElse {
@@ -137,7 +137,7 @@ object ImagesDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, image.id)
+        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.name.trim)
 
         Right(
           findById(image.id).getOrElse {

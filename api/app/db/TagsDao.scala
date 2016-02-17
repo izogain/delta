@@ -131,7 +131,7 @@ object TagsDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.TagCreated(form.projectId, id)
+        MainActor.ref ! MainActor.Messages.TagCreated(form.projectId, id, form.name.trim)
 
         Right(
           findById(Authorization.All, id).getOrElse {
@@ -159,7 +159,7 @@ object TagsDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.TagUpdated(form.projectId, tag.id)
+        MainActor.ref ! MainActor.Messages.TagUpdated(form.projectId, tag.id, form.name.trim)
 
         Right(
           findById(Authorization.All, tag.id).getOrElse {
