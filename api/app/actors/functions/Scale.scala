@@ -33,14 +33,14 @@ object Scale extends SupervisorFunction {
 
         case (None, Some(_)) => {
           MainActor.ref ! MainActor.Messages.CheckLastState(project.id)
-          SupervisorResult.Change(s"Last state is not known. Requested CheckLastState")
+          SupervisorResult.Change(s"Requested CheckLastState as last state is not known")
         }
 
         case (Some(last), Some(desired)) => {
           Scale.isRecent(last.timestamp) match {
             case false => {
               MainActor.ref ! MainActor.Messages.CheckLastState(project.id)
-              SupervisorResult.NoChange(s"Last state is too old. Last updated at ${last.timestamp}")
+              SupervisorResult.NoChange(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
             }
             case true => {
               Deployer(project, last, desired).scale()
