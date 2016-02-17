@@ -1,10 +1,10 @@
 package io.flow.delta.actors
 
-import db.{OrganizationsDao, ImagesDao, UsersDao}
+import db.{ImagesDao, UsersDao}
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
-import io.flow.docker.registry.v0.{Authorization, Client}
+import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.Util
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
@@ -39,16 +39,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
-  private[this] lazy val client = new Client(
-    auth = Some(
-      Authorization.Basic(
-        username = DefaultConfig.requiredString("docker.username"),
-        password = Some(DefaultConfig.requiredString("docker.password"))
-      )
-    )
-  )
-
-  private[this] lazy val v2client = new Client(
+ private[this] lazy val v2client = new Client(
     defaultHeaders = Seq(
       ("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
     )
@@ -102,7 +93,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   def syncImages(docker: Docker, project: Project) {
     println(s"syncImages(${docker.organization}, ${project.id})")
     for {
-      tags <- client.tags.get(docker.organization, project.id)
+      tags <- v2client.V2Tags.get(docker.organization, project.id)
     } yield {
       tags.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
