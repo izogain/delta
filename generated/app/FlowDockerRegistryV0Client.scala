@@ -50,7 +50,7 @@ package io.flow.docker.registry.v0.models {
   case class DockerRepository(
     canEdit: Boolean,
     description: String,
-    fullDescription: String,
+    fullDescription: _root_.scala.Option[String] = None,
     hasStarred: Boolean,
     isAutomated: Boolean,
     isPrivate: Boolean,
@@ -241,7 +241,7 @@ package io.flow.docker.registry.v0.models {
       (
         (__ \ "can_edit").read[Boolean] and
         (__ \ "description").read[String] and
-        (__ \ "full_description").read[String] and
+        (__ \ "full_description").readNullable[String] and
         (__ \ "has_starred").read[Boolean] and
         (__ \ "is_automated").read[Boolean] and
         (__ \ "is_private").read[Boolean] and
@@ -259,7 +259,6 @@ package io.flow.docker.registry.v0.models {
       play.api.libs.json.Json.obj(
         "can_edit" -> play.api.libs.json.JsBoolean(obj.canEdit),
         "description" -> play.api.libs.json.JsString(obj.description),
-        "full_description" -> play.api.libs.json.JsString(obj.fullDescription),
         "has_starred" -> play.api.libs.json.JsBoolean(obj.hasStarred),
         "is_automated" -> play.api.libs.json.JsBoolean(obj.isAutomated),
         "is_private" -> play.api.libs.json.JsBoolean(obj.isPrivate),
@@ -270,7 +269,10 @@ package io.flow.docker.registry.v0.models {
         "star_count" -> play.api.libs.json.JsNumber(obj.starCount),
         "status" -> play.api.libs.json.JsNumber(obj.status),
         "user" -> play.api.libs.json.JsString(obj.user)
-      )
+      ) ++ (obj.fullDescription match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("full_description" -> play.api.libs.json.JsString(x))
+      })
     }
 
     implicit def jsonWritesDockerRegistryDockerRepository: play.api.libs.json.Writes[DockerRepository] = {
