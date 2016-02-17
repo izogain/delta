@@ -19,10 +19,10 @@ trait Settings {
   val asgDesiredSize = 3
 
   // Subnets for the load balancer and autoscaling group instances
-  val subnets = Seq("subnet-4a8ee313", "subnet-7d2f1547", "subnet-c99a0de2", "subnet-dc2961ab")
+  val subnets = Seq("subnet-719c7029", "subnet-3538f243", "subnet-2338f255", "subnet-6c9c7034")
 
   // Keypair name used to SSH into EC2 instances created by the autoscaling group
-  val ec2KeyName = "mbryzek-key-pair-us-east"
+  val ec2KeyName = "flow-admin"
 
   // Launch configuration image ID. AMI instance is: Amazon Linux AMI for ECS
   val launchConfigImageId = "ami-9886a0f2"
@@ -31,10 +31,10 @@ trait Settings {
   val launchConfigIamInstanceProfile = "ecsInstanceRole"
 
   // Security groups for the EC2 instances launch configuration and autoscaling group
-  val securityGroups = Seq("sg-2ed73856", "sg-abfaf7cf")
+  val securityGroups = Seq("sg-47fb1b3e")
 
   // Should this be higher? And if so, probably should use something other than t2.micro
-  val containerMemory = 500
+  val containerMemory = 1024
 
   // Launch configuration EC2 instance type. t2 micro for now, but probably change later or make configurable
   val launchConfigInstanceType = "t2.micro"
