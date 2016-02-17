@@ -71,20 +71,22 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
             if checkDockerHubRepo.status != 200
             createDockerHubRepo <- createDockerHubRepository(project, repo, org.docker.organization)
           } yield {
-            syncImages(project, repo)
+            //no-op
+          }
 
-            ImagesDao.findByProjectIdAndVersion(project.id, version) match {
-              case Some(image) => {
-                log.checkpoint(s"Docker hub image $repo:$version is ready - image id[${image.id}]")
-                // Don't fire an event; the ImagesDao will already have
-                // raised ImageCreated
-              }
+          syncImages(project, repo)
 
-              case None => {
-                log.checkpoint(s"Docker hub image $repo:$version is not ready. Will check again in $IntervalSeconds seconds")
-                Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
-                  self ! DockerHubActor.Messages.Build(version)
-                }
+          ImagesDao.findByProjectIdAndVersion(project.id, version) match {
+            case Some(image) => {
+              log.checkpoint(s"Docker hub image $repo:$version is ready - image id[${image.id}]")
+              // Don't fire an event; the ImagesDao will already have
+              // raised ImageCreated
+            }
+
+            case None => {
+              log.checkpoint(s"Docker hub image $repo:$version is not ready. Will check again in $IntervalSeconds seconds")
+              Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
+                self ! DockerHubActor.Messages.Build(version)
               }
             }
           }
