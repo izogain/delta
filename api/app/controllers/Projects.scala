@@ -2,11 +2,12 @@ package controllers
 
 import db.{ProjectsDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
+import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
+import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
 import io.flow.play.util.Validation
-import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.json._
 import play.api.mvc._
 import play.api.libs.json._
@@ -127,6 +128,13 @@ class Projects @javax.inject.Inject() (
           )
         )
       )
+    }
+  }
+
+  def postEventsAndPursueDesiredStateById(id: String) = Identified { request =>
+    withProject(request.user, id) { project =>
+      MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+      NoContent
     }
   }
 

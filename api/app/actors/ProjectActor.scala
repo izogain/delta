@@ -47,6 +47,15 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
       setDataProject(id)
+
+      withProject { project =>
+        Akka.system.scheduler.schedule(
+          Duration(1, "second"),
+          Duration(30, "seconds")
+        ) {
+          self ! ProjectActor.Messages.CheckLastState
+        }
+      }
     }
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
@@ -151,6 +160,8 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def monitorScale(project: Project, imageName: String, imageVersion: String) {
+    captureLastState(project: Project)
+
     val ecsService = EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
     val running = ecsService.getRunningCount
     val desired = ecsService.getDesiredCount
@@ -172,13 +183,14 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     // We want to get:
     //  0.0.1: 2 instances
     //  0.0.2: 1 instance
-    log.run(s"Capturing last state for project ${project.name}") {
-      ProjectLastStatesDao.upsert(
-        UsersDao.systemUser,
-        project,
-        StateForm(versions = EC2ContainerService.getClusterInfo(project.id))
-      )
-    }
+    log.started(s"Capturing last state")
+    val versions = EC2ContainerService.getClusterInfo(project.id)
+    ProjectLastStatesDao.upsert(
+      UsersDao.systemUser,
+      project,
+      StateForm(versions = versions)
+    )
+    log.completed(s"Last state set to: ${versions}")
   }
 
   def createLaunchConfiguration(project: Project): String = {

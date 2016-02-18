@@ -1,10 +1,11 @@
 package db
 
+import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
+import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.v0.models.{Project, State, StateForm, Version}
 import io.flow.delta.v0.models.json._
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -29,6 +30,10 @@ object ProjectLastStatesDao extends ProjectStatesDao("project_last_states", "pls
 
 class ProjectStatesDao(table: String, idPrefix: String) {
 
+  /**
+    * Invoked whenever a state record is created or updated (when
+    * something in the versions actually changed)
+    */
   def onChange(projectId: String) {
     // No-op
   }
@@ -105,11 +110,12 @@ class ProjectStatesDao(table: String, idPrefix: String) {
   def upsert(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
     findByProjectId(Authorization.All, project.id) match {
       case None => create(createdBy, project, form)
-      case Some(_) => update(createdBy, project, form)
+      case Some(existing) => update(createdBy, project, existing, form)
     }
   }
 
-  private[this] def update(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
+  private[this] def update(createdBy: User, project: Project, existing: State, form: StateForm): Either[Seq[String], State] = {
+
     validate(createdBy, project, form) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -120,13 +126,16 @@ class ProjectStatesDao(table: String, idPrefix: String) {
           ).execute()
         }
 
-        onChange(project.id)
+        val updated = findByProjectId(Authorization.All, project.id).getOrElse {
+          sys.error(s"Failed to update $table")
+        }
 
-        Right(
-          findByProjectId(Authorization.All, project.id).getOrElse {
-            sys.error(s"Failed to update $table")
-          }
-        )
+        StateDiff.diff(existing, updated) match {
+          case Nil => // No-op
+          case _ => onChange(project.id)
+        }
+
+        Right(updated)
       }
       case errors => Left(errors)
     }

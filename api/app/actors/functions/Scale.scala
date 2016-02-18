@@ -15,7 +15,7 @@ import scala.concurrent.Future
   */
 object Scale extends SupervisorFunction {
 
-  private[this] val MinutesUntilStale = 10
+  private[this] val SecondsUntilStale = 90
 
   override def run(
     project: Project
@@ -53,7 +53,7 @@ object Scale extends SupervisorFunction {
 
   def isRecent(ts: DateTime): Boolean = {
     val now = new DateTime()
-    ts.isAfter(now.minusMinutes(MinutesUntilStale))
+    ts.isAfter(now.minusMinutes(SecondsUntilStale))
   }
   
 }
