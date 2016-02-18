@@ -35,7 +35,8 @@ trait Settings {
   // Security groups for the EC2 instances launch configuration and autoscaling group
   // sg-aa26c6d3 = ssh from bastion
   // sg-47fb1b3e = all traffic from within production vpc
-  val securityGroups = Seq("sg-47fb1b3e", "sg-aa26c6d3")
+  // sg-31d03048 = nat-production
+  val securityGroups = Seq("sg-47fb1b3e", "sg-aa26c6d3", "sg-31d03048")
 
   // Should this be higher? And if so, probably should use something other than t2.micro
   val containerMemory = 500
