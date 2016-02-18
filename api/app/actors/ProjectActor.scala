@@ -46,6 +46,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   def receive = {
 
     case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+      println(s"ProjectActor.Messages.Data(id)")
       setDataProject(id)
 
       withProject { project =>

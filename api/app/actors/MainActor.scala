@@ -62,6 +62,9 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
 
+  Akka.system.scheduler.scheduleOnce(Duration(1, "seconds")) {
+    periodicActor ! PeriodicActor.Messages.Startup
+  }
 
   def receive = akka.event.LoggingReceive {
 
@@ -93,6 +96,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
+      upsertProjectActor(id) // Start the project actor
       upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }

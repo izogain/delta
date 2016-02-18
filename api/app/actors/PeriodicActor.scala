@@ -12,6 +12,7 @@ object PeriodicActor {
 
   object Messages {
     case object CheckProjects extends Message
+    case object Startup extends Message
   }
 
 }
@@ -34,6 +35,14 @@ class PeriodicActor extends Actor with Util {
             MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
           }
         }
+      }
+    }
+
+    case msg @ PeriodicActor.Messages.Startup => withVerboseErrorHandler(msg) {
+      Pager.create { offset =>
+        ProjectsDao.findAll(Authorization.All, offset = offset)
+      }.foreach { project =>
+        MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
       }
     }
 
