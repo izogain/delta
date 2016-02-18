@@ -485,6 +485,17 @@
         },
 
         {
+          "method": "POST",
+          "description": "Triggers the pursue desired state event.",
+          "path": "/:id/events/pursue_desired_state",
+          "responses": {
+            "204": { "type": "unit" },
+            "401": { "type": "unit" },
+            "404": { "type": "unit" }
+          }
+        },
+
+        {
           "method": "PUT",
 	  "path": "/:id",
           "description": "Update an existing project.",
