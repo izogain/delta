@@ -70,8 +70,8 @@ package io.flow.docker.registry.v0.models {
 
   case class V2Tag(
     count: Long,
-    next: _root_.scala.Option[Long] = None,
-    previous: _root_.scala.Option[Long] = None,
+    next: _root_.scala.Option[String] = None,
+    previous: _root_.scala.Option[String] = None,
     results: Seq[io.flow.docker.registry.v0.models.V2TagDetails]
   )
 
@@ -337,8 +337,8 @@ package io.flow.docker.registry.v0.models {
     implicit def jsonReadsDockerRegistryV2Tag: play.api.libs.json.Reads[V2Tag] = {
       (
         (__ \ "count").read[Long] and
-        (__ \ "next").readNullable[Long] and
-        (__ \ "previous").readNullable[Long] and
+        (__ \ "next").readNullable[String] and
+        (__ \ "previous").readNullable[String] and
         (__ \ "results").read[Seq[io.flow.docker.registry.v0.models.V2TagDetails]]
       )(V2Tag.apply _)
     }
@@ -349,11 +349,11 @@ package io.flow.docker.registry.v0.models {
         "results" -> play.api.libs.json.Json.toJson(obj.results)
       ) ++ (obj.next match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("next" -> play.api.libs.json.JsNumber(x))
+        case Some(x) => play.api.libs.json.Json.obj("next" -> play.api.libs.json.JsString(x))
       }) ++
       (obj.previous match {
         case None => play.api.libs.json.Json.obj()
-        case Some(x) => play.api.libs.json.Json.obj("previous" -> play.api.libs.json.JsNumber(x))
+        case Some(x) => play.api.libs.json.Json.obj("previous" -> play.api.libs.json.JsString(x))
       })
     }
 
