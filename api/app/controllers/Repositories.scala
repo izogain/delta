@@ -26,9 +26,11 @@ class Repositories @javax.inject.Inject() (
     existingProject: Option[Boolean] = None,
     limit: Long = 25,
     offset: Long = 0
-  ) = Identified { request =>
+  ) = Identified.async { request =>
     if (!existingProject.isEmpty && organizationId.isEmpty) {
-      UnprocessableEntity(Json.toJson(Validation.error("When filtering by existing projects, you must also provide the organization_id")))
+      Future {
+        UnprocessableEntity(Json.toJson(Validation.error("When filtering by existing projects, you must also provide the organization_id")))
+      }
 
     } else {
       val auth = authorization(request)
@@ -37,7 +39,7 @@ class Repositories @javax.inject.Inject() (
       // Set limit to 1 if we are guaranteed at most 1 record back
       val actualLimit = if (offset == 0 && !name.isEmpty && !owner.isEmpty) { 1 } else { limit }
 
-      val results = github.repositories(request.user, offset, actualLimit) { r =>
+      github.repositories(request.user, offset, actualLimit) { r =>
         (name match {
           case None => true
           case Some(n) => n.toLowerCase == r.name.toLowerCase
@@ -54,9 +56,9 @@ class Repositories @javax.inject.Inject() (
             existingProject == Some(false) && ProjectsDao.findByOrganizationIdAndName(auth, org.id, r.name).isEmpty
           }
         })
+      }.map { results =>
+        Ok(Json.toJson(results))
       }
-
-      Ok(Json.toJson(results))
     }
   }
 

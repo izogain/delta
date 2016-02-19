@@ -10,8 +10,7 @@ import io.flow.github.v0.{Client => GithubClient}
 import io.flow.github.v0.errors.UnitResponse
 import io.flow.github.v0.models.{Repository => GithubRepository}
 import io.flow.github.v0.models.{User => GithubUser}
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logger
 
 case class GithubUserData(
@@ -157,20 +156,21 @@ trait Github {
     acceptsFilter: GithubRepository => Boolean = { _ => true }
   ) (
     implicit ec: ExecutionContext
-  ): Seq[GithubRepository] = {
-    val thisPage = Await.result(
-      githubRepos(user, page),
-      Duration(5, "seconds")
-    )
-
-    if (thisPage.isEmpty) {
-      resultsSoFar.drop(offset.toInt).take(limit.toInt)
-    } else {
-      val all = resultsSoFar ++ thisPage.filter { acceptsFilter(_) }
-      if (all.size >= offset + limit) {
-        all.drop(offset.toInt).take(limit.toInt)
+  ): Future[Seq[GithubRepository]] = {
+    githubRepos(user, page).flatMap { thisPage =>
+      if (thisPage.isEmpty) {
+        Future {
+          resultsSoFar.drop(offset.toInt).take(limit.toInt)
+        }
       } else {
-        repositories(user, offset, limit, all, page + 1)(acceptsFilter)
+        val all = resultsSoFar ++ thisPage.filter { acceptsFilter(_) }
+        if (all.size >= offset + limit) {
+          Future {
+            all.drop(offset.toInt).take(limit.toInt)
+          }
+        } else {
+          repositories(user, offset, limit, all, page + 1)(acceptsFilter)
+        }
       }
     }
   }
