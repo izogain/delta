@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{ProjectLastStatesDao, ProjectDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, ProjectActor, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
@@ -15,7 +15,7 @@ import scala.concurrent.Future
   */
 object Scale extends SupervisorFunction {
 
-  private[this] val SecondsUntilStale = 90
+  private[this] val SecondsUntilStale = (ProjectActor.CheckLastStateIntervalSeconds * 2.5).toInt
 
   override def run(
     project: Project

@@ -19,6 +19,8 @@ import scala.concurrent.duration._
 
 object ProjectActor {
 
+  val CheckLastStateIntervalSeconds = 45
+
   trait Message
 
   object Messages {
@@ -52,7 +54,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       withProject { project =>
         Akka.system.scheduler.schedule(
           Duration(1, "second"),
-          Duration(30, "seconds")
+          Duration(ProjectActor.CheckLastStateIntervalSeconds, "seconds")
         ) {
           self ! ProjectActor.Messages.CheckLastState
         }
