@@ -22,7 +22,7 @@ class PeriodicActor extends Actor with Util {
   
   def receive = {
 
-    case m @ PeriodicActor.Messages.CheckProjects => withVerboseErrorHandler(m) {
+    case msg @ PeriodicActor.Messages.CheckProjects => withVerboseErrorHandler(msg) {
       Pager.create { offset =>
         ProjectsDao.findAll(Authorization.All, offset = offset)
       }.foreach { project =>
@@ -37,7 +37,7 @@ class PeriodicActor extends Actor with Util {
       }
     }
 
-    case m: Any => logUnhandledMessage(m)
+    case msg: Any => logUnhandledMessage(msg)
   }
 
 
