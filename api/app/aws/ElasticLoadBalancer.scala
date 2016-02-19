@@ -11,11 +11,11 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import scala.concurrent.Future
 
-object ElasticLoadBalancer extends Settings {
+object ElasticLoadBalancer extends Settings with Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
-  private[this] lazy val client = new AmazonElasticLoadBalancingClient()
+  private[this] lazy val client = new AmazonElasticLoadBalancingClient(awsCredentials)
 
   def getLoadBalancerName(projectId: String): String = s"$projectId-ecs-lb"
 

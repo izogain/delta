@@ -9,8 +9,8 @@ import sun.misc.BASE64Encoder
 
 import collection.JavaConverters._
 
-object AutoScalingGroup extends Settings {
-  lazy val client = new AmazonAutoScalingClient()
+object AutoScalingGroup extends Settings with Credentials {
+  lazy val client = new AmazonAutoScalingClient(awsCredentials)
   lazy val encoder = new BASE64Encoder()
 
   /**

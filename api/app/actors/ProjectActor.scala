@@ -1,5 +1,6 @@
 package io.flow.delta.actors
 
+import com.amazonaws.services.ecs.model.Service
 import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import io.flow.delta.api.lib.{Semver, StateFormatter}
@@ -148,21 +149,29 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def monitorScale(project: Project, imageName: String, imageVersion: String) {
-    captureLastState(project: Project)
+    captureLastState(project)
 
-    val ecsService = EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
-    val running = ecsService.getRunningCount
-    val desired = ecsService.getDesiredCount
-    val pending = ecsService.getPendingCount
-    val status = ecsService.getStatus
+    for {
+      ecsServiceOpt <- getServiceInfo(imageName, imageVersion, project)
+    } yield {
+      ecsServiceOpt match {
+        case None => sys.error(s"Cannot find thing to monitor - project $project.id, image $imageName, version $imageVersion")
+        case Some(ecsService) => {
+          val running = ecsService.getRunningCount
+          val desired = ecsService.getDesiredCount
+          val pending = ecsService.getPendingCount
+          val status = ecsService.getStatus
 
-    if (running == desired) {
-      log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
-    } else {
-      log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
+          if (running == desired) {
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
+          } else {
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
 
-      Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
-        self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
+            Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
+              self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
+            }
+          }
+        }
       }
     }
   }
@@ -186,6 +195,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       case Failure(ex) => {
         log.completed("Error getting cluster information", Some(ex))
       }
+    }
+  }
+
+  def getServiceInfo(imageName: String, imageVersion: String, project: Project): Future[Option[Service]] = {
+    log.runSync("Getting ECS service Info") {
+      EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
     }
   }
 
