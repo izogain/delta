@@ -55,29 +55,31 @@ object EC2ContainerService extends Settings {
   }
 
   // scale to the desired count - can be up or down
-  def scale(imageName: String, imageVersion: String, projectId: String, desiredCount: Long) {
+  def scale(imageName: String, imageVersion: String, projectId: String, desiredCount: Long): Future[Unit] = {
     val cluster = getClusterName(projectId)
     val service = getServiceName(imageName, imageVersion)
 
-    val resp = client.describeServices(
-      new DescribeServicesRequest()
-      .withCluster(cluster)
-      .withServices(Seq(service).asJava)
-    )
+    Future {
+      val resp = client.describeServices(
+        new DescribeServicesRequest()
+        .withCluster(cluster)
+        .withServices(Seq(service).asJava)
+      )
 
-    // if service doesn't exist in the cluster
-    if (resp.getFailures().size() > 0) {
-      registerTaskDefinition(imageName, imageVersion, projectId).map { taskDefinition =>
-        createService(imageName, imageVersion, projectId, taskDefinition)
+      // if service doesn't exist in the cluster
+      if (resp.getFailures().size() > 0) {
+        registerTaskDefinition(imageName, imageVersion, projectId).map { taskDefinition =>
+          createService(imageName, imageVersion, projectId, taskDefinition)
+        }
       }
-    }
 
-    client.updateService(
-      new UpdateServiceRequest()
-      .withCluster(cluster)
-      .withService(service)
-      .withDesiredCount(desiredCount.toInt)
-    )
+      client.updateService(
+        new UpdateServiceRequest()
+        .withCluster(cluster)
+        .withService(service)
+        .withDesiredCount(desiredCount.toInt)
+      )
+    }
   }
 
   def getClusterInfo(projectId: String): Seq[Version] = {

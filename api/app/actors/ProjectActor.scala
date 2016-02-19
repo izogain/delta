@@ -134,12 +134,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
-      log.run(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
-      log.run(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     }
@@ -190,20 +190,14 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def createLaunchConfiguration(project: Project): Future[String] = {
-    log.started("EC2 auto scaling group launch configuration")
-    Future {
-      val lc = AutoScalingGroup.createLaunchConfiguration(project.id)
-      log.completed(s"EC2 auto scaling group launch configuration: [$lc]")
-      lc
+    log.runSync("EC2 auto scaling group launch configuration") {
+      AutoScalingGroup.createLaunchConfiguration(project.id)
     }
   }
 
   def createLoadBalancer(project: Project): Future[String] = {
-    log.started("EC2 load balancer")
-    ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id).map {
-      elb =>
-      log.completed(s"EC2 Load Balancer: [$elb]")
-      elb
+    log.runAsync("EC2 load balancer") {
+      ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id)
     }
   }
 
