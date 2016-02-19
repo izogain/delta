@@ -1,16 +1,21 @@
 package io.flow.delta.aws
 
-import io.flow.delta.v0.models.Version
-
 import io.flow.delta.api.lib.RegistryClient
+import io.flow.delta.v0.models.Version
 
 import com.amazonaws.services.ecs.AmazonECSClient
 import com.amazonaws.services.ecs.model._
 
 import collection.JavaConverters._
 
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+
 object EC2ContainerService extends Settings {
-  lazy val client = new AmazonECSClient()
+
+  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
+
+  private[this] lazy val client = new AmazonECSClient()
 
   /**
   * Name creation helper functions
@@ -113,10 +118,10 @@ object EC2ContainerService extends Settings {
   def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): String = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val registryPorts = RegistryClient.getById(projectId).ports.head
-    val commandSeq = registryPorts.service.id match {
-      case "nodejs" => Seq[String]().asJava
-      case _ => Seq("production").asJava
+    val registryPorts = RegistryClient.getById(projectId).getOrElse {
+      sys.error(s"project[$projectId] was not found in the registry")
+    }.ports.headOption.getOrElse {
+      sys.error(s"project[$projectId] does not have any ports in the registry")
     }
 
     client.registerTaskDefinition(
@@ -135,7 +140,7 @@ object EC2ContainerService extends Settings {
               .withHostPort(registryPorts.external.toInt)
             ).asJava
           )
-          .withCommand(commandSeq)
+          .withCommand(Seq("production").asJava)
         ).asJava
       )
     )
@@ -149,6 +154,12 @@ object EC2ContainerService extends Settings {
     val containerName = getContainerName(imageName, imageVersion)
     val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
+    val internalPort: Int = RegistryClient.getById(projectId).getOrElse {
+      sys.error(s"project[$projectId] was not found in the registry")
+    }.ports.headOption.getOrElse {
+      sys.error(s"project[$projectId] does not have any ports in the registry")
+    }.internal.toInt
+
     return client.createService(
       new CreateServiceRequest()
       .withServiceName(serviceName)
@@ -161,7 +172,7 @@ object EC2ContainerService extends Settings {
           new LoadBalancer()
           .withContainerName(containerName)
           .withLoadBalancerName(loadBalancerName)
-          .withContainerPort(RegistryClient.getById(projectId).ports.head.internal.toInt)
+          .withContainerPort(internalPort)
         ).asJava
       )
     ).getService().getServiceName()
