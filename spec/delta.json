@@ -694,6 +694,7 @@
 	  "path": "/github",
           "description": "Returns a list of repositories from github",
           "parameters": [
+	    { "name": "owner", "type": "string", "required": false, "description": "Optionally filter by owner name. Case in-sensitive. Exact match" },
 	    { "name": "name", "type": "string", "required": false, "description": "Optionally filter by repo name. Case in-sensitive. Exact match" },
 	    { "name": "organization_id", "type": "string", "required": false, "description": "If specified, we enable additional filtering by this organization (see existing_project parameter)." },
 	    { "name": "existing_project", "type": "boolean", "required": false, "description": "Optionally filter by repositories that are either already mapped to existing projects or not. Requires organization_id parameter to also be specified." },

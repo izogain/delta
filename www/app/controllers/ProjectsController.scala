@@ -132,15 +132,16 @@ class ProjectsController @javax.inject.Inject() (
 
   def postGithubOrg(
     orgId: String,
-    name: String,
+    owner: String, // github owner, ex. flowcommerce
+    name: String,  // github repo name, ex. user
     repositoriesPage: Int = 0
   ) = Identified.async { implicit request =>
     withOrganization(request, orgId) { org =>
       deltaClient(request).repositories.getGithub(
         organizationId = Some(org.id),
+        owner = Some(owner),
         name = Some(name),
-        limit = Pagination.DefaultLimit+1,
-        offset = repositoriesPage * Pagination.DefaultLimit
+        limit = 1
       ).flatMap { selected =>
         selected.headOption match {
           case None => Future {

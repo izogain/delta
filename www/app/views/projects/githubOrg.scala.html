@@ -18,7 +18,7 @@
       <table class="table">
         @repositories.items.map { repo =>
           <tr>
-            <td><a class="postForm" href="@routes.ProjectsController.postGithubOrg(org.id, repo.name, repositories.page)">@{repo.owner.login}/@{repo.name}</a></td>
+            <td><a class="postForm" href="@routes.ProjectsController.postGithubOrg(org.id, repo.owner.login, repo.name, repositories.page)">@{repo.owner.login}/@{repo.name}</a></td>
             <td>@repo.description</td>
           </tr>
         }
