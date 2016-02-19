@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
-  val SuccessfulCompletionMessage = "completed PursueDesiredState"
+  val StartedMessage = "started PursueDesiredState"
   
   trait Message
 
@@ -53,9 +53,9 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     case msg @ SupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-        log.started("PursueDesiredState")
+        log.message(SupervisorActor.StartedMessage)
         run(project, settings, SupervisorActor.All)
-        log.message(SupervisorActor.SuccessfulCompletionMessage)
+        log.completed("PursueDesiredState")
       }
     }
 

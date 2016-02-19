@@ -76,6 +76,7 @@ object EventsDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     `type`: Option[EventType] = None,
+    summary: Option[String] = None,
     numberMinutesSinceCreation: Option[Long] = None,
     orderBy: OrderBy = OrderBy("-events.created_at, events.id"),
     limit: Long = 25,
@@ -86,6 +87,7 @@ object EventsDao {
         optionalIn(s"events.id", ids).
         equals(s"events.project_id", projectId).
         equals(s"events.type", `type`.map(_.toString)).
+        equals(s"events.summary", summary).
         and(numberMinutesSinceCreation.map { minutes =>
           s"events.created_at >= now() - interval '$minutes minutes'"
         }).
