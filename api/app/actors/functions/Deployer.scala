@@ -22,9 +22,9 @@ case class Deployer(project: Project, last: State, desired: State) {
     * unhealthy.
     */
   def scale(): SupervisorResult = {
-    StateDiff.up(last, desired).toList match {
+    StateDiff.up(last.versions, desired.versions).toList match {
       case Nil => {
-        StateDiff.down(last, desired).toList match {
+        StateDiff.down(last.versions, desired.versions).toList match {
           case Nil => {
             SupervisorResult.NoChange(
               s"Last state[%s] matches desired state[%s]".format(

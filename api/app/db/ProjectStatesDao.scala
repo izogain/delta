@@ -130,7 +130,7 @@ class ProjectStatesDao(table: String, idPrefix: String) {
           sys.error(s"Failed to update $table")
         }
 
-        StateDiff.diff(existing, updated) match {
+        StateDiff.diff(existing.versions, updated.versions) match {
           case Nil => // No-op
           case _ => onChange(project.id)
         }
