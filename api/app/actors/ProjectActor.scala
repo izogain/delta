@@ -2,7 +2,7 @@ package io.flow.delta.actors
 
 import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
-import io.flow.delta.api.lib.Semver
+import io.flow.delta.api.lib.{Semver, StateFormatter}
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
 import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
@@ -191,7 +191,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       project,
       StateForm(versions = versions)
     )
-    log.completed(s"Last state set to: ${versions}")
+    log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
   }
 
   def createLaunchConfiguration(project: Project): String = {
