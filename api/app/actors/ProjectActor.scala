@@ -79,7 +79,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case msg @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(msg.toString) {
+    case msg @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(msg) {
       withProject { project =>
         withRepo { repo =>
           createHooks(project, repo)
@@ -87,7 +87,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg.toString) {
+    case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
       withProject { project =>
         diffs.foreach { diff =>
           Try(
@@ -100,7 +100,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg.toString) {
+    case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg) {
       withProject { project =>
         Try(
           monitorScale(project, imageName, imageVersion)
@@ -111,7 +111,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       }
     }
 
-    case m: Any => logUnhandledMessage(m)
+    case msg: Any => logUnhandledMessage(msg)
 
   }
 

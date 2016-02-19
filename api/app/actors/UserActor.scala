@@ -24,11 +24,11 @@ class UserActor extends Actor with Util {
 
   def receive = {
 
-    case m @ UserActor.Messages.Data(id) => withVerboseErrorHandler(m.toString) {
+    case msg @ UserActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
       dataUser = UsersDao.findById(id)
     }
 
-    case m @ UserActor.Messages.Created => withVerboseErrorHandler(m.toString) {
+    case msg @ UserActor.Messages.Created => withVerboseErrorHandler(msg) {
       dataUser.foreach { user =>
         // This method will force create an identifier
         UserIdentifiersDao.latestForUser(MainActor.SystemUser, user)
@@ -46,7 +46,7 @@ class UserActor extends Actor with Util {
       }
     }
 
-    case m: Any => logUnhandledMessage(m)
+    case msg: Any => logUnhandledMessage(msg)
   }
 
 }

@@ -21,14 +21,14 @@ class SearchActor extends Actor with Util {
 
   def receive = {
 
-    case m @ SearchActor.Messages.SyncProject(id) => withVerboseErrorHandler(m) {
+    case msg @ SearchActor.Messages.SyncProject(id) => withVerboseErrorHandler(msg) {
       ProjectsDao.findById(Authorization.All, id) match {
         case None => ItemsDao.deleteByObjectId(Authorization.All, MainActor.SystemUser, id)
         case Some(project) => ItemsDao.replaceProject(MainActor.SystemUser, project)
       }
     }
 
-    case m: Any => logUnhandledMessage(m)
+    case msg: Any => logUnhandledMessage(msg)
   }
 
 }
