@@ -11,6 +11,7 @@ POST    /projects/postCreate                    controllers.ProjectsController.p
 GET     /projects/:id                           controllers.ProjectsController.show(id: String)
 GET     /projects/:id/edit                      controllers.ProjectsController.edit(id: String)
 POST    /projects/:id/postEdit                  controllers.ProjectsController.postEdit(id: String)
+POST    /projects/:id/postSync                  controllers.ProjectsController.postSync(id: String)
 POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
 POST    /projects/:id/settings/:name            controllers.ProjectsController.postSettingsToggle(id: String, name: String)
 

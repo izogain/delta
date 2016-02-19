@@ -33,7 +33,7 @@ object StateDiff {
     * where last state is the desired state - e.g. if last ==
     * desired, you will get back Nil.
     */
-  private[this] def diff(last: State, desired: State): Seq[StateDiff] = {
+  def diff(last: State, desired: State): Seq[StateDiff] = {
     desired.versions.flatMap { expVersion =>
       val lastInstances: Long = last.versions.find { _.name == expVersion.name }.map(_.instances).getOrElse(0)
       lastInstances == expVersion.instances match {

@@ -27,6 +27,7 @@ DELETE     /organizations/:id                            controllers.Organizatio
 GET        /projects                                     controllers.Projects.get(id: _root_.scala.Option[List[String]], organization: _root_.scala.Option[String], name: _root_.scala.Option[String], limit: Long ?= 25, offset: Long ?= 0, sort: String ?= "projects.id")
 GET        /projects/:id                                 controllers.Projects.getById(id: String)
 POST       /projects                                     controllers.Projects.post()
+POST       /projects/:id/events/pursue_desired_state     controllers.Projects.postEventsAndPursueDesiredStateById(id: String)
 PUT        /projects/:id                                 controllers.Projects.putById(id: String)
 DELETE     /projects/:id                                 controllers.Projects.deleteById(id: String)
 GET        /projects/:id/settings                        controllers.Projects.getSettingsById(id: String)

@@ -274,6 +274,12 @@ class ProjectsController @javax.inject.Inject() (
     }
   }
 
+  def postSync(id: String) = Identified.async { implicit request =>
+    deltaClient(request).projects.postEventsAndPursueDesiredStateById(id).map { _ =>
+      Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Project sync triggered")
+    }
+  }
+
   /**
    * Toggle the setting w/ the given name
    */

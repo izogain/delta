@@ -12,6 +12,7 @@ object PeriodicActor {
 
   object Messages {
     case object CheckProjects extends Message
+    case object Startup extends Message
   }
 
 }
@@ -37,6 +38,14 @@ class PeriodicActor extends Actor with Util {
       }
     }
 
+    case msg @ PeriodicActor.Messages.Startup => withVerboseErrorHandler(msg) {
+      Pager.create { offset =>
+        ProjectsDao.findAll(Authorization.All, offset = offset)
+      }.foreach { project =>
+        MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+      }
+    }
+
     case msg: Any => logUnhandledMessage(msg)
   }
 
@@ -44,9 +53,8 @@ class PeriodicActor extends Actor with Util {
   /**
    * A project is considered active if:
    * 
-   *   - it has had at least one log entry written in the past MinutesUntilInactive minutes
-   *   - the last log entry writtin was not the successful completion of the supervisor
-   *     actor loop (SupervisorActor.SuccessfulCompletionMessage)
+   *   - it has had at least one SupervisorActor.StartedMessage log
+   *     entry written in the past MinutesUntilInactive minutes
    * 
    * Otherwise, the project is not active
    */
@@ -54,15 +62,11 @@ class PeriodicActor extends Actor with Util {
     EventsDao.findAll(
       projectId = Some(projectId),
       numberMinutesSinceCreation = Some(MinutesUntilInactive),
-      limit = 1,
-      orderBy = OrderBy("-events.created_at")
+      summary = Some(SupervisorActor.StartedMessage),
+      limit = 1
     ).headOption match {
-      case None => {
-        false
-      }
-      case Some(event) => {
-        event.summary != SupervisorActor.SuccessfulCompletionMessage
-      }
+      case None => false
+      case Some(_) => true
     }
   }
   

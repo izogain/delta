@@ -6,13 +6,10 @@ import io.flow.delta.v0.models.{Project, Settings}
 import io.flow.play.actors.Util
 import io.flow.postgresql.Authorization
 import play.libs.Akka
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 
 object SupervisorActor {
 
-  val SuccessfulCompletionMessage = "completed PursueDesiredState"
+  val StartedMessage = "started PursueDesiredState"
   
   trait Message
 
@@ -53,9 +50,9 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     case msg @ SupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-        log.started("PursueDesiredState")
+        log.message(SupervisorActor.StartedMessage)
         run(project, settings, SupervisorActor.All)
-        log.message(SupervisorActor.SuccessfulCompletionMessage)
+        log.completed("PursueDesiredState")
       }
     }
 
@@ -97,31 +94,22 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
           }
           case true => {
             log.started(format(f))
-            Try(
-              // TODO: Remove the await
-              Await.result(
-                f.run(project),
-                Duration(10, "minutes")
-              )
-            ) match {
-              case Success(result) => {
-                result match {
-                  case SupervisorResult.Change(desc) => {
-                    log.changed(format(f, desc))
-                  }
-                  case SupervisorResult.NoChange(desc)=> {
-                    log.completed(format(f, desc))
-                    run(project, settings, functions.drop(1))
-                  }
-                  case SupervisorResult.Error(desc, ex)=> {
-                    log.completed(format(f, desc), Some(ex))
-                  }
+            f.run(project).map { result =>
+              result match {
+                case SupervisorResult.Change(desc) => {
+                  log.changed(format(f, desc))
+                }
+                case SupervisorResult.NoChange(desc)=> {
+                  log.completed(format(f, desc))
+                  run(project, settings, functions.drop(1))
+                }
+                case SupervisorResult.Error(desc, ex)=> {
+                  log.completed(format(f, desc), Some(ex))
                 }
               }
 
-              case Failure(ex) => {
-                log.completed(format(f, ex.getMessage), Some(ex))
-              }
+            }.recover {
+              case ex: Throwable => log.completed(format(f, ex.getMessage), Some(ex))
             }
           }
         }

@@ -69,7 +69,7 @@ object SettingsDao {
         'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
         'set_desired_state -> form.setDesiredState.getOrElse(defaults.setDesiredState),
         'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
-        'scale -> form.buildDockerImage.getOrElse(defaults.scale),
+        'scale -> form.scale.getOrElse(defaults.scale),
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
@@ -83,7 +83,7 @@ object SettingsDao {
         'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
         'set_desired_state -> form.setDesiredState.getOrElse(settings.setDesiredState),
         'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage), 
-        'scale -> form.buildDockerImage.getOrElse(settings.scale),
+        'scale -> form.scale.getOrElse(settings.scale),
        'updated_by_user_id -> createdBy.id
       ).execute()
     }

@@ -2,7 +2,7 @@ package io.flow.delta.actors
 
 import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
-import io.flow.delta.api.lib.Semver
+import io.flow.delta.api.lib.{Semver, StateFormatter}
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
 import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
@@ -18,6 +18,8 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 
 object ProjectActor {
+
+  val CheckLastStateIntervalSeconds = 45
 
   trait Message
 
@@ -46,7 +48,17 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   def receive = {
 
     case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+      println(s"ProjectActor.Messages.Data(id)")
       setDataProject(id)
+
+      withProject { project =>
+        Akka.system.scheduler.schedule(
+          Duration(1, "second"),
+          Duration(ProjectActor.CheckLastStateIntervalSeconds, "seconds")
+        ) {
+          self ! ProjectActor.Messages.CheckLastState
+        }
+      }
     }
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
@@ -151,6 +163,8 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def monitorScale(project: Project, imageName: String, imageVersion: String) {
+    captureLastState(project: Project)
+
     val ecsService = EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
     val running = ecsService.getRunningCount
     val desired = ecsService.getDesiredCount
@@ -172,12 +186,21 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     // We want to get:
     //  0.0.1: 2 instances
     //  0.0.2: 1 instance
-    log.run(s"Capturing last state for project ${project.name}") {
-      ProjectLastStatesDao.upsert(
-        UsersDao.systemUser,
-        project,
-        StateForm(versions = EC2ContainerService.getClusterInfo(project.id))
-      )
+    log.started(s"Capturing last state")
+    Try {
+      EC2ContainerService.getClusterInfo(project.id)
+    } match {
+      case Success(versions) => {
+        ProjectLastStatesDao.upsert(
+          UsersDao.systemUser,
+          project,
+          StateForm(versions = versions)
+        )
+        log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
+      }
+      case Failure(ex) => {
+        log.completed("Error getting cluster information", Some(ex))
+      }
     }
   }
 

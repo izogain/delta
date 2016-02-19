@@ -20,6 +20,7 @@
       | <a class="delete" data-confirm="Are you sure?" href="@routes.ProjectsController.postDelete(project.id)">Delete</a>
     }
 
+    <a href="@routes.ProjectsController.postSync(project.id)" class="btn btn-primary btn-sm active postForm" role="button">Sync</a>
   </div>
 
   <div class="table-responsive">
@@ -87,7 +88,7 @@
   }
 
   <h3>Recent Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
-  @if(changeEvents.isEmpty) {
+  @if(recentEvents.isEmpty) {
     <em>No events in past 10 minutes</em>
   } else {
     <em>We show up to the 5 most recent events that were created in past 10 minutes</em>
