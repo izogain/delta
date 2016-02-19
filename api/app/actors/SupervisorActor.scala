@@ -2,7 +2,8 @@ package io.flow.delta.actors
 
 import akka.actor.Actor
 import db.{ProjectDesiredStatesDao, SettingsDao}
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.api.lib.StateDiff
+import io.flow.delta.v0.models.{Project, Settings, Version}
 import io.flow.play.actors.Util
 import io.flow.postgresql.Authorization
 import play.libs.Akka
@@ -34,7 +35,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
 
   override val logPrefix = "Supervisor"
 
-  implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
@@ -65,9 +66,9 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
     case msg @ SupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
       withProject { project =>
         ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id).map { state =>
-          state.versions.find(_.name == name) match {
-            case None => // Version with specified name does not exist
-            case Some(_) => self ! SupervisorActor.Messages.PursueDesiredState
+          StateDiff.up(state.versions, Seq(Version(name, 1))) match {
+            case Nil => // This tag would not move the project forward
+            case _ => self ! SupervisorActor.Messages.PursueDesiredState
           }
         }
       }
