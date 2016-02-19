@@ -5,6 +5,7 @@ import io.flow.delta.v0.models.{EventType, Project}
 import io.flow.common.v0.models.User
 import java.io.{PrintWriter, StringWriter}
 import org.joda.time.DateTime
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 object EventLog {
@@ -74,19 +75,33 @@ case class EventLog(
     * Wraps the execution of a function with a started and completed
     * entry in the log. Catches and handles errors as well.
     */
-  def run(
+  def runSync[T](
     message: String
   ) (
-    f: => Unit
-  ) {
-    started(message)
+    f: => T
+  ) (
+    implicit ec: ExecutionContext
+  ): Future[T] = {
+    runAsync(message) {
+      Future { f }
+    }
+  }
 
-    Try(f) match {
-      case Success(result) => {
-        completed(message)
-      }
-      case Failure(ex) => {
+  def runAsync[T](
+    message: String
+  ) (
+    f: => Future[T]
+  ) (
+    implicit ec: ExecutionContext
+  ): Future[T] = {
+    started(message)
+    f.map { result =>
+      completed(message + ": " + result)
+      result
+    }.recover {
+      case ex: Throwable => {
         completed(message, Some(ex))
+        throw ex
       }
     }
   }

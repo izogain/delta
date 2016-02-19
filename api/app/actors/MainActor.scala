@@ -80,8 +80,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
       // are setup every time the actor starts (vs. just on project
       // creation)
       actor ! ProjectActor.Messages.CreateHooks
-      actor ! ProjectActor.Messages.ConfigureECS // One-time ECS setup
-      actor ! ProjectActor.Messages.ConfigureEC2 // One-time EC2 setup
+      actor ! ProjectActor.Messages.ConfigureAWS // One-time AWS setup
       upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }

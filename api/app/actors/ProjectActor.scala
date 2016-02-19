@@ -16,6 +16,7 @@ import akka.actor.Actor
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
+import scala.concurrent.Future
 
 object ProjectActor {
 
@@ -28,8 +29,7 @@ object ProjectActor {
 
     case object CheckLastState extends Message
 
-    case object ConfigureEC2 extends Message // One-time EC2 setup
-    case object ConfigureECS extends Message // One-time ECS setup
+    case object ConfigureAWS extends Message // One-time AWS setup
 
     case object CreateHooks extends Message
 
@@ -68,22 +68,10 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
 
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
-    case msg @ ProjectActor.Messages.ConfigureEC2 => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
       withProject { project =>
         Try(
-          configureEc2(project)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Error configuring EC2", Some(e))
-        }
-      }
-    }
-
-    // Create ECS cluster for a project (id: user, fulfillment, splashpage, etc)
-    case msg @ ProjectActor.Messages.ConfigureECS => withVerboseErrorHandler(msg) {
-      withProject { project =>
-        Try(
-          configureEcs(project)
+          configureAWS(project)
         ) match {
           case Success(_) => // do nothing
           case Failure(e) => log.completed("Error configuring EC2", Some(e))
@@ -127,18 +115,15 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   }
 
-  def configureEc2(project: Project) {
-    log.run(s"Configuring EC2") {
-      val lc = createLaunchConfiguration(project)
-      val elb = createLoadBalancer(project)
-      createAutoScalingGroup(project, lc, elb)
-    }
-  }
-
-  def configureEcs(project: Project) {
-    log.run(s"Configuring ECS") {
-      // Only one thing for now, but room to add more stuff later...
-      createCluster(project)
+  def configureAWS(project: Project): Future[Unit] = {
+    log.started(s"Configuring EC2")
+    for {
+      lc <- createLaunchConfiguration(project)
+      elb <- createLoadBalancer(project)
+      cluster <- createCluster(project)
+      asg <- createAutoScalingGroup(project, lc, elb)
+    } yield {
+      log.completed("Configuring EC2")
     }
   }
 
@@ -149,12 +134,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
-      log.run(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
-      log.run(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     }
@@ -204,32 +189,35 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def createLaunchConfiguration(project: Project): String = {
-    log.started("EC2 auto scaling group launch configuration")
-    val lc = AutoScalingGroup.createLaunchConfiguration(project.id)
-    log.completed(s"EC2 auto scaling group launch configuration: [$lc]")
-    return lc
+  def createLaunchConfiguration(project: Project): Future[String] = {
+    log.runSync("EC2 auto scaling group launch configuration") {
+      AutoScalingGroup.createLaunchConfiguration(project.id)
+    }
   }
 
-  def createLoadBalancer(project: Project): String = {
-    log.started("EC2 load balancer")
-    val elb = ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id)
-    log.completed(s"EC2 Load Balancer: [$elb]")
-    return elb
+  def createLoadBalancer(project: Project): Future[String] = {
+    log.runAsync("EC2 load balancer") {
+      ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id)
+    }
   }
 
-  def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String) {
-    log.started("EC2 auto scaling group")
-    val asg = AutoScalingGroup.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
-    log.completed(s"EC2 auto scaling group: [$asg]")
+  def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String): Future[String] = {
+    Future {
+      log.started("EC2 auto scaling group")
+      val asg = AutoScalingGroup.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
+      log.completed(s"EC2 auto scaling group: [$asg]")
+      asg
+    }
   }
 
-  def createCluster(project: Project) {
-    log.started("ECS Cluster")
-    val cluster = EC2ContainerService.createCluster(project.id)
-    log.completed(s"ECS Cluster: [$cluster]")
+  def createCluster(project: Project): Future[String] = {
+     Future {
+       log.started("Create Cluster")
+       val cluster = EC2ContainerService.createCluster(project.id)
+       log.completed(s"Create Cluster $cluster")
+       cluster
+    }
   }
-
 
   private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
   private[this] val HookName = "web"

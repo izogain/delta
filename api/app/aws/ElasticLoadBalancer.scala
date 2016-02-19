@@ -9,6 +9,7 @@ import collection.JavaConverters._
 
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import scala.concurrent.Future
 
 object ElasticLoadBalancer extends Settings {
 
@@ -18,21 +19,25 @@ object ElasticLoadBalancer extends Settings {
 
   def getLoadBalancerName(projectId: String): String = s"$projectId-ecs-lb"
 
-  def createLoadBalancerAndHealthCheck(projectId: String): String = {
+  def createLoadBalancerAndHealthCheck(projectId: String): Future[String] = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
     val name = getLoadBalancerName(projectId)
 
-    val externalPort: Long = RegistryClient.getById(projectId).getOrElse {
-      sys.error(s"project[$projectId] was not found in the registry")
-    }.ports.headOption.getOrElse {
-      sys.error(s"project[$projectId] does not have any ports in the registry")
-    }.external
+    RegistryClient.getById(projectId).map {
+      case None => sys.error(s"project[$projectId] was not found in the registry")
+      case Some(application) => {
+        val registryPorts = application.ports.headOption.getOrElse {
+          sys.error(s"project[$projectId] does not have any ports in the registry")
+        }
+        val externalPort: Long = registryPorts.external
 
-    createLoadBalancer(name, externalPort)
-    configureHealthCheck(name, externalPort)
+        createLoadBalancer(name, externalPort)
+        configureHealthCheck(name, externalPort)
 
-    name
+        name
+      }
+    }
   }
 
   def createLoadBalancer(name: String, externalPort: Long) {
