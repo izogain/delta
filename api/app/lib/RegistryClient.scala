@@ -4,10 +4,8 @@ import io.flow.play.util.DefaultConfig
 import io.flow.registry.v0.models.Application
 import io.flow.registry.v0.{Authorization, Client}
 import io.flow.registry.v0.errors.UnitResponse
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success, Try}
-import java.util.concurrent.TimeUnit
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 object RegistryClient {
 
@@ -23,20 +21,12 @@ object RegistryClient {
     id: String
   ) (
     implicit ec: ExecutionContext
-  ): Option[Application] = {
-    Try(
-      Await.result(instance.applications.getById(id=id),
-      Duration(5, TimeUnit.SECONDS))
-    ) match {
-      case Success(app) => {
-        Some(app)
-      }
-      case Failure(ex) => {
-        ex match {
-          case UnitResponse(404) => None
-          case _: Throwable => throw ex
-        }
-      }
+  ): Future[Option[Application]] = {
+    instance.applications.getById(id=id).map { application =>
+      Some(application)
+    }.recover {
+      case UnitResponse(404) => None
+      case ex: Throwable => throw ex
     }
   }
 

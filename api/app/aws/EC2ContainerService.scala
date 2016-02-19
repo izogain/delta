@@ -11,6 +11,8 @@ import collection.JavaConverters._
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 
+import scala.concurrent.Future
+
 object EC2ContainerService extends Settings {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
@@ -65,8 +67,9 @@ object EC2ContainerService extends Settings {
 
     // if service doesn't exist in the cluster
     if (resp.getFailures().size() > 0) {
-      val taskDefinition = registerTaskDefinition(imageName, imageVersion, projectId)
-      createService(imageName, imageVersion, projectId, taskDefinition)
+      registerTaskDefinition(imageName, imageVersion, projectId).map { taskDefinition =>
+        createService(imageName, imageVersion, projectId, taskDefinition)
+      }
     }
 
     client.updateService(
@@ -115,67 +118,75 @@ object EC2ContainerService extends Settings {
     ).getServices().asScala.head
   }
 
-  def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): String = {
+  def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val registryPorts = RegistryClient.getById(projectId).getOrElse {
-      sys.error(s"project[$projectId] was not found in the registry")
-    }.ports.headOption.getOrElse {
-      sys.error(s"project[$projectId] does not have any ports in the registry")
-    }
+    RegistryClient.getById(projectId).map {
+      case None => sys.error(s"project[$projectId] was not found in the registry")
+      case Some(application) => {
+        val registryPorts = application.ports.headOption.getOrElse {
+          sys.error(s"project[$projectId] does not have any ports in the registry")
+        }
 
-    client.registerTaskDefinition(
-      new RegisterTaskDefinitionRequest()
-      .withFamily(taskName)
-      .withContainerDefinitions(
-        Seq(
-          new ContainerDefinition()
-          .withName(containerName)
-          .withImage(imageName + ":" + imageVersion)
-          .withMemory(containerMemory)
-          .withPortMappings(
+        client.registerTaskDefinition(
+          new RegisterTaskDefinitionRequest()
+          .withFamily(taskName)
+          .withContainerDefinitions(
             Seq(
-              new PortMapping()
-              .withContainerPort(registryPorts.internal.toInt)
-              .withHostPort(registryPorts.external.toInt)
+              new ContainerDefinition()
+              .withName(containerName)
+              .withImage(imageName + ":" + imageVersion)
+              .withMemory(containerMemory)
+              .withPortMappings(
+                Seq(
+                  new PortMapping()
+                  .withContainerPort(registryPorts.internal.toInt)
+                  .withHostPort(registryPorts.external.toInt)
+                ).asJava
+              )
+              .withCommand(Seq("production").asJava)
             ).asJava
           )
-          .withCommand(Seq("production").asJava)
-        ).asJava
-      )
-    )
+        )
 
-    return taskName
+        taskName
+      }
+    }
   }
 
-  def createService(imageName: String, imageVersion: String, projectId: String, taskDefinition: String): String = {
+  def createService(imageName: String, imageVersion: String, projectId: String, taskDefinition: String): Future[String] = {
     val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
     val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
-    val internalPort: Int = RegistryClient.getById(projectId).getOrElse {
-      sys.error(s"project[$projectId] was not found in the registry")
-    }.ports.headOption.getOrElse {
-      sys.error(s"project[$projectId] does not have any ports in the registry")
-    }.internal.toInt
+    RegistryClient.getById(projectId).map {
+      case None => sys.error(s"project[$projectId] was not found in the registry")
+      case Some(application) => {
+        val registryPorts = application.ports.headOption.getOrElse {
+          sys.error(s"project[$projectId] does not have any ports in the registry")
+        }
 
-    return client.createService(
-      new CreateServiceRequest()
-      .withServiceName(serviceName)
-      .withCluster(clusterName)
-      .withDesiredCount(createServiceDesiredCount)
-      .withRole(serviceRole)
-      .withTaskDefinition(taskDefinition)
-      .withLoadBalancers(
-        Seq(
-          new LoadBalancer()
-          .withContainerName(containerName)
-          .withLoadBalancerName(loadBalancerName)
-          .withContainerPort(internalPort)
-        ).asJava
-      )
-    ).getService().getServiceName()
+        val internalPort: Int = registryPorts.internal.toInt
+
+        client.createService(
+          new CreateServiceRequest()
+          .withServiceName(serviceName)
+          .withCluster(clusterName)
+          .withDesiredCount(createServiceDesiredCount)
+          .withRole(serviceRole)
+          .withTaskDefinition(taskDefinition)
+          .withLoadBalancers(
+            Seq(
+              new LoadBalancer()
+              .withContainerName(containerName)
+              .withLoadBalancerName(loadBalancerName)
+              .withContainerPort(internalPort)
+            ).asJava
+          )
+        ).getService().getServiceName()
+      }
+    }
   }
 
 }
