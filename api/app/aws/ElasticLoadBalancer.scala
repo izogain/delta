@@ -7,19 +7,32 @@ import com.amazonaws.services.elasticloadbalancing.model._
 
 import collection.JavaConverters._
 
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+
 object ElasticLoadBalancer extends Settings {
-  lazy val client = new AmazonElasticLoadBalancingClient()
 
-  def getLoadBalancerName(id: String): String = s"$id-ecs-lb"
+  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
-  def createLoadBalancerAndHealthCheck(id: String): String = {
+  private[this] lazy val client = new AmazonElasticLoadBalancingClient()
+
+  def getLoadBalancerName(projectId: String): String = s"$projectId-ecs-lb"
+
+  def createLoadBalancerAndHealthCheck(projectId: String): String = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
-    val name = getLoadBalancerName(id)
-    val externalPort = RegistryClient.getById(id).ports.head.external
+    val name = getLoadBalancerName(projectId)
+
+    val externalPort: Long = RegistryClient.getById(projectId).getOrElse {
+      sys.error(s"project[$projectId] was not found in the registry")
+    }.ports.headOption.getOrElse {
+      sys.error(s"project[$projectId] does not have any ports in the registry")
+    }.external
+
     createLoadBalancer(name, externalPort)
     configureHealthCheck(name, externalPort)
-    return name
+
+    name
   }
 
   def createLoadBalancer(name: String, externalPort: Long) {
@@ -60,7 +73,7 @@ object ElasticLoadBalancer extends Settings {
           )
       )
     } catch {
-      case e: LoadBalancerNotFoundException => sys.error("Cannoy find load balancer $name")
+      case e: LoadBalancerNotFoundException => sys.error("Cannot find load balancer $name: $e")
     }
   }
 
