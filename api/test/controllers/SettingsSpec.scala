@@ -19,9 +19,11 @@ class SettingsSpec extends PlaySpecification with MockClient {
       client.projects.getSettingsById(project.id)
     )
 
-    settings.syncMasterSha must beEqualTo(true)
-    settings.tagMaster must beEqualTo(true)
-    settings.setDesiredState must beEqualTo(true)
+    settings.syncMasterSha must beEqualTo(false)
+    settings.tagMaster must beEqualTo(false)
+    settings.setDesiredState must beEqualTo(false)
+    settings.buildDockerImage must beEqualTo(false)
+    settings.scale must beEqualTo(false)
   }
 
   "PUT /projects/:id/settings for a new project" in new WithServer(port=port) {
