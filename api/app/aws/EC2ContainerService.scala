@@ -13,11 +13,11 @@ import play.api.Play.current
 
 import scala.concurrent.Future
 
-object EC2ContainerService extends Settings {
+object EC2ContainerService extends Settings with Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
-  private[this] lazy val client = new AmazonECSClient()
+  private[this] lazy val client = new AmazonECSClient(awsCredentials)
 
   /**
   * Name creation helper functions
@@ -93,22 +93,28 @@ object EC2ContainerService extends Settings {
         new DescribeServicesRequest()
         .withCluster(cluster)
         .withServices(Seq(serviceArn).asJava)
-      ).getServices().asScala.head
+      ).getServices().asScala.headOption.getOrElse {
+        sys.error(s"Service ARN $serviceArn does not exist for cluster $cluster")
+      }
 
-      val image = client.describeTaskDefinition(
+      client.describeTaskDefinition(
         new DescribeTaskDefinitionRequest()
         .withTaskDefinition(service.getTaskDefinition)
-      ).getTaskDefinition().getContainerDefinitions().asScala.head.getImage()
+      ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
+        case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
+        case Some(containerDef) => {
+          val image = containerDef.getImage()
 
-      // image name = "flow/user:0.0.1"
-      // o = flow, p = user, version = 0.0.1
-      val pattern = "(\\w+)/(\\w+):(.+)".r
-      val pattern(o, p, version) = image
-      Version(version, service.getRunningCount.toInt)
+          // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
+          val pattern = "(\\w+)/(\\w+):(.+)".r
+          val pattern(o, p, version) = image
+          Version(version, service.getRunningCount.toInt)
+        }
+      }
     }
   }
 
-  def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Service = {
+  def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Option[Service] = {
     val cluster = getClusterName(projectId)
     val service = getServiceName(imageName, imageVersion)
 
@@ -117,7 +123,7 @@ object EC2ContainerService extends Settings {
       new DescribeServicesRequest()
       .withCluster(cluster)
       .withServices(Seq(service).asJava)
-    ).getServices().asScala.head
+    ).getServices().asScala.headOption
   }
 
   def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): Future[String] = {
