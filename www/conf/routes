@@ -5,7 +5,7 @@ GET     /projects                               controllers.ApplicationControlle
 GET     /projects/                              controllers.ProjectsController.index(page: Int ?= 0)
 GET     /projects/github                        controllers.ProjectsController.github()
 GET     /projects/github/:org                   controllers.ProjectsController.githubOrg(org: String, repositoriesPage: Int ?= 0)
-POST    /projects/github/:org/post              controllers.ProjectsController.postGithubOrg(org: String, name: String, repositoriesPage: Int ?= 0)
+POST    /projects/github/:org/post              controllers.ProjectsController.postGithubOrg(org: String, owner: String, name: String, repositoriesPage: Int ?= 0)
 GET     /projects/create                        controllers.ProjectsController.create()
 POST    /projects/postCreate                    controllers.ProjectsController.postCreate()
 GET     /projects/:id                           controllers.ProjectsController.show(id: String)

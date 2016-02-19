@@ -20,10 +20,11 @@ class Repositories @javax.inject.Inject() (
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def getGithub(
-    name: Option[String] = None,
+    owner: Option[String] = None, // Ex: flowcommerce
+    name: Option[String] = None,  // Ex: user
     organizationId: Option[String] = None,
     existingProject: Option[Boolean] = None,
-    limit: Long = 5,
+    limit: Long = 25,
     offset: Long = 0
   ) = Identified { request =>
     if (!existingProject.isEmpty && organizationId.isEmpty) {
@@ -33,10 +34,17 @@ class Repositories @javax.inject.Inject() (
       val auth = authorization(request)
       val org = organizationId.flatMap { OrganizationsDao.findById(auth, _)}
 
-      val results = github.repositories(request.user, offset, limit) { r =>
+      // Set limit to 1 if we are guaranteed at most 1 record back
+      val actualLimit = if (offset == 0 && !name.isEmpty && !owner.isEmpty) { 1 } else { limit }
+
+      val results = github.repositories(request.user, offset, actualLimit) { r =>
         (name match {
           case None => true
-          case Some(n) => n == r.name
+          case Some(n) => n.toLowerCase == r.name.toLowerCase
+        }) &&
+        (owner match {
+          case None => true
+          case Some(o) => o.toLowerCase == r.owner.login.toLowerCase
         }) &&
         (org match {
           case None => true

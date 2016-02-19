@@ -160,7 +160,7 @@ trait Github {
   ): Seq[GithubRepository] = {
     val thisPage = Await.result(
       githubRepos(user, page),
-      Duration(3, "seconds")
+      Duration(5, "seconds")
     )
 
     if (thisPage.isEmpty) {
