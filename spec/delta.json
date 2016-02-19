@@ -128,7 +128,8 @@
 	{ "name": "name", "type": "string" },
 	{ "name": "visibility", "type": "visibility" },
 	{ "name": "scms", "type": "scms" },
-	{ "name": "uri", "type": "string" }
+	{ "name": "uri", "type": "string" },
+	{ "name": "settings", "type": "settings_form" }
       ]
     },
 

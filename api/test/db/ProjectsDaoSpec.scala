@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.{Project, Scms, Visibility}
+import io.flow.delta.v0.models.{Project, Scms, SettingsForm, Visibility}
 import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
@@ -33,6 +33,50 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     ProjectsDao.findById(Authorization.All, UUID.randomUUID.toString) must be(None)
   }
 
+  "create respects settings" in {
+    val disabledForm = createProjectForm(org).copy(
+      settings = SettingsForm(
+        syncMasterSha = Some(false),
+        tagMaster = Some(false),
+        setDesiredState = Some(false),
+        buildDockerImage = Some(false),
+        scale = Some(false)
+      )
+    )
+
+    val project = createProject(org)(disabledForm)
+    val disabled = SettingsDao.findByProjectId(Authorization.All, project.id).getOrElse {
+      sys.error("Failed to create settings")
+    }
+
+    disabled.syncMasterSha must be(false)
+    disabled.tagMaster must be(false)
+    disabled.setDesiredState must be(false)
+    disabled.buildDockerImage must be(false)
+    disabled.scale must be(false)
+
+    val enabledForm = createProjectForm(org).copy(
+      settings = SettingsForm(
+        syncMasterSha = Some(true),
+        tagMaster = Some(true),
+        setDesiredState = Some(true),
+        buildDockerImage = Some(true),
+        scale = Some(true)
+      )
+    )
+
+    val project2 = createProject(org)(enabledForm)
+    val enabled = SettingsDao.findByProjectId(Authorization.All, project2.id).getOrElse {
+      sys.error("Failed to create settings")
+    }
+
+    enabled.syncMasterSha must be(true)
+    enabled.tagMaster must be(true)
+    enabled.setDesiredState must be(true)
+    enabled.buildDockerImage must be(true)
+    enabled.scale must be(true)
+  }
+
   "update" in {
     val form = createProjectForm(org)
     val project = createProject(org)(form)
@@ -49,25 +93,25 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     updated.name must be(newName)
   }
 
-  "create" must {
-    "validates SCMS" in {
+  "validates" must {
+    "SCMS" in {
       val form = createProjectForm(org).copy(scms = Scms.UNDEFINED("other"))
       ProjectsDao.create(systemUser, form) must be(Left(Seq("Scms not found")))
     }
 
-    "validates SCMS URI" in {
+    "SCMS URI" in {
       val form = createProjectForm(org).copy(scms = Scms.Github, uri = "http://github.com/mbryzek")
       ProjectsDao.create(systemUser, form) must be(
         Left(Seq("Invalid uri path[http://github.com/mbryzek] missing project name"))
       )
     }
 
-    "validates empty name" in {
+    "empty name" in {
       val form = createProjectForm(org).copy(name = "   ")
       ProjectsDao.create(systemUser, form) must be(Left(Seq("Name cannot be empty")))
     }
 
-    "validates duplicate names" in {
+    "duplicate names" in {
       val project = createProject(org)
       val form = createProjectForm(org).copy(name = project.name.toString.toUpperCase)
       ProjectsDao.create(systemUser, form) must be(Left(Seq("Project with this name already exists")))
@@ -78,7 +122,7 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       ProjectsDao.validate(systemUser, form2) must be(Nil)
     }
 
-    "validates empty uri" in {
+    "empty uri" in {
       val form = createProjectForm(org).copy(uri = "   ")
       ProjectsDao.create(systemUser, form) must be(Left(Seq("Uri cannot be empty")))
     }

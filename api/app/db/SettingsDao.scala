@@ -48,9 +48,8 @@ object SettingsDao {
     * create settings to match the specified form for this project.
     */
   def upsert(createdBy: User, projectId: String, form: SettingsForm): Settings = {
-    findByProjectId(Authorization.All, projectId) match {
-      case None => create(createdBy, projectId, form)
-      case Some(settings) => update(createdBy, projectId, settings, form)
+    DB.withConnection { implicit c =>
+      upsert(c, createdBy, projectId, form)
     }
 
     findByProjectId(Authorization.All, projectId).getOrElse {
@@ -58,35 +57,38 @@ object SettingsDao {
     }
   }
 
-  private[this] def create(createdBy: User, projectId: String, form: SettingsForm) {
-    val defaults = Settings()
-
-    DB.withConnection { implicit c =>
-      SQL(InsertQuery).on(
-        'id -> idGenerator.randomId(),
-        'project_id -> projectId,
-        'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
-        'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
-        'set_desired_state -> form.setDesiredState.getOrElse(defaults.setDesiredState),
-        'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
-        'scale -> form.scale.getOrElse(defaults.scale),
-        'updated_by_user_id -> createdBy.id
-      ).execute()
+  private[db] def upsert(implicit c: java.sql.Connection, createdBy: User, projectId: String, form: SettingsForm) {
+    findByProjectId(Authorization.All, projectId) match {
+      case None => create(c, createdBy, projectId, form)
+      case Some(settings) => update(c, createdBy, projectId, settings, form)
     }
   }
+  
+  private[db] def create(implicit c: java.sql.Connection, createdBy: User, projectId: String, form: SettingsForm) {  
+    val defaults = Settings()
 
-  private[this] def update(createdBy: User, projectId: String, settings: Settings, form: SettingsForm) {
-    DB.withConnection { implicit c =>
-      SQL(UpdateQuery).on(
-        'project_id -> projectId,
-        'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
-        'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
-        'set_desired_state -> form.setDesiredState.getOrElse(settings.setDesiredState),
-        'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage), 
-        'scale -> form.scale.getOrElse(settings.scale),
-       'updated_by_user_id -> createdBy.id
-      ).execute()
-    }
+    SQL(InsertQuery).on(
+      'id -> idGenerator.randomId(),
+      'project_id -> projectId,
+      'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
+      'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
+      'set_desired_state -> form.setDesiredState.getOrElse(defaults.setDesiredState),
+      'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
+      'scale -> form.scale.getOrElse(defaults.scale),
+      'updated_by_user_id -> createdBy.id
+    ).execute()
+  }
+
+  private[this] def update(implicit c: java.sql.Connection, createdBy: User, projectId: String, settings: Settings, form: SettingsForm) {  
+    SQL(UpdateQuery).on(
+      'project_id -> projectId,
+      'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
+      'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
+      'set_desired_state -> form.setDesiredState.getOrElse(settings.setDesiredState),
+      'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage),
+      'scale -> form.scale.getOrElse(settings.scale),
+      'updated_by_user_id -> createdBy.id
+    ).execute()
   }
 
   def deleteByProjectId(deletedBy: User, projectId: String) {

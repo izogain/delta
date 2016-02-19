@@ -119,7 +119,8 @@ package io.flow.delta.v0.models {
     name: String,
     visibility: io.flow.delta.v0.models.Visibility,
     scms: io.flow.delta.v0.models.Scms,
-    uri: String
+    uri: String,
+    settings: io.flow.delta.v0.models.SettingsForm
   )
 
   /**
@@ -1058,7 +1059,8 @@ package io.flow.delta.v0.models {
         (__ \ "name").read[String] and
         (__ \ "visibility").read[io.flow.delta.v0.models.Visibility] and
         (__ \ "scms").read[io.flow.delta.v0.models.Scms] and
-        (__ \ "uri").read[String]
+        (__ \ "uri").read[String] and
+        (__ \ "settings").read[io.flow.delta.v0.models.SettingsForm]
       )(ProjectForm.apply _)
     }
 
@@ -1068,7 +1070,8 @@ package io.flow.delta.v0.models {
         "name" -> play.api.libs.json.JsString(obj.name),
         "visibility" -> play.api.libs.json.JsString(obj.visibility.toString),
         "scms" -> play.api.libs.json.JsString(obj.scms.toString),
-        "uri" -> play.api.libs.json.JsString(obj.uri)
+        "uri" -> play.api.libs.json.JsString(obj.uri),
+        "settings" -> jsObjectSettingsForm(obj.settings)
       )
     }
 

@@ -110,7 +110,7 @@ object ProjectsDao {
         
         val id = urlKey.generate(form.name.trim)
 
-        DB.withConnection { implicit c =>
+        DB.withTransaction { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
             'organization_id -> org.id,
@@ -121,6 +121,8 @@ object ProjectsDao {
             'uri -> form.uri.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
+
+          SettingsDao.create(c, createdBy, id, form.settings)
         }
 
         MainActor.ref ! MainActor.Messages.ProjectCreated(id)
@@ -145,7 +147,7 @@ object ProjectsDao {
           "Changing organization ID not currently supported"
         )
 
-        DB.withConnection { implicit c =>
+        DB.withTransaction { implicit c =>
           SQL(UpdateQuery).on(
             'id -> project.id,
             'visibility -> form.visibility.toString,
@@ -154,6 +156,8 @@ object ProjectsDao {
             'uri -> form.uri.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
+
+          SettingsDao.upsert(c, createdBy, project.id, form.settings)
         }
 
         MainActor.ref ! MainActor.Messages.ProjectUpdated(project.id)
