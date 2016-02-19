@@ -95,7 +95,8 @@ trait Helpers {
       name = createTestName(),
       visibility = Visibility.Private,
       scms = Scms.Github,
-      uri = s"http://github.com/test/${UUID.randomUUID.toString}"
+      uri = s"http://github.com/test/${UUID.randomUUID.toString}",
+      settings = SettingsForm()
     )
   }
 

@@ -154,7 +154,8 @@ class ProjectsController @javax.inject.Inject() (
                 name = repo.name,
                 scms = Scms.Github,
                 visibility = if (repo.`private`) { Visibility.Private } else { Visibility.Public },
-                uri = repo.htmlUrl
+                uri = repo.htmlUrl,
+                settings = SettingsForm()
               )
             ).map { project =>
               Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project added")
@@ -194,7 +195,8 @@ class ProjectsController @javax.inject.Inject() (
               name = uiForm.name,
               scms = Scms(uiForm.scms),
               visibility = Visibility(uiForm.visibility),
-              uri = uiForm.uri
+              uri = uiForm.uri,
+              settings = SettingsForm()
             )
           ).map { project =>
             Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project created")
@@ -249,7 +251,8 @@ class ProjectsController @javax.inject.Inject() (
                   name = uiForm.name,
                   scms = Scms(uiForm.scms),
                   visibility = Visibility(uiForm.visibility),
-                  uri = uiForm.uri
+                  uri = uiForm.uri,
+                  settings = SettingsForm()
                 )
               ).map { project =>
                 Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project updated")

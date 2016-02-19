@@ -119,7 +119,8 @@ package io.flow.delta.v0.models {
     name: String,
     visibility: io.flow.delta.v0.models.Visibility,
     scms: io.flow.delta.v0.models.Scms,
-    uri: String
+    uri: String,
+    settings: io.flow.delta.v0.models.SettingsForm
   )
 
   /**
@@ -1058,7 +1059,8 @@ package io.flow.delta.v0.models {
         (__ \ "name").read[String] and
         (__ \ "visibility").read[io.flow.delta.v0.models.Visibility] and
         (__ \ "scms").read[io.flow.delta.v0.models.Scms] and
-        (__ \ "uri").read[String]
+        (__ \ "uri").read[String] and
+        (__ \ "settings").read[io.flow.delta.v0.models.SettingsForm]
       )(ProjectForm.apply _)
     }
 
@@ -1068,7 +1070,8 @@ package io.flow.delta.v0.models {
         "name" -> play.api.libs.json.JsString(obj.name),
         "visibility" -> play.api.libs.json.JsString(obj.visibility.toString),
         "scms" -> play.api.libs.json.JsString(obj.scms.toString),
-        "uri" -> play.api.libs.json.JsString(obj.uri)
+        "uri" -> play.api.libs.json.JsString(obj.uri),
+        "settings" -> jsObjectSettingsForm(obj.settings)
       )
     }
 
@@ -2068,17 +2071,6 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def postEventsAndPursueDesiredStateById(
-        id: String
-      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit] = {
-        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/events/pursue_desired_state").map {
-          case r if r.status == 204 => ()
-          case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
-          case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
-          case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 204, 401, 404")
-        }
-      }
-
       override def putById(
         id: String,
         projectForm: io.flow.delta.v0.models.ProjectForm
@@ -2754,13 +2746,6 @@ package io.flow.delta.v0 {
     def post(
       projectForm: io.flow.delta.v0.models.ProjectForm
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Project]
-
-    /**
-     * Triggers the pursue desired state event.
-     */
-    def postEventsAndPursueDesiredStateById(
-      id: String
-    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit]
 
     /**
      * Update an existing project.

@@ -528,7 +528,8 @@ package io.flow.delta.v0.anorm.parsers {
       name = s"$prefix${sep}name",
       visibility = s"$prefix${sep}visibility",
       scms = s"$prefix${sep}scms",
-      uri = s"$prefix${sep}uri"
+      uri = s"$prefix${sep}uri",
+      settingsPrefix = s"$prefix${sep}settings"
     )
 
     def parser(
@@ -536,20 +537,23 @@ package io.flow.delta.v0.anorm.parsers {
       name: String = "name",
       visibility: String = "visibility",
       scms: String = "scms",
-      uri: String = "uri"
+      uri: String = "uri",
+      settingsPrefix: String = "settings"
     ): RowParser[io.flow.delta.v0.models.ProjectForm] = {
       SqlParser.str(organization) ~
       SqlParser.str(name) ~
       io.flow.delta.v0.anorm.parsers.Visibility.parser(visibility) ~
       io.flow.delta.v0.anorm.parsers.Scms.parser(scms) ~
-      SqlParser.str(uri) map {
-        case organization ~ name ~ visibility ~ scms ~ uri => {
+      SqlParser.str(uri) ~
+      io.flow.delta.v0.anorm.parsers.SettingsForm.parserWithPrefix(settingsPrefix) map {
+        case organization ~ name ~ visibility ~ scms ~ uri ~ settings => {
           io.flow.delta.v0.models.ProjectForm(
             organization = organization,
             name = name,
             visibility = visibility,
             scms = scms,
-            uri = uri
+            uri = uri,
+            settings = settings
           )
         }
       }
