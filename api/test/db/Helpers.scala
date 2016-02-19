@@ -96,7 +96,13 @@ trait Helpers {
       visibility = Visibility.Private,
       scms = Scms.Github,
       uri = s"http://github.com/test/${UUID.randomUUID.toString}",
-      settings = SettingsForm()
+      settings = SettingsForm(
+        syncMasterSha = Some(false),
+        tagMaster = Some(false),
+        setDesiredState = Some(false),
+        buildDockerImage = Some(false),
+        scale = Some(false)
+      )
     )
   }
 
