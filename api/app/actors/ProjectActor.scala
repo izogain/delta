@@ -185,13 +185,21 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     //  0.0.1: 2 instances
     //  0.0.2: 1 instance
     log.started(s"Capturing last state")
-    val versions = EC2ContainerService.getClusterInfo(project.id)
-    ProjectLastStatesDao.upsert(
-      UsersDao.systemUser,
-      project,
-      StateForm(versions = versions)
-    )
-    log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
+    Try {
+      EC2ContainerService.getClusterInfo(project.id)
+    } match {
+      case Success(versions) => {
+        ProjectLastStatesDao.upsert(
+          UsersDao.systemUser,
+          project,
+          StateForm(versions = versions)
+        )
+        log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
+      }
+      case Failure(ex) => {
+        log.completed("Error getting cluster information", Some(ex))
+      }
+    }
   }
 
   def createLaunchConfiguration(project: Project): String = {
