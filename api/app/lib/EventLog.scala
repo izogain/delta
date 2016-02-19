@@ -25,18 +25,15 @@ case class EventLog(
 ) {
 
   def changed(message: String) = {
-    println(format(s"changed $message"))
-    EventsDao.create(user, project.id, EventType.Change, message, ex = None)
+    process(EventType.Change, message)
   }
 
   def skipped(message: String) = {
-    println(format(s"skipped $message"))
-    EventsDao.create(user, project.id, EventType.Info, s"skipped $message", ex = None)
+    process(EventType.Info, s"skipped $message")
   }
 
   def message(message: String) = {
-    println(format(message))
-    EventsDao.create(user, project.id, EventType.Info, message, ex = None)
+    process(EventType.Info, message)
   }
 
   /**
@@ -44,8 +41,7 @@ case class EventLog(
     * when the function is complete.
     */
   def started(message: String) = {
-    println(format(s"started $message"))
-    EventsDao.create(user, project.id, EventType.Info, s"started $message", ex = None)
+    process(EventType.Info, s"started $message")
   }
 
   /**
@@ -55,16 +51,10 @@ case class EventLog(
   def completed(message: String, error: Option[Throwable] = None) = {
     error match {
       case None => {
-        println(format(s"completed $message"))
-        EventsDao.create(user, project.id, EventType.Info, s"completed $message", ex = None)
+        process(EventType.Info, s"completed $message")
       }
       case Some(ex) => {
-        // this works much better
-        val sw = new StringWriter
-        ex.printStackTrace(new PrintWriter(sw))
-        println(format(s"error $message: ${ex.getMessage}\n\n$sw"))
-
-        EventsDao.create(user, project.id, EventType.Info, s"error $message", ex = Some(ex))
+        process(EventType.Info, s"error $message", Some(ex))
       }
     }
   }
@@ -77,8 +67,7 @@ case class EventLog(
     * the log.
     */
   def checkpoint(message: String) = {
-    println(format(s"checkpoint $message"))
-    EventsDao.create(user, project.id, EventType.Info, s"checkpoint $message", ex = None)
+    process(EventType.Info, s"checkpoint $message")
   }
 
   /**
@@ -102,9 +91,21 @@ case class EventLog(
     }
   }
 
-  private[this] def format(message: String): String = {
+  private[this] def process(typ: EventType, message: String, ex: Option[Throwable] = None) {
+    val formatted = s"$prefix: $message"
     val ts = new DateTime()
-    s"[$ts] ${project.id} $message"
-  }
-}
 
+    ex match {
+      case None => {
+        println(s"[$ts] ${project.id} $typ $formatted")
+        EventsDao.create(user, project.id, typ, formatted, ex = None)
+      }
+      case Some(error) =>
+        val sw = new StringWriter
+        error.printStackTrace(new PrintWriter(sw))
+        println(s"[$ts] ${project.id} error $formatted: ${error.getMessage}\n\n$sw")
+        EventsDao.create(user, project.id, EventType.Info, s"error $message", ex = Some(error))
+    }
+  }
+
+}
