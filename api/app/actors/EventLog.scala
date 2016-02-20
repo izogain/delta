@@ -9,7 +9,10 @@ trait EventLog {
     * class name (exluding its package)
     */
   def logPrefix: String = {
-    getClass.getName.split(".").last
+    getClass.getName.split("\\.").lastOption match {
+      case None => getClass.getName
+      case Some(value) => value
+    }
   }
 
   /**
