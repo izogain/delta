@@ -33,8 +33,6 @@ object SupervisorActor {
 
 class SupervisorActor extends Actor with Util with DataProject with EventLog {
 
-  override val logPrefix = "Supervisor"
-
   private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {

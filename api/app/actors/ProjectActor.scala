@@ -50,8 +50,6 @@ class ProjectActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with Util with DataProject with EventLog {
 
-  override val logPrefix = s"ProjectActor"
-
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
   private[this] lazy val ecs = EC2ContainerService

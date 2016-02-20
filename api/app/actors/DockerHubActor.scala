@@ -47,8 +47,6 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
   private[this] val IntervalSeconds = 30
 
-  override val logPrefix = "DockerHubActor"
-
   def receive = {
 
     case msg @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(msg) {
@@ -98,6 +96,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
     for {
       tags <- v2client.V2Tags.get(docker.organization, project.id)
     } yield {
+
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
           upsertImage(docker, project.id, tag.name)
