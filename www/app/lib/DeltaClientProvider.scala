@@ -1,7 +1,7 @@
 package io.flow.delta.www.lib
 
 import io.flow.play.clients.{Registry, UserTokensClient}
-import io.flow.play.util.Config
+import io.flow.play.util
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.{Authorization, Client}
 import io.flow.delta.v0.errors.UnitResponse
@@ -16,7 +16,7 @@ trait DeltaClientProvider extends UserTokensClient {
 
 @javax.inject.Singleton
 class DefaultDeltaClientProvider @javax.inject.Inject() (
-  config: Config
+  config: util.Config
 ) extends DeltaClientProvider {
 
   private[this] val host = config.requiredString("delta.api.host")
