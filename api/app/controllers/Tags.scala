@@ -1,6 +1,6 @@
 package controllers
 
-import db.TagsDao
+import db.{TagsDao, TagsWriteDao}
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.Tag
 import io.flow.delta.v0.models.json._
@@ -13,7 +13,8 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Tags @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  tagsWriteDao: TagsWriteDao  
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
@@ -49,7 +50,7 @@ class Tags @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withTag(request.user, id) { tag =>
-      TagsDao.delete(request.user, tag)
+      tagsWriteDao.delete(request.user, tag)
       NoContent
     }
   }

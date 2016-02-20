@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import akka.actor.ActorRef
-import db.{ShasDao, TagsDao, UsersDao}
+import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
@@ -34,6 +34,8 @@ object TagMaster extends SupervisorFunction {
 }
 
 case class TagMaster(project: Project) extends Github {
+
+  private[this] lazy val tagsWriteDao = play.api.Play.current.injector.instanceOf[TagsWriteDao]
 
   private[this] case class Tag(semver: Semver, sha: String)
 
@@ -122,7 +124,7 @@ case class TagMaster(project: Project) extends Github {
             sha = sha
           )
         ).map { githubRef =>
-          TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
+          tagsWriteDao.upsert(UsersDao.systemUser, project.id, name, sha)
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
@@ -138,7 +140,7 @@ case class TagMaster(project: Project) extends Github {
     */
   private[this] def persist(tags: Seq[Tag]) = {
     tags.foreach { tag =>
-      TagsDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
+      tagsWriteDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
     }
   }
 

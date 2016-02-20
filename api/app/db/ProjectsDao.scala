@@ -77,7 +77,8 @@ object ProjectsDao {
 case class ProjectsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   imagesWriteDao: ImagesWriteDao,
-  shasWriteDao: ShasWriteDao
+  shasWriteDao: ShasWriteDao,
+  tagsWriteDao: TagsWriteDao
 ) {
 
   private[this] val InsertQuery = """
@@ -237,7 +238,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     Pager.create { offset =>
       TagsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { tag =>
-      TagsDao.delete(deletedBy, tag)
+      tagsWriteDao.delete(deletedBy, tag)
     }
 
     Pager.create { offset =>
