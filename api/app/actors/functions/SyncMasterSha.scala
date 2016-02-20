@@ -5,7 +5,7 @@ import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
 import io.flow.postgresql.Authorization
-import db.{ShasDao, UsersDao}
+import db.{ShasDao, ShasWriteDao, UsersDao}
 import scala.concurrent.Future
 
 object SyncMasterSha extends SupervisorFunction {
@@ -27,6 +27,8 @@ object SyncMasterSha extends SupervisorFunction {
   */
 case class SyncMasterSha(project: Project) extends Github {
 
+  private[this] lazy val shasWriteDao = play.api.Play.current.injector.instanceOf[ShasWriteDao]
+
   def run(
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
@@ -46,7 +48,7 @@ case class SyncMasterSha(project: Project) extends Github {
                 SupervisorResult.NoChange(s"Shas table already records that master is at $masterSha")
               }
               case false => {
-                ShasDao.upsertMaster(UsersDao.systemUser, project.id, masterSha)
+                shasWriteDao.upsertMaster(UsersDao.systemUser, project.id, masterSha)
                 SupervisorResult.Change(s"Updated master sha to $masterSha")
               }
             }

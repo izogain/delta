@@ -2,7 +2,7 @@ package controllers
 
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.v0.models.json._
-import db.{UserIdentifiersDao, UsersDao}
+import db.{UserIdentifiersDao, UsersDao, UsersWriteDao}
 import io.flow.common.v0.models.{Error, User}
 import io.flow.common.v0.models.json._
 import io.flow.play.clients.UserTokensClient
@@ -13,7 +13,8 @@ import play.api.libs.json._
 import scala.concurrent.Future
 
 class Users @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  usersWriteDao: UsersWriteDao
 ) extends Controller with IdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,7 +60,7 @@ class Users @javax.inject.Inject() (
       }
       case s: JsSuccess[UserForm] => {
         request.user.map { userOption =>
-          UsersDao.create(userOption, s.get) match {
+          usersWriteDao.create(userOption, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(user) => Created(Json.toJson(user))
           }
