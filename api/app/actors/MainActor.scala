@@ -60,9 +60,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   private[this] val periodicActor = Akka.system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
 
-  scheduleRecurring("io.flow.delta.api.CheckProjects.seconds") {
-    periodicActor ! PeriodicActor.Messages.CheckProjects
-  }
+  scheduleRecurring(periodicActor, "io.flow.delta.api.CheckProjects.seconds", PeriodicActor.Messages.CheckProjects)
 
   Akka.system.scheduler.scheduleOnce(Duration(1, "seconds")) {
     periodicActor ! PeriodicActor.Messages.Startup

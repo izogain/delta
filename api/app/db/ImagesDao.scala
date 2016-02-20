@@ -26,9 +26,9 @@ object ImagesDao {
 
   private[this] val InsertQuery = """
     insert into images
-    (id, project_id, name, version, updated_by_user_id)
+    (id, project_id, name, version, sort_key, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {version}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {version}, {sort_key}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -36,6 +36,7 @@ object ImagesDao {
        set project_id = {project_id},
            name = {name},
            version = {version},
+           sort_key = {sort_key},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
   """
@@ -108,6 +109,7 @@ object ImagesDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'version -> form.version.trim,
+            'sort_key -> Util.generateVersionSortKey(form.version.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -133,6 +135,7 @@ object ImagesDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'version -> form.version.trim,
+            'sort_key -> Util.generateVersionSortKey(form.version.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -172,7 +175,7 @@ object ImagesDao {
    projectId: Option[String] = None,
    names: Option[Seq[String]] = None,
    versions: Option[Seq[String]] = None,
-   orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
+   orderBy: OrderBy = OrderBy("-images.sort_key, -images.created_at"),
    limit: Long = 25,
    offset: Long = 0
   ): Seq[Image] = {

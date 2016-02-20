@@ -57,12 +57,12 @@ class ProjectsController @javax.inject.Inject() (
         )
         tags <- deltaClient(request).tags.get(
           projectId = Some(id),
-          sort = "-tags.created_at",
+          sort = "-tags.sort_key",
           limit = 1
         )
         images <- deltaClient(request).images.get(
           projectId = Some(id),
-          sort = "-images.created_at",
+          sort = "-images.sort_key",
           limit = 1
         )
         shas <- deltaClient(request).shas.get(
