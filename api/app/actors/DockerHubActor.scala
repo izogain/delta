@@ -72,7 +72,7 @@ class DockerHubActor @javax.inject.Inject() (
             log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
           }.recover {
             case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
-            case err => log.message(s"Error creating Docker Hub repository and automated build: $err")
+            case err => log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
           }
 
           syncImages(org.docker, project)
