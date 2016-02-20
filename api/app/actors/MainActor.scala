@@ -73,16 +73,7 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
     }
 
     case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
-      val actor = upsertProjectActor(id)
-
-      // TODO: should we do this inside Project Actor every time it
-      // received the data object? Would allow us to make sure things
-      // are setup every time the actor starts (vs. just on project
-      // creation)
-      actor ! ProjectActor.Messages.CreateHooks
-      actor ! ProjectActor.Messages.ConfigureAWS // One-time AWS setup
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
-      searchActor ! SearchActor.Messages.SyncProject(id)
+      self ! MainActor.Messages.ProjectSync(id)
     }
 
     case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {

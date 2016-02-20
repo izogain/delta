@@ -13,7 +13,7 @@ import play.api.Play.current
 
 import scala.concurrent.Future
 
-object EC2ContainerService extends Settings with Credentials {
+case class EC2ContainerService(registryClient: RegistryClient) extends Settings with Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
@@ -127,7 +127,7 @@ object EC2ContainerService extends Settings with Credentials {
   def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    RegistryClient.getById(projectId).map {
+    registryClient.getById(projectId).map {
       case None => sys.error(s"project[$projectId] was not found in the registry")
       case Some(application) => {
         val registryPorts = application.ports.headOption.getOrElse {
@@ -164,9 +164,9 @@ object EC2ContainerService extends Settings with Credentials {
     val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
+    val loadBalancerName = ElasticLoadBalancer(registryClient).getLoadBalancerName(projectId)
 
-    RegistryClient.getById(projectId).map {
+    registryClient.getById(projectId).map {
       case None => sys.error(s"project[$projectId] was not found in the registry")
       case Some(application) => {
         val registryPorts = application.ports.headOption.getOrElse {
