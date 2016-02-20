@@ -57,28 +57,25 @@ object EC2ContainerService extends Settings with Credentials {
   // scale to the desired count - can be up or down
   def scale(imageName: String, imageVersion: String, projectId: String, desiredCount: Long): Future[Unit] = {
     val cluster = getClusterName(projectId)
-    val service = getServiceName(imageName, imageVersion)
 
+    for {
+      taskDef <- registerTaskDefinition(imageName, imageVersion, projectId)
+      service <- createService(imageName, imageVersion, projectId, taskDef)
+      count <- updateServiceDesiredCount(cluster, service, desiredCount)
+    } yield {
+      // Nothing
+    }
+  }
+
+  def updateServiceDesiredCount(cluster: String, service: String, desiredCount: Long): Future[Long] = {
     Future {
-      val resp = client.describeServices(
-        new DescribeServicesRequest()
-        .withCluster(cluster)
-        .withServices(Seq(service).asJava)
-      )
-
-      // if service doesn't exist in the cluster
-      if (resp.getFailures().size() > 0) {
-        registerTaskDefinition(imageName, imageVersion, projectId).map { taskDefinition =>
-          createService(imageName, imageVersion, projectId, taskDefinition)
-        }
-      }
-
       client.updateService(
         new UpdateServiceRequest()
         .withCluster(cluster)
         .withService(service)
         .withDesiredCount(desiredCount.toInt)
       )
+      desiredCount
     }
   }
 
@@ -175,24 +172,33 @@ object EC2ContainerService extends Settings with Credentials {
           sys.error(s"project[$projectId] does not have any ports in the registry")
         }
 
-        val internalPort: Int = registryPorts.internal.toInt
+        val resp = client.describeServices(
+          new DescribeServicesRequest()
+            .withCluster(clusterName)
+            .withServices(Seq(serviceName).asJava)
+        )
 
-        client.createService(
-          new CreateServiceRequest()
-          .withServiceName(serviceName)
-          .withCluster(clusterName)
-          .withDesiredCount(createServiceDesiredCount)
-          .withRole(serviceRole)
-          .withTaskDefinition(taskDefinition)
-          .withLoadBalancers(
-            Seq(
-              new LoadBalancer()
-              .withContainerName(containerName)
-              .withLoadBalancerName(loadBalancerName)
-              .withContainerPort(internalPort)
-            ).asJava
+        // if service doesn't exist in the cluster
+        if (!resp.getFailures().isEmpty()) {
+          client.createService(
+            new CreateServiceRequest()
+            .withServiceName(serviceName)
+            .withCluster(clusterName)
+            .withDesiredCount(createServiceDesiredCount)
+            .withRole(serviceRole)
+            .withTaskDefinition(taskDefinition)
+            .withLoadBalancers(
+              Seq(
+                new LoadBalancer()
+                .withContainerName(containerName)
+                .withLoadBalancerName(loadBalancerName)
+                .withContainerPort(registryPorts.internal.toInt)
+              ).asJava
+            )
           )
-        ).getService().getServiceName()
+        }
+
+        serviceName
       }
     }
   }
