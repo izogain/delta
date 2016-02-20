@@ -1,7 +1,7 @@
 package io.flow.delta.www.lib
 
-import io.flow.play.clients.UserTokensClient
-import io.flow.play.util.DefaultConfig
+import io.flow.play.clients.{Registry, UserTokensClient}
+import io.flow.play.util.Config
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.{Authorization, Client}
 import io.flow.delta.v0.errors.UnitResponse
@@ -15,17 +15,18 @@ trait DeltaClientProvider extends UserTokensClient {
 }
 
 @javax.inject.Singleton
-class DefaultDeltaClientProvider() extends DeltaClientProvider {
+class DefaultDeltaClientProvider @javax.inject.Inject() (
+  config: Config
+) extends DeltaClientProvider {
 
-  def host: String = DefaultConfig.requiredString("delta.api.host")
-  def token: String = DefaultConfig.requiredString("delta.api.token")
+  private[this] val host = config.requiredString("delta.api.host")
 
-  private[this] lazy val client = new Client(host)
+  private[this] lazy val anonymousClient = new Client(host)
 
   override def newClient(user: Option[User]): Client = {
     user match {
       case None => {
-        client
+        anonymousClient
       }
       case Some(u) => {
         new Client(
@@ -45,7 +46,7 @@ class DefaultDeltaClientProvider() extends DeltaClientProvider {
     token: String
   )(implicit ec: ExecutionContext): Future[Option[User]] = {
     // Token is just the ID
-    client.users.get(id = Some(token)).map { _.headOption }
+    anonymousClient.users.get(id = Some(token)).map { _.headOption }
   }
 
 }
