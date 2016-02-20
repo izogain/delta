@@ -5,7 +5,7 @@ import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import io.flow.delta.api.lib.{Semver, StateFormatter}
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
-import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
+import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesWriteDao}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.v0.models.{Project, StateForm}
 import io.flow.delta.lib.Text
@@ -196,7 +196,7 @@ class ProjectActor @javax.inject.Inject() (
   def captureLastState(project: Project): Future[String] = {
     log.runAsync("captureLastState") {
       ecs.getClusterInfo(project.id).map { versions =>
-        ProjectLastStatesDao.upsert(
+        play.api.Play.current.injector.instanceOf[ProjectLastStatesWriteDao].upsert(
           UsersDao.systemUser,
           project,
           StateForm(versions = versions)
