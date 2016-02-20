@@ -98,7 +98,7 @@ object ShasDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ShaCreated(form.projectId, id)
+        // MainActor.ref ! MainActor.Messages.ShaCreated(form.projectId, id)
 
         Right(
           findById(Authorization.All, id).getOrElse {
@@ -164,7 +164,7 @@ object ShasDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
+        // MainActor.ref ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
 
         Right(
           findById(Authorization.All, sha.id).getOrElse {

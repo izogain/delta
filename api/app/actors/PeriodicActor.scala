@@ -32,7 +32,7 @@ class PeriodicActor extends Actor with Util {
             Logger.info(s"PeriodicActor: Project[${project.id}] is already active")
           }
           case false => {
-            MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+            sender ! MainActor.Messages.ProjectSync(project.id)
           }
         }
       }
@@ -42,7 +42,7 @@ class PeriodicActor extends Actor with Util {
       Pager.create { offset =>
         ProjectsDao.findAll(Authorization.All, offset = offset)
       }.foreach { project =>
-        MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+        sender ! MainActor.Messages.ProjectSync(project.id)
       }
     }
 

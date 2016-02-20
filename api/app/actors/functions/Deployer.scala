@@ -1,5 +1,6 @@
 package io.flow.delta.actors.functions
 
+import akka.actor.ActorRef
 import io.flow.delta.actors.{MainActor, SupervisorResult}
 import io.flow.delta.api.lib.{StateDiff, StateFormatter}
 import io.flow.delta.lib.Text
@@ -21,7 +22,7 @@ case class Deployer(project: Project, last: State, desired: State) {
     * the last instances which in turn leaves a service offline or
     * unhealthy.
     */
-  def scale(): SupervisorResult = {
+  def scale(main: ActorRef): SupervisorResult = {
     StateDiff.up(last.versions, desired.versions).toList match {
       case Nil => {
         StateDiff.down(last.versions, desired.versions).toList match {
@@ -34,13 +35,13 @@ case class Deployer(project: Project, last: State, desired: State) {
             )
           }
           case diffs => {
-            MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
+            main ! MainActor.Messages.Scale(project.id, diffs)
             SupervisorResult.Change(s"Scale Down: " + toLabel(diffs))
           }
         }
       }
       case diffs => {
-        MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
+        main ! MainActor.Messages.Scale(project.id, diffs)
         SupervisorResult.Change(s"Scale Up: " + toLabel(diffs))
       }
     }

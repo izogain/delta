@@ -26,7 +26,7 @@ object ProjectActor {
   trait Message
 
   object Messages {
-    case class Data(id: String) extends Message
+    //case class Data(id: String) extends Message
 
     case object CheckLastState extends Message
 
@@ -34,16 +34,26 @@ object ProjectActor {
 
     case object CreateHooks extends Message
 
+    case class MonitorScale(imageName: String, imageVersion: String) extends Message
+
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
-    case class MonitorScale(imageName: String, imageVersion: String) extends Message
+    case object Setup extends Message    
+  }
+
+  trait Factory {
+    def apply(projectId: String): Actor
   }
 
 }
 
-class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) extends Actor with Util with DataProject with EventLog {
+class ProjectActor @javax.inject.Inject() (
+  registryClient: RegistryClient,
+  @com.google.inject.assistedinject.Assisted projectId: String
+) extends Actor with Util with DataProject with EventLog {
 
-  override val logPrefix = "ProjectActor"
+  override val logPrefix = s"ProjectActor[$projectId]"
+  println(s"logPrefix[$logPrefix]")
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
@@ -53,8 +63,9 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
 
   def receive = {
 
-    case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      setDataProject(id)
+    // case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.Setup => withVerboseErrorHandler(msg) {
+      setDataProject(projectId)
 
       // Verify hooks, AWS have been setup
       self ! ProjectActor.Messages.CreateHooks
@@ -182,7 +193,7 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
     }
   }
 
-  def captureLastState(project: Project): Future[Unit] = {
+  def captureLastState(project: Project): Future[String] = {
     log.runAsync("captureLastState") {
       ecs.getClusterInfo(project.id).map { versions =>
         ProjectLastStatesDao.upsert(
@@ -190,6 +201,7 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
           project,
           StateForm(versions = versions)
         )
+        StateFormatter.label(versions)
       }
     }
   }

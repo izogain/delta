@@ -125,7 +125,7 @@ object ProjectsDao {
           SettingsDao.create(c, createdBy, id, form.settings)
         }
 
-        MainActor.ref ! MainActor.Messages.ProjectCreated(id)
+        // MainActor.ref ! MainActor.Messages.ProjectCreated(id)
 
         Right(
           findById(Authorization.All, id).getOrElse {
@@ -160,7 +160,7 @@ object ProjectsDao {
           SettingsDao.upsert(c, createdBy, project.id, form.settings)
         }
 
-        MainActor.ref ! MainActor.Messages.ProjectUpdated(project.id)
+        // MainActor.ref ! MainActor.Messages.ProjectUpdated(project.id)
 
         Right(
           findById(Authorization.All, project.id).getOrElse {
@@ -189,7 +189,7 @@ object ProjectsDao {
 
     Delete.delete("projects", deletedBy.id, project.id)
 
-    MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
+    // MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
   }
 
   def findByOrganizationIdAndName(auth: Authorization, organizationId: String, name: String): Option[Project] = {

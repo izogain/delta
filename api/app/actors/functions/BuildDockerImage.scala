@@ -6,7 +6,7 @@ import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
 import play.api.Logger
 import play.libs.Akka
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -19,18 +19,22 @@ import scala.util.{Failure, Success, Try}
 object BuildDockerImage extends SupervisorFunction {
 
   override def run(
+    mainActor: ActorRef,
     project: Project
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
     Future {
-      BuildDockerImage(project).run
+      BuildDockerImage(mainActor, project).run
     }
   }
 
 }
 
-case class BuildDockerImage(project: Project) {
+case class BuildDockerImage @javax.inject.Inject() (
+  mainActor: ActorRef,
+  project: Project
+) {
 
   def run(
     implicit ec: scala.concurrent.ExecutionContext
@@ -47,7 +51,7 @@ case class BuildDockerImage(project: Project) {
               None
             }
             case None => {
-              MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, version.name)
+              mainActor ! MainActor.Messages.BuildDockerImage(project.id, version.name)
               Some(version.name)
             }
           }

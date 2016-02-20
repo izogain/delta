@@ -7,14 +7,11 @@ import play.api.libs.concurrent.Akka
 import akka.actor._
 import play.api.Logger
 import play.api.Play.current
+import play.api.libs.concurrent.InjectedActorSupport
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object MainActor {
-
-  def props() = Props(new MainActor("main"))
-
-  lazy val ref = Akka.system.actorOf(props(), "main")
 
   lazy val SystemUser = db.UsersDao.systemUser
 
@@ -46,10 +43,15 @@ object MainActor {
   }
 }
 
+@javax.inject.Singleton
+class MainActor @javax.inject.Inject() (
+  projectFactory: ProjectActor.Factory,
+  application: play.api.Application
+) extends Actor with ActorLogging with Util with InjectedActorSupport{
 
-class MainActor(name: String) extends Actor with ActorLogging with Util {
+  private[this] implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
 
-  implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
+  private[this] val name = "main"
 
   private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
@@ -155,8 +157,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
 
   def upsertProjectActor(id: String): ActorRef = {
     projectActors.lift(id).getOrElse {
-      val ref = Akka.system.actorOf(Props[ProjectActor], name = s"$name:projectActor:$id")
-      ref ! ProjectActor.Messages.Data(id)
+      val ref = injectedChild(projectFactory(id), name = s"$name:projectActor:$id")
+      ref ! ProjectActor.Messages.Setup
+      //val ref = Akka.system.actorOf(Props[ProjectActor], name = s"$name:projectActor:$id")
+      //ref ! ProjectActor.Messages.Data(id)
       projectActors += (id -> ref)
       ref
     }

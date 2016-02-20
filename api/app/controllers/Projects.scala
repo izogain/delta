@@ -14,7 +14,8 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Projects @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
@@ -133,7 +134,7 @@ class Projects @javax.inject.Inject() (
 
   def postEventsAndPursueDesiredStateById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+      mainActor ! MainActor.Messages.ProjectSync(project.id)
       NoContent
     }
   }

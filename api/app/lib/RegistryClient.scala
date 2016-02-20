@@ -16,7 +16,7 @@ class RegistryClient @javax.inject.Inject() (registry: Registry) {
   }
 
   /**
-    * Blocking call to get an application. Turns a 404 into None
+    * Get an application, turning a 404 into a None
     */
   def getById(
     id: String

@@ -14,7 +14,7 @@ import play.api.libs.json._
 object ProjectDesiredStatesDao extends ProjectStatesDao("project_desired_states", "pds") {
 
   override def onChange(projectId: String) {
-    MainActor.ref ! MainActor.Messages.ProjectDesiredStateUpdated(projectId)
+    // MainActor.ref ! MainActor.Messages.ProjectDesiredStateUpdated(projectId)
   }
 
 }
@@ -22,7 +22,7 @@ object ProjectDesiredStatesDao extends ProjectStatesDao("project_desired_states"
 object ProjectLastStatesDao extends ProjectStatesDao("project_last_states", "pls") {
 
   override def onChange(projectId: String) {
-    MainActor.ref ! MainActor.Messages.ProjectLastStateUpdated(projectId)
+    // MainActor.ref ! MainActor.Messages.ProjectLastStateUpdated(projectId)
   }
 
 }

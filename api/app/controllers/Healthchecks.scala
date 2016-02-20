@@ -7,12 +7,15 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 
-class Healthchecks extends Controller {
+@javax.inject.Singleton
+class Healthchecks @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
+) extends Controller {
 
   private val HealthyJson = Json.toJson(Healthcheck(status = "healthy"))
 
   def getHealthcheck() = Action { request =>
-    io.flow.delta.actors.MainActor.ref // wake up actor
+    println("MANI: " + mainActor)
     Ok(HealthyJson)
   }
 

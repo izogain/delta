@@ -81,7 +81,7 @@ object UsersDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.UserCreated(id.toString)
+        // MainActor.ref ! MainActor.Messages.UserCreated(id.toString)
 
         Right(
           findById(id).getOrElse {

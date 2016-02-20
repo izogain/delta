@@ -95,7 +95,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
           }
           case true => {
             log.started(format(f))
-            f.run(project).map { result =>
+            f.run(sender, project).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
                   log.changed(format(f, desc))
