@@ -29,7 +29,7 @@ class PeriodicActor extends Actor with Util {
       }.foreach { project =>
         isActive(project.id) match {
           case true => {
-            Logger.info(s"PeriodicActor: Project[${project.id}] is already active")
+            Logger.info(s"PeriodicActor: Project[${project.id}] is currently active - skipping sync")
           }
           case false => {
             sender ! MainActor.Messages.ProjectSync(project.id)
