@@ -13,7 +13,7 @@ class SubscriptionsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "upsert" in {
     val form = createSubscriptionForm()
-    val subscription1 = SubscriptionsDao.create(systemUser, form).right.get
+    val subscription1 = SubscriptionsDao.upsert(systemUser, form)
 
     val subscription2 = SubscriptionsDao.upsert(systemUser, form)
     subscription1.id must be(subscription2.id)
@@ -58,8 +58,8 @@ class SubscriptionsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "findAll by identifier" in {
     val user = createUser()
+    val subscription = db.SubscriptionsDao.upsert(systemUser, createSubscriptionForm(user = user))
     val identifier = UserIdentifiersDao.latestForUser(systemUser, user).value
-    val subscription = createSubscription(createSubscriptionForm(user = user))
 
     SubscriptionsDao.findAll(identifier = Some(identifier)).map(_.id) must be(Seq(subscription.id))
     SubscriptionsDao.findAll(identifier = Some(createTestKey())) must be(Nil)
