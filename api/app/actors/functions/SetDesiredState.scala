@@ -1,6 +1,5 @@
 package io.flow.delta.actors.functions
 
-import akka.actor.ActorRef
 import db.{ProjectDesiredStatesDao, ProjectDesiredStatesWriteDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
@@ -17,7 +16,6 @@ object SetDesiredState extends SupervisorFunction {
   val DefaultNumberInstances = 2
 
   override def run(
-    main: ActorRef,
     project: Project
   ) (
     implicit ec: scala.concurrent.ExecutionContext

@@ -93,7 +93,7 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
           }
           case true => {
             log.started(format(f))
-            f.run(sender, project).map { result =>
+            f.run(project).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
                   log.changed(format(f, desc))

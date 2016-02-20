@@ -1,6 +1,5 @@
 package io.flow.delta.actors.functions
 
-import akka.actor.ActorRef
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
@@ -11,7 +10,6 @@ import scala.concurrent.Future
 object SyncMasterSha extends SupervisorFunction {
 
   def run(
-    main: ActorRef,
     project: Project
   ) (
     implicit ec: scala.concurrent.ExecutionContext

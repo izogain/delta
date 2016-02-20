@@ -1,6 +1,5 @@
 package io.flow.delta.actors.functions
 
-import akka.actor.ActorRef
 import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
@@ -10,8 +9,6 @@ import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
 import play.api.Logger
-import play.libs.Akka
-import akka.actor.Actor
 import scala.concurrent.Future
 
 /**
@@ -23,7 +20,6 @@ object TagMaster extends SupervisorFunction {
   val InitialTag = "0.0.1"
 
   override def run(
-    main: ActorRef,
     project: Project
   ) (
     implicit ec: scala.concurrent.ExecutionContext

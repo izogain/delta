@@ -12,11 +12,14 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  private[this] lazy val projectDesiredStatesWriteDao = app.injector.instanceOf[ProjectDesiredStatesWriteDao]
+  private[this] lazy val projectLastStatesWriteDao = app.injector.instanceOf[ProjectLastStatesWriteDao]
+
   def createProjectDesiredState(
     project: Project = createProject(),
     form: StateForm = createStateForm()
   ): State = {
-    rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, form))
+    rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, form))
   }
 
   def createStateForm(): StateForm = {
@@ -30,22 +33,22 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "create desired" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, createStateForm()))
+    val state = rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "create actual" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectLastStatesDao.create(systemUser, project, createStateForm()))
+    val state = rightOrErrors(projectLastStatesWriteDao.create(systemUser, project, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "upsert" in {
     val project = createProject()
-    val state = rightOrErrors(ProjectDesiredStatesDao.upsert(systemUser, project, createStateForm()))
-    val second = rightOrErrors(ProjectDesiredStatesDao.upsert(systemUser, project, createStateForm()))
+    val state = rightOrErrors(projectDesiredStatesWriteDao.upsert(systemUser, project, createStateForm()))
+    val second = rightOrErrors(projectDesiredStatesWriteDao.upsert(systemUser, project, createStateForm()))
     second.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
@@ -53,7 +56,7 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "delete" in {
     val project = createProject()
     val state = createProjectDesiredState(project)
-    ProjectDesiredStatesDao.delete(systemUser, project)
+    projectDesiredStatesWriteDao.delete(systemUser, project)
     ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) must be(None)
   }
 
@@ -66,7 +69,7 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     )
     
     val project = createProject()
-    val state = rightOrErrors(ProjectDesiredStatesDao.create(systemUser, project, form))
+    val state = rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, form))
     state.versions.map(_.name) must be(Seq("0.0.2"))
     state.versions.map(_.instances) must be(Seq(2))
   }

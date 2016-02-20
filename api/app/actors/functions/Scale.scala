@@ -1,8 +1,7 @@
 package io.flow.delta.actors.functions
 
-import akka.actor.ActorRef
 import db.{ProjectLastStatesDao, ProjectDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, ProjectActor, SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, MainActorProvider, ProjectActor, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
@@ -19,7 +18,6 @@ object Scale extends SupervisorFunction {
   private[this] val SecondsUntilStale = (ProjectActor.CheckLastStateIntervalSeconds * 2.5).toInt
 
   override def run(
-    main: ActorRef,
     project: Project
   ) (
     implicit ec: scala.concurrent.ExecutionContext
@@ -34,18 +32,18 @@ object Scale extends SupervisorFunction {
         }
 
         case (None, Some(_)) => {
-          main ! MainActor.Messages.CheckLastState(project.id)
+          MainActorProvider.ref ! MainActor.Messages.CheckLastState(project.id)
           SupervisorResult.Change(s"Requested CheckLastState as last state is not known")
         }
 
         case (Some(last), Some(desired)) => {
           Scale.isRecent(last.timestamp) match {
             case false => {
-              main ! MainActor.Messages.CheckLastState(project.id)
+              MainActorProvider.ref ! MainActor.Messages.CheckLastState(project.id)
               SupervisorResult.NoChange(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
             }
             case true => {
-              Deployer(project, last, desired).scale(main)
+              Deployer(project, last, desired).scale()
             }
           }
         }
