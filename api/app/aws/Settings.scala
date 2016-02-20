@@ -10,14 +10,18 @@ trait Settings {
   // Use these, per Kunal @ AWS
   // subnet-3538f243 = production-dmz-us-east-1a
   // subnet-6c9c7034 = production-dmz-us-east-1b
-  val subnets = Seq("subnet-3538f243", "subnet-6c9c7034")
+  // subnet-2338f255 = production-private-us-east-1a
+  // subnet-719c7029 = production-private-us-east-1b
+  val elbSubnets = Seq("subnet-3538f243", "subnet-6c9c7034")
+  val asgSubnets = Seq("subnet-719c7029", "subnet-2338f255")
 
   // Security groups for the EC2 instances launch configuration and autoscaling group
   // sg-aa26c6d3 = ssh from bastion
   // sg-47fb1b3e = all traffic from within production vpc
   // sg-31d03048 = nat-production
   // sg-bfe128c7 = production-http-gateway (Use this, per Kunal @ AWS)
-  val securityGroups = Seq("sg-47fb1b3e", "sg-aa26c6d3", "sg-31d03048", "sg-bfe128c7")
+  val lcSecurityGroups = Seq("sg-47fb1b3e", "sg-aa26c6d3", "sg-31d03048")
+  val elbSecurityGroups = Seq("sg-47fb1b3e", "sg-31d03048", "sg-bfe128c7")
 
   // Length of time in seconds after a new Amazon EC2 instance comes into service that Auto Scaling starts checking its health
   val asgHealthCheckGracePeriod = 300

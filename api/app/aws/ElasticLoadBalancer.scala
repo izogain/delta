@@ -54,8 +54,8 @@ object ElasticLoadBalancer extends Settings with Credentials {
         new CreateLoadBalancerRequest()
           .withLoadBalancerName(name)
           .withListeners(elbListeners.asJava)
-          .withSubnets(subnets.asJava)
-          .withSecurityGroups(securityGroups.asJava)
+          .withSubnets(elbSubnets.asJava)
+          .withSecurityGroups(elbSecurityGroups.asJava)
       )
       println(s"Created Load Balancer: ${result.getDNSName}")
     } catch {
