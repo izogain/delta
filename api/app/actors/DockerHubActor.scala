@@ -1,11 +1,11 @@
 package io.flow.delta.actors
 
-import db.{ImagesDao, UsersDao}
+import db.{ImagesDao, ImagesWriteDao, UsersDao}
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
 import io.flow.docker.registry.v0.Client
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
 import play.api.libs.concurrent.Akka
@@ -22,8 +22,6 @@ object DockerHubActor {
 
   object Messages {
 
-    case class Data(projectId: String) extends Message
-
     /**
       * Message to start the build the docker image for the specified
       * version. Note the current implementation does not actually
@@ -31,31 +29,48 @@ object DockerHubActor {
       * completed - thus assuming an automated build in docker hub.
       */
     case class Build(version: String) extends Message
+
+    case object Setup extends Message
   }
 
+  trait Factory {
+    def apply(projectId: String): Actor
+  }
+  
 }
 
-class DockerHubActor extends Actor with Util with DataProject with EventLog {
+class DockerHubActor @javax.inject.Inject() (
+  imagesWriteDao: ImagesWriteDao,
+  @com.google.inject.assistedinject.Assisted projectId: String
+) extends Actor with ErrorHandler with DataProject with EventLog {
 
-  implicit val dockerHubActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
+  implicit val dockerHubActorExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
-  private[this] lazy val v2client = new Client(
-    defaultHeaders = Seq(
-      ("Authorization", s"Bearer ${DefaultConfig.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
+  private[this] lazy val v2client = {
+    val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
+    new Client(
+      defaultHeaders = Seq(
+        ("Authorization", s"Bearer ${config.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
+      )
     )
-  )
+  }
 
   private[this] val IntervalSeconds = 30
 
   def receive = {
 
-    case msg @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setProjectId(projectId)
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
+      println(s"DockerHubActor.Messages.Build($version)")
       withProject { project =>
+        println(s" project[${project.id}]")
         withOrganization { org =>
+          println(s" org[${org.id}]")
+
+          println(s" staritng post auto build")
           v2client.DockerRepositories.postAutobuild(
             org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
           ).map { dockerHubBuild =>
@@ -64,6 +79,8 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
             case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
             case err => log.message(s"Error creating Docker Hub repository and automated build: $err")
           }
+
+          println(s" staritng sync images")
 
           syncImages(org.docker, project)
 
@@ -112,7 +129,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
 
   def upsertImage(docker: Docker, projectId: String, version: String) {
     ImagesDao.findByProjectIdAndVersion(projectId, version).getOrElse {
-      ImagesDao.create(
+      imagesWriteDao.create(
         UsersDao.systemUser,
         ImageForm(
           projectId = projectId,

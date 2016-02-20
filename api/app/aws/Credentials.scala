@@ -5,9 +5,11 @@ import io.flow.play.util.DefaultConfig
 
 trait Credentials {
 
+  private[this] val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
+
   val awsCredentials = new BasicAWSCredentials(
-    DefaultConfig.requiredString("aws.delta.access.key"),
-    DefaultConfig.requiredString("aws.delta.secret.key")
+    config.requiredString("aws.delta.access.key"),
+    config.requiredString("aws.delta.secret.key")
   )
 
 }

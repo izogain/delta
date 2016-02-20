@@ -41,7 +41,7 @@ case class BuildDockerImage @javax.inject.Inject() (
   ): SupervisorResult = {
     ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) match {
       case None => {
-        SupervisorResult.NoChange("Project does not have an desired state")
+        SupervisorResult.NoChange("Project does not have a desired state")
       }
 
       case Some(state) => {

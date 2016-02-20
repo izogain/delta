@@ -1,6 +1,6 @@
 package io.flow.delta.api.lib
 
-import io.flow.play.clients.Registry
+import io.flow.play.clients.{Registry, RegistryConstants}
 import io.flow.play.util.DefaultConfig
 import io.flow.registry.v0.models.Application
 import io.flow.registry.v0.{Authorization, Client}
@@ -9,11 +9,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @javax.inject.Singleton
-class RegistryClient @javax.inject.Inject() (registry: Registry) {
+class RegistryClient @javax.inject.Inject() (
+  registry: Registry,
+  config: DefaultConfig
+) extends RegistryConstants {
 
-  lazy val instance = registry.withHostAndToken("registry") { (host, token) =>
-    new Client(host, auth = Some(Authorization.Basic(token)))
-  }
+  lazy val instance = new Client(
+    registry.host("registry"),
+    auth = Some(Authorization.Basic(config.requiredString(TokenVariableName)))
+  )
 
   /**
     * Get an application, turning a 404 into a None

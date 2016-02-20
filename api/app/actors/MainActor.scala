@@ -1,11 +1,11 @@
 package io.flow.delta.actors
 
 import io.flow.delta.api.lib.StateDiff
-import io.flow.play.actors.Util
+import io.flow.play.actors.{ErrorHandler, Scheduler}
 import io.flow.postgresql.Authorization
 import play.api.libs.concurrent.Akka
 import akka.actor._
-import play.api.Logger
+import play.api.{Application, Logger}
 import play.api.Play.current
 import play.api.libs.concurrent.InjectedActorSupport
 import scala.concurrent.ExecutionContext
@@ -46,25 +46,29 @@ object MainActor {
 @javax.inject.Singleton
 class MainActor @javax.inject.Inject() (
   projectFactory: ProjectActor.Factory,
-  application: play.api.Application
-) extends Actor with ActorLogging with Util with InjectedActorSupport{
+  dockerHubFactory: DockerHubActor.Factory, 
+  override val config: io.flow.play.util.DefaultConfig,
+  system: ActorSystem
+) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
 
-  private[this] implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
+  private[this] implicit val mainActorExecutionContext: ExecutionContext = system.dispatchers.lookup("main-actor-context")
 
   private[this] val name = "main"
 
-  private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
+  private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
   private[this] val dockerHubActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val supervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
-  private[this] val periodicActor = Akka.system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
+  private[this] val periodicActor = system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
 
-  scheduleRecurring(periodicActor, "io.flow.delta.api.CheckProjects.seconds", PeriodicActor.Messages.CheckProjects)
+  scheduleRecurring(system, "io.flow.delta.api.CheckProjects.seconds") {
+    periodicActor ! PeriodicActor.Messages.CheckProjects
+  }
 
-  Akka.system.scheduler.scheduleOnce(Duration(1, "seconds")) {
+  system.scheduler.scheduleOnce(Duration(10, "seconds")) {
     periodicActor ! PeriodicActor.Messages.Startup
   }
 
@@ -139,8 +143,8 @@ class MainActor @javax.inject.Inject() (
 
   def upsertDockerHubActor(projectId: String): ActorRef = {
     dockerHubActors.lift(projectId).getOrElse {
-      val ref = Akka.system.actorOf(Props[DockerHubActor], name = s"$name:dockerHubActor:$projectId")
-      ref ! DockerHubActor.Messages.Data(projectId)
+      val ref = injectedChild(dockerHubFactory(projectId), name = s"$name:dockerHubActor:$projectId")
+      ref ! DockerHubActor.Messages.Setup
       dockerHubActors += (projectId -> ref)
       ref
     }
@@ -148,7 +152,7 @@ class MainActor @javax.inject.Inject() (
 
   def upsertUserActor(id: String): ActorRef = {
     userActors.lift(id).getOrElse {
-      val ref = Akka.system.actorOf(Props[UserActor], name = s"$name:userActor:$id")
+      val ref = system.actorOf(Props[UserActor], name = s"$name:userActor:$id")
       ref ! UserActor.Messages.Data(id)
       userActors += (id -> ref)
       ref
@@ -159,8 +163,6 @@ class MainActor @javax.inject.Inject() (
     projectActors.lift(id).getOrElse {
       val ref = injectedChild(projectFactory(id), name = s"$name:projectActor:$id")
       ref ! ProjectActor.Messages.Setup
-      //val ref = Akka.system.actorOf(Props[ProjectActor], name = s"$name:projectActor:$id")
-      //ref ! ProjectActor.Messages.Data(id)
       projectActors += (id -> ref)
       ref
     }
@@ -168,7 +170,7 @@ class MainActor @javax.inject.Inject() (
 
   def upsertSupervisorActor(id: String): ActorRef = {
     supervisorActors.lift(id).getOrElse {
-      val ref = Akka.system.actorOf(Props[SupervisorActor], name = s"$name:supervisorActor:$id")
+      val ref = system.actorOf(Props[SupervisorActor], name = s"$name:supervisorActor:$id")
       ref ! SupervisorActor.Messages.Data(id)
       supervisorActors += (id -> ref)
       ref

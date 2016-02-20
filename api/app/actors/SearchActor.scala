@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import io.flow.delta.v0.models.ProjectSummary
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import db.{ItemForm, ItemsDao, ProjectsDao}
 import play.api.Logger
@@ -17,7 +17,7 @@ object SearchActor {
 
 }
 
-class SearchActor extends Actor with Util {
+class SearchActor extends Actor with ErrorHandler {
 
   def receive = {
 

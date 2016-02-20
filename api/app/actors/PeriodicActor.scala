@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import db.{EventsDao, ProjectsDao}
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.{Authorization, OrderBy, Pager}
 import play.api.Logger
 import akka.actor.Actor
@@ -17,7 +17,7 @@ object PeriodicActor {
 
 }
 
-class PeriodicActor extends Actor with Util {
+class PeriodicActor extends Actor with ErrorHandler {
 
   private[this] val MinutesUntilInactive = 2
   

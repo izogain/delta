@@ -1,6 +1,6 @@
 package io.flow.delta.lib
 
-import io.flow.play.util.DefaultConfig
+import io.flow.play.util.Config
 import io.flow.delta.v0.models.{ItemSummary, ItemSummaryUndefinedType, ProjectSummary}
 
 /**
@@ -10,9 +10,11 @@ import io.flow.delta.v0.models.{ItemSummary, ItemSummaryUndefinedType, ProjectSu
  * provide hard coded urls - but keep in one file for easier
  * maintenance.
  */
-case class Urls(
-  wwwHost: String = DefaultConfig.requiredString("delta.www.host")
+case class Urls @javax.inject.Inject() (
+  config: Config
 ) {
+
+  val wwwHost = config.requiredString("delta.www.host")
 
   def project(id: String) = s"/projects/$id"
 

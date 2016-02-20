@@ -183,10 +183,10 @@ trait Github {
 }
 
 @javax.inject.Singleton
-class DefaultGithub @javax.inject.Inject() () extends Github {
+class DefaultGithub @javax.inject.Inject() (config: DefaultConfig) extends Github {
 
-  private[this] lazy val clientId = DefaultConfig.requiredString("github.delta.client.id")
-  private[this] lazy val clientSecret = DefaultConfig.requiredString("github.delta.client.secret")
+  private[this] lazy val clientId = config.requiredString("github.delta.client.id")
+  private[this] lazy val clientSecret = config.requiredString("github.delta.client.secret")
 
   private[this] lazy val oauthClient = new GithubOauthClient(
     apiUrl = "https://github.com",

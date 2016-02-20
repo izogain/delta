@@ -9,7 +9,7 @@ import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.v0.models.{Project, StateForm}
 import io.flow.delta.lib.Text
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
 import play.api.Logger
 import play.libs.Akka
@@ -47,14 +47,19 @@ object ProjectActor {
 
 class ProjectActor @javax.inject.Inject() (
   registryClient: RegistryClient,
+  config: DefaultConfig,
   @com.google.inject.assistedinject.Assisted projectId: String
-) extends Actor with Util with DataProject with EventLog {
+) extends Actor with ErrorHandler with DataProject with EventLog {
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] lazy val ecs = EC2ContainerService
-  private[this] lazy val elb = ElasticLoadBalancer
-  private[this] lazy val asg = AutoScalingGroup
+  private[this] lazy val ecs = EC2ContainerService(registryClient)
+  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
+  private[this] lazy val asg = AutoScalingGroup(
+    ecs,
+    dockerHubToken = config.requiredString("dockerhub.delta.auth.token"),
+    dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
+  )
 
   def receive = {
 
@@ -231,7 +236,7 @@ class ProjectActor @javax.inject.Inject() (
     }
   }
 
-  private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
+  private[this] val HookBaseUrl = config.requiredString("delta.api.host") + "/webhooks/github/"
   private[this] val HookName = "web"
   private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
 

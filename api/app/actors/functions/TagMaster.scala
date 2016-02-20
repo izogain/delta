@@ -41,6 +41,8 @@ case class TagMaster(project: Project) extends Github {
     sys.error(s"Project id[${project.id}] uri[${project.uri}]: Could not parse")
   }
 
+  private[this] val email = play.api.Play.current.injector.instanceOf[Email]
+
   def run(
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
@@ -106,8 +108,8 @@ case class TagMaster(project: Project) extends Github {
           message = s"Delta automated tag $name",
           `object` = sha,
           tagger = Tagger(
-            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
-            email = Email.fromEmail,
+            name = Seq(email.fromName.first, email.fromName.last).flatten.mkString(" "),
+            email = email.fromEmail,
             date = new DateTime()
           )
         )

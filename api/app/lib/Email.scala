@@ -8,28 +8,30 @@ import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import com.sendgrid._
 
-object Email {
+class Email @javax.inject.Inject() (
+  config: DefaultConfig
+) {
 
-  private[this] val SubjectPrefix = DefaultConfig.requiredString("mail.subject.prefix")
+  private[this] val SubjectPrefix = config.requiredString("mail.subject.prefix")
 
   def subjectWithPrefix(subject: String): String = {
     SubjectPrefix + " " + subject
   }
 
-  val fromEmail = DefaultConfig.requiredString("mail.default.from.email")
+  val fromEmail = config.requiredString("mail.default.from.email")
   val fromName = Name(
-    Some(DefaultConfig.requiredString("mail.default.from.name.first")),
-    Some(DefaultConfig.requiredString("mail.default.from.name.last"))
+    Some(config.requiredString("mail.default.from.name.first")),
+    Some(config.requiredString("mail.default.from.name.last"))
   )
 
-  val localDeliveryDir = DefaultConfig.optionalString("mail.local.delivery.dir").map(Paths.get(_))
+  val localDeliveryDir = config.optionalString("mail.local.delivery.dir").map(Paths.get(_))
 
   // Initialize sendgrid on startup to verify that all of our settings
   // are here. If using localDeliveryDir, set password to a test
   // string.
   private[this] val sendgrid = {
     localDeliveryDir match {
-      case None => new SendGrid(DefaultConfig.requiredString("sendgrid.api.key"))
+      case None => new SendGrid(config.requiredString("sendgrid.api.key"))
       case Some(_) => new SendGrid("development")
     }
   }

@@ -64,6 +64,10 @@ object EventsDao {
     id
   }
 
+  def delete(deletedBy: User, event: Event) {
+    Delete.delete("events", deletedBy.id, event.id)
+  }
+
   def findById(id: String): Option[Event] = {
     findAll(ids = Some(Seq(id)), limit = 1).headOption
   }
