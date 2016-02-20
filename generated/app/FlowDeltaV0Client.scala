@@ -1824,7 +1824,7 @@ package io.flow.delta.v0 {
         name: _root_.scala.Option[String] = None,
         limit: Long = 25,
         offset: Long = 0,
-        sort: String = "-images.created_at"
+        sort: String = "-images.sort_key"
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]] = {
         val queryParameters = Seq(
           projectId.map("project_id" -> _),
@@ -2642,7 +2642,7 @@ package io.flow.delta.v0 {
       name: _root_.scala.Option[String] = None,
       limit: Long = 25,
       offset: Long = 0,
-      sort: String = "-images.created_at"
+      sort: String = "-images.sort_key"
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.Image]]
 
     def getById(

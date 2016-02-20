@@ -126,7 +126,7 @@ object TagsDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'hash -> form.hash.trim,
-            'sort_key -> generateSortKey(form.name.trim),
+            'sort_key -> Util.generateVersionSortKey(form.name.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -154,7 +154,7 @@ object TagsDao {
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'hash -> form.hash.trim,
-            'sort_key -> generateSortKey(form.name.trim),
+            'sort_key -> Util.generateVersionSortKey(form.name.trim),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -170,13 +170,6 @@ object TagsDao {
       case errors => {
         Left(errors)
       }
-    }
-  }
-
-  private[this] def generateSortKey(name: String): String = {
-    Semver.parse(name) match {
-      case None => sys.error(s"Tag[$name] is not semver")
-      case Some(semver) => semver.sortKey
     }
   }
 
