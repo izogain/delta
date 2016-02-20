@@ -64,13 +64,8 @@ class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
-      println(s"DockerHubActor.Messages.Build($version)")
       withProject { project =>
-        println(s" project[${project.id}]")
         withOrganization { org =>
-          println(s" org[${org.id}]")
-
-          println(s" staritng post auto build")
           v2client.DockerRepositories.postAutobuild(
             org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
           ).map { dockerHubBuild =>
@@ -79,8 +74,6 @@ class DockerHubActor @javax.inject.Inject() (
             case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
             case err => log.message(s"Error creating Docker Hub repository and automated build: $err")
           }
-
-          println(s" staritng sync images")
 
           syncImages(org.docker, project)
 
@@ -109,7 +102,6 @@ class DockerHubActor @javax.inject.Inject() (
 
 
   def syncImages(docker: Docker, project: Project) {
-    println(s"syncImages(${docker.organization}, ${project.id})")
     for {
       tags <- v2client.V2Tags.get(docker.organization, project.id)
     } yield {
