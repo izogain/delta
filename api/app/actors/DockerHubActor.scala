@@ -30,6 +30,8 @@ object DockerHubActor {
       */
     case class Build(version: String) extends Message
 
+    case class Monitor(version: String) extends Message    
+
     case object Setup extends Message
   }
 
@@ -75,6 +77,14 @@ class DockerHubActor @javax.inject.Inject() (
             case err => log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
           }
 
+          self ! DockerHubActor.Messages.Monitor(version)
+        }
+      }
+    }
+
+    case msg @ DockerHubActor.Messages.Monitor(version) => withVerboseErrorHandler(msg) {
+      withProject { project =>
+        withOrganization { org =>
           syncImages(org.docker, project)
 
           val imageFullName = s"${org.docker.organization}/${project.id}:$version"
@@ -97,7 +107,7 @@ class DockerHubActor @javax.inject.Inject() (
       }
     }
 
-   case msg: Any => logUnhandledMessage(msg)
+    case msg: Any => logUnhandledMessage(msg)
  }
 
 
