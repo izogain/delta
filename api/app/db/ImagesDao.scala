@@ -156,7 +156,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        // MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.projectId, id, form.version.trim)
 
         Right(
           ImagesDao.findById(id).getOrElse {
@@ -182,7 +182,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        // MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.version.trim)
 
         Right(
           ImagesDao.findById(image.id).getOrElse {
