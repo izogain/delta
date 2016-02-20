@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import io.flow.delta.api.lib.{Semver, StateFormatter}
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
-import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
+import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.v0.models.{Project, StateForm}
 import io.flow.delta.lib.Text
 import io.flow.play.actors.Util
@@ -45,6 +45,10 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   override val logPrefix = "ProjectActor"
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
+
+  private[this] lazy val ecs = EC2ContainerService(registryClient)
+  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
+  private[this] lazy val asg = AutoScalingGroup(ecs)
 
   def receive = {
 
@@ -127,14 +131,15 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def configureAWS(project: Project): Future[Unit] = {
-    log.started(s"Configuring EC2")
-    for {
-      cluster <- createCluster(project)
-      lc <- createLaunchConfiguration(project)
-      elb <- createLoadBalancer(project)
-      asg <- createAutoScalingGroup(project, lc, elb)
-    } yield {
-      log.completed("Configuring EC2")
+    log.runAsync("configureAWS") {
+      for {
+        cluster <- createCluster(project)
+        lc <- createLaunchConfiguration(project)
+        elb <- createLoadBalancer(project)
+        asg <- createAutoScalingGroup(project, lc, elb)
+      } yield {
+        // All steps have completed
+      }
     }
   }
 
@@ -146,12 +151,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
       log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+        ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        EC2ContainerService.scale(imageName, imageVersion, project.id, diff.desiredInstances)
+        ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
     }
 
@@ -165,19 +170,23 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       ecsServiceOpt <- getServiceInfo(imageName, imageVersion, project)
     } yield {
       ecsServiceOpt match {
-        case None => sys.error(s"Cannot find thing to monitor - project $project.id, image $imageName, version $imageVersion")
+        case None => {
+          sys.error(s"ECS Service not found for project $project.id, image $imageName, version $imageVersion")
+        }
+
         case Some(ecsService) => {
           val running = ecsService.getRunningCount
           val desired = ecsService.getDesiredCount
           val pending = ecsService.getPendingCount
           val status = ecsService.getStatus
+          val intervalSeconds = 5
 
           if (running == desired) {
             log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
           } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~5 seconds.")
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~$intervalSeconds seconds.")
 
-            Akka.system.scheduler.scheduleOnce(Duration(5, "seconds")) {
+            Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
               self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
             }
           }
@@ -187,52 +196,44 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   }
 
   def captureLastState(project: Project): Future[Unit] = {
-    log.started(s"Capturing last state")
-    EC2ContainerService.getClusterInfo(project.id).map { versions =>
-      ProjectLastStatesDao.upsert(
-        UsersDao.systemUser,
-        project,
-        StateForm(versions = versions)
-      )
-      log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
-    }.recover {
-      case ex: Throwable => throw ex
+    log.runAsync("captureLastState") {
+      ecs.getClusterInfo(project.id).map { versions =>
+        ProjectLastStatesDao.upsert(
+          UsersDao.systemUser,
+          project,
+          StateForm(versions = versions)
+        )
+      }
     }
   }
 
   def getServiceInfo(imageName: String, imageVersion: String, project: Project): Future[Option[Service]] = {
     log.runSync("Getting ECS service Info") {
-      EC2ContainerService.getServiceInfo(imageName, imageVersion, project.id)
+      ecs.getServiceInfo(imageName, imageVersion, project.id)
     }
   }
 
   def createLaunchConfiguration(project: Project): Future[String] = {
     log.runSync("EC2 auto scaling group launch configuration") {
-      AutoScalingGroup.createLaunchConfiguration(project.id)
+      asg.createLaunchConfiguration(project.id)
     }
   }
 
   def createLoadBalancer(project: Project): Future[String] = {
     log.runAsync("EC2 load balancer") {
-      ElasticLoadBalancer.createLoadBalancerAndHealthCheck(project.id)
+      elb.createLoadBalancerAndHealthCheck(project.id)
     }
   }
 
   def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String): Future[String] = {
-    Future {
-      log.started("EC2 auto scaling group")
-      val asg = AutoScalingGroup.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
-      log.completed(s"EC2 auto scaling group: [$asg]")
-      asg
+    log.runSync("EC2 auto scaling group") {
+      asg.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
     }
   }
 
   def createCluster(project: Project): Future[String] = {
-     Future {
-       log.started("Create Cluster")
-       val cluster = EC2ContainerService.createCluster(project.id)
-       log.completed(s"Create Cluster $cluster")
-       cluster
+    log.runSync("Create cluster") {
+       ecs.createCluster(project.id)
     }
   }
 
