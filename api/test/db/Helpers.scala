@@ -128,7 +128,7 @@ trait Helpers {
   def createUser(
     form: UserForm = createUserForm()
   ): User = {
-    rightOrErrors(UsersDao.create(None, form))
+    rightOrErrors(injector.instanceOf[UsersWriteDao].create(None, form))
   }
 
   def createUserForm(
@@ -248,7 +248,7 @@ trait Helpers {
     form: ShaForm = createShaForm(),
     user: User = systemUser
   ): Sha = {
-    rightOrErrors(ShasDao.create(user, form))
+    rightOrErrors(injector.instanceOf[ShasWriteDao].create(user, form))
   }
 
   def createShaForm(
@@ -265,7 +265,7 @@ trait Helpers {
     form: TagForm = createTagForm(),
     user: User = systemUser
   ): Tag = {
-    rightOrErrors(TagsDao.create(user, form))
+    rightOrErrors(injector.instanceOf[TagsWriteDao].create(user, form))
   }
 
   def createTagForm(

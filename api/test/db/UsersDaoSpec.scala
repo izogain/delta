@@ -12,6 +12,8 @@ class UsersDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  lazy val usersWriteDao = app.injector.instanceOf[UsersWriteDao]
+
   "Special users" must {
     "anonymous user exists" in {
       UsersDao.anonymousUser.email must be(
@@ -118,7 +120,7 @@ class UsersDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
         first = Some("Michael"),
         last = Some("Bryzek")
       )
-      UsersDao.create(
+      usersWriteDao.create(
         createdBy = None,
         form = createUserForm(
           email = email,
@@ -139,7 +141,7 @@ class UsersDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
         first = Some("  "),
         last = Some("   ")
       )
-      UsersDao.create(
+      usersWriteDao.create(
         createdBy = None,
         form = createUserForm().copy(name = Some(name))
       ) match {
