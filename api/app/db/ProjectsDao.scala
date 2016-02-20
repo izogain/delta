@@ -24,6 +24,59 @@ object ProjectsDao {
       from projects
       left join organizations on organizations.id = projects.organization_id
   """)
+  
+  def findByOrganizationIdAndName(auth: Authorization, organizationId: String, name: String): Option[Project] = {
+    findAll(auth, organizationId = Some(organizationId), name = Some(name), limit = 1).headOption
+  }
+
+  def findById(auth: Authorization, id: String): Option[Project] = {
+    findAll(auth, id = Some(id), limit = 1).headOption
+  }
+
+  def findAll(
+    auth: Authorization,
+    id: Option[String] = None,
+    ids: Option[Seq[String]] = None,
+    organizationId: Option[String] = None,
+    name: Option[String] = None,
+    orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
+    limit: Long = 25,
+    offset: Long = 0
+  ): Seq[Project] = {
+
+    DB.withConnection { implicit c =>
+      Standards.query(
+        BaseQuery,
+        tableName = "projects",
+        auth = Filters(auth).organizations("projects.organization_id", Some("projects.visibility")),
+        id = id,
+        ids = ids,
+        orderBy = orderBy.sql,
+        limit = limit,
+        offset = offset
+      ).
+        optionalText(
+          "organizations.id",
+          organizationId,
+          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
+        ).
+        optionalText(
+          "projects.name",
+          name,
+          columnFunctions = Seq(Query.Function.Lower),
+          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
+        ).
+        as(
+          io.flow.delta.v0.anorm.parsers.Project.parser().*
+        )
+    }
+  }
+  
+}
+
+case class ProjectsWriteDao @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
+) {
 
   private[this] val InsertQuery = """
     insert into projects
@@ -125,10 +178,10 @@ object ProjectsDao {
           SettingsDao.create(c, createdBy, id, form.settings)
         }
 
-        // MainActor.ref ! MainActor.Messages.ProjectCreated(id)
+        mainActor ! MainActor.Messages.ProjectCreated(id)
 
         Right(
-          findById(Authorization.All, id).getOrElse {
+          ProjectsDao.findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create project")
           }
         )
@@ -160,10 +213,10 @@ object ProjectsDao {
           SettingsDao.upsert(c, createdBy, project.id, form.settings)
         }
 
-        // MainActor.ref ! MainActor.Messages.ProjectUpdated(project.id)
+        mainActor ! MainActor.Messages.ProjectUpdated(project.id)
 
         Right(
-          findById(Authorization.All, project.id).getOrElse {
+          ProjectsDao.findById(Authorization.All, project.id).getOrElse {
             sys.error("Failed to create project")
           }
         )
@@ -189,54 +242,8 @@ object ProjectsDao {
 
     Delete.delete("projects", deletedBy.id, project.id)
 
-    // MainActor.ref ! MainActor.Messages.ProjectDeleted(project.id)
+    mainActor ! MainActor.Messages.ProjectDeleted(project.id)
   }
 
-  def findByOrganizationIdAndName(auth: Authorization, organizationId: String, name: String): Option[Project] = {
-    findAll(auth, organizationId = Some(organizationId), name = Some(name), limit = 1).headOption
-  }
-
-  def findById(auth: Authorization, id: String): Option[Project] = {
-    findAll(auth, id = Some(id), limit = 1).headOption
-  }
-
-  def findAll(
-    auth: Authorization,
-    id: Option[String] = None,
-    ids: Option[Seq[String]] = None,
-    organizationId: Option[String] = None,
-    name: Option[String] = None,
-    orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
-    limit: Long = 25,
-    offset: Long = 0
-  ): Seq[Project] = {
-
-    DB.withConnection { implicit c =>
-      Standards.query(
-        BaseQuery,
-        tableName = "projects",
-        auth = Filters(auth).organizations("projects.organization_id", Some("projects.visibility")),
-        id = id,
-        ids = ids,
-        orderBy = orderBy.sql,
-        limit = limit,
-        offset = offset
-      ).
-        optionalText(
-          "organizations.id",
-          organizationId,
-          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
-        ).
-        optionalText(
-          "projects.name",
-          name,
-          columnFunctions = Seq(Query.Function.Lower),
-          valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
-        ).
-        as(
-          io.flow.delta.v0.anorm.parsers.Project.parser().*
-        )
-    }
-  }
 
 }

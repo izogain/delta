@@ -11,8 +11,6 @@ import play.api.libs.json._
 
 object OrganizationsDao {
 
-  val DefaultUserNameLength = 8
-
   private[this] val BaseQuery = Query(s"""
     select organizations.id,
            organizations.user_id,
@@ -25,6 +23,51 @@ object OrganizationsDao {
       from organizations
       join users on users.id = organizations.user_id
   """)
+
+  def findById(auth: Authorization, id: String): Option[Organization] = {
+    findAll(auth, id = Some(id), limit = 1).headOption
+  }
+
+  def findAll(
+    auth: Authorization,
+    id: Option[String] = None,
+    ids: Option[Seq[String]] = None,
+    userId: Option[String] = None,
+    orderBy: OrderBy = OrderBy("organizations.id"),
+    limit: Long = 25,
+    offset: Long = 0
+  ): Seq[Organization] = {
+    DB.withConnection { implicit c =>
+      Standards.query(
+        BaseQuery,
+        tableName = "organizations",
+        auth = Filters(auth).organizations("organizations.id"),
+        id = id,
+        ids = ids,
+        orderBy = orderBy.sql,
+        limit = limit,
+        offset = offset
+      ).
+        and(
+          userId.map { id =>
+            "organizations.id in (select organization_id from memberships where user_id = {user_id})"
+          }
+        ).bind("user_id", userId).
+        as(
+          io.flow.delta.v0.anorm.parsers.Organization.parser().*
+        )
+    }
+
+  }
+
+}
+
+case class OrganizationsWriteDao @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
+  projectsWriteDao: ProjectsWriteDao  
+) {
+
+  val DefaultUserNameLength = 8
 
   private[this] val InsertQuery = """
     insert into organizations
@@ -88,7 +131,7 @@ object OrganizationsDao {
         }
 
         Right(
-          findById(Authorization.All, id).getOrElse {
+          OrganizationsDao.findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create organization")
           }
         )
@@ -130,7 +173,7 @@ object OrganizationsDao {
         }
 
         Right(
-          findById(Authorization.All, organization.id).getOrElse {
+          OrganizationsDao.findById(Authorization.All, organization.id).getOrElse {
             sys.error("Failed to update organization")
           }
         )
@@ -143,7 +186,7 @@ object OrganizationsDao {
     Pager.create { offset =>
       ProjectsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
     }.foreach { project =>
-      ProjectsDao.delete(deletedBy, project)
+      projectsWriteDao.delete(deletedBy, project)
     }
 
     Pager.create { offset =>
@@ -153,42 +196,6 @@ object OrganizationsDao {
     }
 
     Delete.delete("organizations", deletedBy.id, organization.id)
-  }
-
-  def findById(auth: Authorization, id: String): Option[Organization] = {
-    findAll(auth, id = Some(id), limit = 1).headOption
-  }
-
-  def findAll(
-    auth: Authorization,
-    id: Option[String] = None,
-    ids: Option[Seq[String]] = None,
-    userId: Option[String] = None,
-    orderBy: OrderBy = OrderBy("organizations.id"),
-    limit: Long = 25,
-    offset: Long = 0
-  ): Seq[Organization] = {
-    DB.withConnection { implicit c =>
-      Standards.query(
-        BaseQuery,
-        tableName = "organizations",
-        auth = Filters(auth).organizations("organizations.id"),
-        id = id,
-        ids = ids,
-        orderBy = orderBy.sql,
-        limit = limit,
-        offset = offset
-      ).
-        and(
-          userId.map { id =>
-            "organizations.id in (select organization_id from memberships where user_id = {user_id})"
-          }
-        ).bind("user_id", userId).
-        as(
-          io.flow.delta.v0.anorm.parsers.Organization.parser().*
-        )
-    }
-
   }
 
 }

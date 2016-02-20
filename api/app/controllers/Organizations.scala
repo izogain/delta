@@ -1,6 +1,6 @@
 package controllers
 
-import db.OrganizationsDao
+import db.{OrganizationsDao, OrganizationsWriteDao}
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
 import io.flow.delta.v0.models.{Organization, OrganizationForm}
@@ -10,7 +10,8 @@ import play.api.mvc._
 import play.api.libs.json._
 
 class Organizations @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  organizationsWriteDao: OrganizationsWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,7 +51,7 @@ class Organizations @javax.inject.Inject() (
         UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
       }
       case s: JsSuccess[OrganizationForm] => {
-        OrganizationsDao.create(request.user, s.get) match {
+        organizationsWriteDao.create(request.user, s.get) match {
           case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
           case Right(organization) => Created(Json.toJson(organization))
         }
@@ -65,7 +66,7 @@ class Organizations @javax.inject.Inject() (
           UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
         }
         case s: JsSuccess[OrganizationForm] => {
-          OrganizationsDao.update(request.user, organization, s.get) match {
+          organizationsWriteDao.update(request.user, organization, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(updated) => Ok(Json.toJson(updated))
           }
@@ -76,7 +77,7 @@ class Organizations @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withOrganization(request.user, id) { organization =>
-      OrganizationsDao.delete(request.user, organization)
+      organizationsWriteDao.delete(request.user, organization)
       NoContent
     }
   }
