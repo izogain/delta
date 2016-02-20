@@ -75,24 +75,14 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          captureLastState(project)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Error checking last state", Some(e))
-        }
+        captureLastState(project)
       }
     }
 
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          configureAWS(project)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Error configuring EC2", Some(e))
-        }
+        configureAWS(project)
       }
     }
 
@@ -107,24 +97,14 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
     case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
       withProject { project =>
         diffs.foreach { diff =>
-          Try(
-            scale(project, diff)
-          ) match {
-            case Success(_) => // do nothing
-            case Failure(e) => log.completed("Scale attempt ended with failure", Some(e))
-          }
+          scale(project, diff)
         }
       }
     }
 
     case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          monitorScale(project, imageName, imageVersion)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Monitor Scale attempt ended with failure", Some(e))
-        }
+        monitorScale(project, imageName, imageVersion)
       }
     }
 
@@ -159,6 +139,7 @@ class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) exten
       log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
+
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
