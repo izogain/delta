@@ -48,7 +48,8 @@ object MainActor {
 
 
 class MainActor(name: String) extends Actor with ActorLogging with Util {
-  import scala.concurrent.duration._
+
+  implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
 
   private[this] val searchActor = Akka.system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
@@ -58,9 +59,10 @@ class MainActor(name: String) extends Actor with ActorLogging with Util {
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
   private[this] val periodicActor = Akka.system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
-  scheduleRecurring(periodicActor, "io.flow.delta.api.CheckProjects.seconds", PeriodicActor.Messages.CheckProjects)
 
-  implicit val mainActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("main-actor-context")
+  scheduleRecurring("io.flow.delta.api.CheckProjects.seconds") {
+    periodicActor ! PeriodicActor.Messages.CheckProjects
+  }
 
   Akka.system.scheduler.scheduleOnce(Duration(1, "seconds")) {
     periodicActor ! PeriodicActor.Messages.Startup

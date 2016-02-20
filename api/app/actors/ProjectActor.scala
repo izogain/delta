@@ -46,9 +46,9 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] lazy val ecs = EC2ContainerService(registryClient)
-  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
-  private[this] lazy val asg = AutoScalingGroup(ecs)
+  private[this] lazy val ecs = EC2ContainerService
+  private[this] lazy val elb = ElasticLoadBalancer
+  private[this] lazy val asg = AutoScalingGroup
 
   def receive = {
 
