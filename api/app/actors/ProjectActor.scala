@@ -35,12 +35,13 @@ object ProjectActor {
     case object CreateHooks extends Message
 
     case class Scale(diffs: Seq[StateDiff]) extends Message
+
     case class MonitorScale(imageName: String, imageVersion: String) extends Message
   }
 
 }
 
-class ProjectActor extends Actor with Util with DataProject with EventLog {
+class ProjectActor @javax.inject.Inject() (registryClient: RegistryClient) extends Actor with Util with DataProject with EventLog {
 
   override val logPrefix = "ProjectActor"
 
@@ -55,7 +56,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
       setDataProject(id)
 
+      // Verify hooks, AWS have been setup
+      self ! ProjectActor.Messages.CreateHooks
+
       if (isScaleEnabled) {
+        self ! ProjectActor.Messages.ConfigureAWS
+
         withProject { project =>
           Akka.system.scheduler.schedule(
             Duration(1, "second"),
