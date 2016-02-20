@@ -79,35 +79,36 @@ object EC2ContainerService extends Settings with Credentials {
     }
   }
 
-  def getClusterInfo(projectId: String): Seq[Version] = {
-    val cluster = getClusterName(projectId)
-
-    client.listServices(
-      new ListServicesRequest()
-      .withCluster(cluster)
-    ).getServiceArns().asScala.map{serviceArn =>
-      val service = client.describeServices(
-        new DescribeServicesRequest()
+  def getClusterInfo(projectId: String): Future[Seq[Version]] = {
+    Future {
+      val cluster = getClusterName(projectId)
+      client.listServices(
+        new ListServicesRequest()
         .withCluster(cluster)
-        .withServices(Seq(serviceArn).asJava)
-      ).getServices().asScala.headOption.getOrElse {
-        sys.error(s"Service ARN $serviceArn does not exist for cluster $cluster")
-      }
-
-      client.describeTaskDefinition(
-        new DescribeTaskDefinitionRequest()
-        .withTaskDefinition(service.getTaskDefinition)
-      ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
-        case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
-        case Some(containerDef) => {
-          val image = containerDef.getImage()
-
-          // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
-          val pattern = "(\\w+)/(\\w+):(.+)".r
-          val pattern(o, p, version) = image
-          Version(version, service.getRunningCount.toInt)
+      ).getServiceArns().asScala.map{serviceArn =>
+        val service = client.describeServices(
+          new DescribeServicesRequest()
+          .withCluster(cluster)
+          .withServices(Seq(serviceArn).asJava)
+        ).getServices().asScala.headOption.getOrElse {
+          sys.error(s"Service ARN $serviceArn does not exist for cluster $cluster")
         }
-      }
+
+        client.describeTaskDefinition(
+          new DescribeTaskDefinitionRequest()
+          .withTaskDefinition(service.getTaskDefinition)
+        ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
+          case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
+          case Some(containerDef) => {
+            val image = containerDef.getImage()
+
+            // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
+            val pattern = "(\\w+)/(\\w+):(.+)".r
+            val pattern(o, p, version) = image
+            Version(version, service.getRunningCount.toInt)
+          }
+        }
+      }  
     }
   }
 
