@@ -120,13 +120,13 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   private[this] def isScaleEnabled(): Boolean = {
     withSettings { _.scale }.getOrElse(false)
   }
-  
+
   def configureAWS(project: Project): Future[Unit] = {
     log.started(s"Configuring EC2")
     for {
+      cluster <- createCluster(project)
       lc <- createLaunchConfiguration(project)
       elb <- createLoadBalancer(project)
-      cluster <- createCluster(project)
       asg <- createAutoScalingGroup(project, lc, elb)
     } yield {
       log.completed("Configuring EC2")
