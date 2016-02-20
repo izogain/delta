@@ -47,7 +47,7 @@ trait DataProject {
     */
   def withSettings[T](f: Settings => T): Option[T] = {
     dataProject.flatMap { project =>
-      SettingsDao.findById(Authorization.All, project.id).map { settings =>
+      SettingsDao.findByProjectId(Authorization.All, project.id).map { settings =>
         f(settings)
       }
     }
