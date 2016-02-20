@@ -26,8 +26,6 @@ object ProjectActor {
   trait Message
 
   object Messages {
-    //case class Data(id: String) extends Message
-
     case object CheckLastState extends Message
 
     case object ConfigureAWS extends Message // One-time AWS setup
@@ -52,8 +50,7 @@ class ProjectActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with Util with DataProject with EventLog {
 
-  override val logPrefix = s"ProjectActor[$projectId]"
-  println(s"logPrefix[$logPrefix]")
+  override val logPrefix = s"ProjectActor"
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
@@ -65,7 +62,7 @@ class ProjectActor @javax.inject.Inject() (
 
     // case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
     case msg @ ProjectActor.Messages.Setup => withVerboseErrorHandler(msg) {
-      setDataProject(projectId)
+      setProjectId(projectId)
 
       // Verify hooks, AWS have been setup
       self ! ProjectActor.Messages.CreateHooks

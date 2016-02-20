@@ -40,7 +40,7 @@ class SupervisorActor extends Actor with Util with DataProject with EventLog {
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      setDataProject(id)
+      setProjectId(id)
     }
 
     /**

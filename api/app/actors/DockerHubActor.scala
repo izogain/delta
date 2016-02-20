@@ -52,7 +52,7 @@ class DockerHubActor extends Actor with Util with DataProject with EventLog {
   def receive = {
 
     case msg @ DockerHubActor.Messages.Data(projectId) => withVerboseErrorHandler(msg) {
-      setDataProject(projectId)
+      setProjectId(projectId)
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
