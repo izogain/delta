@@ -1,8 +1,8 @@
 package io.flow.delta.actors
 
-import db.{OrganizationsDao, ProjectsDao}
+import db.{OrganizationsDao, ProjectsDao, SettingsDao}
 import io.flow.delta.api.lib.{GithubUtil, Repo}
-import io.flow.delta.v0.models.{Organization, Project}
+import io.flow.delta.v0.models.{Organization, Project, Settings}
 import io.flow.postgresql.Authorization
 import play.api.Logger
 
@@ -37,6 +37,18 @@ trait DataProject {
     dataProject.flatMap { project =>
       OrganizationsDao.findById(Authorization.All, project.organization.id).map { org =>
         f(org)
+      }
+    }
+  }
+
+  /**
+    * Invokes the specified function w/ the current project settings,
+    * but only if we have settings.
+    */
+  def withSettings[T](f: Settings => T): Option[T] = {
+    dataProject.flatMap { project =>
+      SettingsDao.findById(Authorization.All, project.id).map { settings =>
+        f(settings)
       }
     }
   }

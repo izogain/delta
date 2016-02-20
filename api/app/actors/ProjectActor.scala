@@ -52,12 +52,14 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       println(s"ProjectActor.Messages.Data(id)")
       setDataProject(id)
 
-      withProject { project =>
-        Akka.system.scheduler.schedule(
-          Duration(1, "second"),
-          Duration(ProjectActor.CheckLastStateIntervalSeconds, "seconds")
-        ) {
-          self ! ProjectActor.Messages.CheckLastState
+      if (isScaleEnabled) {
+        withProject { project =>
+          Akka.system.scheduler.schedule(
+            Duration(1, "second"),
+            Duration(ProjectActor.CheckLastStateIntervalSeconds, "seconds")
+          ) {
+            self ! ProjectActor.Messages.CheckLastState
+          }
         }
       }
     }
@@ -116,6 +118,10 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
   }
 
+  private[this] def isScaleEnabled(): Boolean = {
+    withSettings { _.scale }.getOrElse(false)
+  }
+  
   def configureAWS(project: Project): Future[Unit] = {
     log.started(s"Configuring EC2")
     for {
