@@ -65,7 +65,12 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        captureLastState(project)
+        Try(
+          captureLastState(project)
+        ) match {
+          case Success(_) => // do nothing
+          case Failure(e) => log.completed("Error checking last state", Some(e))
+        }
       }
     }
 
@@ -120,7 +125,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
   private[this] def isScaleEnabled(): Boolean = {
     withSettings { _.scale }.getOrElse(false)
   }
-  
+
   def configureAWS(project: Project): Future[Unit] = {
     log.started(s"Configuring EC2")
     for {
@@ -181,25 +186,17 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def captureLastState(project: Project) {
-    // We want to get:
-    //  0.0.1: 2 instances
-    //  0.0.2: 1 instance
+  def captureLastState(project: Project): Future[Unit] = {
     log.started(s"Capturing last state")
-    Try {
-      EC2ContainerService.getClusterInfo(project.id)
-    } match {
-      case Success(versions) => {
-        ProjectLastStatesDao.upsert(
-          UsersDao.systemUser,
-          project,
-          StateForm(versions = versions)
-        )
-        log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
-      }
-      case Failure(ex) => {
-        log.completed("Error getting cluster information", Some(ex))
-      }
+    EC2ContainerService.getClusterInfo(project.id).map { versions =>
+      ProjectLastStatesDao.upsert(
+        UsersDao.systemUser,
+        project,
+        StateForm(versions = versions)
+      )
+      log.completed(s"Last state set to: ${StateFormatter.label(versions)}")
+    }.recover {
+      case ex: Throwable => throw ex
     }
   }
 
