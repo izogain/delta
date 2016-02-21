@@ -75,8 +75,13 @@ class DockerHubActor @javax.inject.Inject() (
             ).map { dockerHubBuild =>
               log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
             }.recover {
-              case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
-              case err => log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
+              case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
+                println(s"UNIT[$code]")
+              }
+              case err => {
+                err.printStackTrace(System.err)
+                log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
+              }
             }
 
             self ! DockerHubActor.Messages.Monitor(version)
@@ -150,9 +155,21 @@ class DockerHubActor @javax.inject.Inject() (
 
   def createBuildForm(docker: Docker, scms: Scms, scmsUri: String, build: Build): DockerBuildForm = {
     val fullName = BuildNames.dockerImageName(docker, build)
+    val buildTags = createBuildTags(build.dockerfilePath)
+
+    val vcsRepoName = io.flow.delta.api.lib.GithubUtil.parseUri(scmsUri) match {
+      case Left(errors) => {
+        Logger.warn(s"Error parsing VCS URI[$scmsUri]. defaulting vcsRepoName to[$fullName]: ${errors.mkString(", ")}")
+        fullName
+      }
+      case Right(repo) => {
+        repo.toString
+      }
+    }
+
     DockerBuildForm(
       active = true,
-      buildTags = createBuildTags(),
+      buildTags = buildTags,
       description = s"Automated build for $fullName",
       dockerhubRepoName = fullName,
       isPrivate = true,
@@ -162,20 +179,14 @@ class DockerHubActor @javax.inject.Inject() (
         case Scms.Github => "github"
         case Scms.UNDEFINED(other) => other
       },
-      vcsRepoName = io.flow.delta.api.lib.GithubUtil.parseUri(scmsUri) match {
-        case Left(errors) => {
-          Logger.warn(s"Error parsing VCS URI[$scmsUri]. defaulting vcsRepoName to[$fullName]: ${errors.mkString(", ")}")
-          fullName
-        }
-        case Right(repo) => repo.toString
-      }
+      vcsRepoName = vcsRepoName
     )
   }
 
-  def createBuildTags(): Seq[DockerBuildTag] = {
+  def createBuildTags(dockerfilePath: String): Seq[DockerBuildTag] = {
     Seq(
       DockerBuildTag(
-        dockerfileLocation = "/",
+        dockerfileLocation = dockerfilePath,
         name = "{sourceref}",
         sourceName = "/^[0-9]+\\.[0-9]+\\.[0-9]+$/",
         sourceType = "Tag"
