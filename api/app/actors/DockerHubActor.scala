@@ -112,7 +112,7 @@ class DockerHubActor @javax.inject.Inject() (
             case None => {
               log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
               Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
-                self ! DockerHubActor.Messages.Build(version)
+                self ! DockerHubActor.Messages.Monitor(version)
               }
             }
           }
