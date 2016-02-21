@@ -43,12 +43,16 @@ private[db] class BuildStatesDao(val table: String) {
     select ${table}.id,
            ${table}.versions,
            ${table}.timestamp,
-           projects.id as project_id,
-           projects.name as project_name,
-           projects.uri as project_uri,
-           projects.organization_id as project_organization_id
+           builds.id as build_id,
+           builds.name as build_name,
+           builds.dockerfile_path as build_dockerfile_path,
+           projects.id as build_project_id,
+           projects.name as build_project_name,
+           projects.uri as build_project_uri,
+           projects.organization_id as build_project_organization_id
       from $table
-      join projects on ${table}.project_id = projects.id
+      join builds on builds.id = ${table}.build_id
+      join projects on projects.id = builds.project_id
   """)
 
 

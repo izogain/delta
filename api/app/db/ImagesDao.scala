@@ -16,10 +16,13 @@ object ImagesDao {
            images.build_id,
            images.name,
            images.version,
-           projects.id as project_id,
-           projects.name as project_name,
-           projects.uri as project_uri,
-           projects.organization_id as project_organization_id
+           builds.id as build_id,
+           builds.name as build_name,
+           builds.dockerfile_path as build_dockerfile_path,
+           projects.id as build_project_id,
+           projects.name as build_project_name,
+           projects.uri as build_project_uri,
+           projects.organization_id as build_project_organization_id
       from images
       join builds on builds.id = images.build_id
       join projects on projects.id = builds.project_id
