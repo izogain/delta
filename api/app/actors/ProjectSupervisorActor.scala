@@ -1,14 +1,14 @@
 package io.flow.delta.actors
 
 import akka.actor.Actor
-import db.{ProjectDesiredStatesDao, SettingsDao}
+import db.{BuildsDao, BuildDesiredStatesDao, SettingsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.v0.models.{Project, Settings, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import play.libs.Akka
 
-object SupervisorActor {
+object ProjectSupervisorActor {
 
   val StartedMessage = "started PursueDesiredState"
   
@@ -21,9 +21,12 @@ object SupervisorActor {
     case object PursueDesiredState extends Message
   }
 
-  val All = Seq(
+  val ProjectFunctions = Seq(
     functions.SyncMasterSha,
-    functions.TagMaster,
+    functions.TagMaster
+  )
+
+  val BuildFunctions = Seq(
     functions.SetDesiredState,
     functions.BuildDockerImage,
     functions.Scale
@@ -31,49 +34,35 @@ object SupervisorActor {
 
 }
 
-class SupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
+class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
 
   private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
-    case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
       setProjectId(id)
     }
 
-    /**
-      * For any project that is not active (defined by not having an
-      * event logged in last n seconds), we send a message to bring
-      * that project to its desired state.
-      */
-    case msg @ SupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-        log.message(SupervisorActor.StartedMessage)
-        run(project, settings, SupervisorActor.All)
+        log.message(ProjectSupervisorActor.StartedMessage)
+        run(project, settings, ProjectSupervisorActor.ProjectFunctions)
+
+        BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
+          sender ! MainActor.Messages.BuildSync(build.id)
+        }
+
         log.completed("PursueDesiredState")
       }
     }
 
-    /**
-      * Indicates that something has happened for the tag with
-      * specified name (e.g. 0.0.2). If this tag is in the project's
-      * desired state, triggers PursueDesiredState. Otherwise a
-      * no-op.
-      */
-    case msg @ SupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
       withProject { project =>
-        ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id).map { state =>
-          StateDiff.up(state.versions, Seq(Version(name, 1))) match {
-            case Nil => {
-              state.versions.find(_.name == name) match {
-                case None => // Nothing to do
-                case Some(_) => self ! SupervisorActor.Messages.PursueDesiredState
-              }
-            }
-            case _ => self ! SupervisorActor.Messages.PursueDesiredState
-          }
-        }
+        BuildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
+          sender ! MainActor.Messages.BuildCheckTag(build.id, name)
+        }.toSeq
       }
     }
 
@@ -85,7 +74,7 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
     * SupervisorResult.Error, returns that result. Otherwise will
     * return NoChange at the end of all the functions.
     */
-  private[this] def run(project: Project, settings: Settings, functions: Seq[SupervisorFunction]) {
+  private[this] def run(project: Project, settings: Settings, functions: Seq[ProjectSupervisorFunction]) {
     functions.headOption match {
       case None => {
         SupervisorResult.NoChange("All functions returned without modification")
@@ -121,29 +110,11 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
     }
   }
 
-  /**
-    * Prepend the description with the class name of the
-    * function. This lets us have automatic messages like
-    * "TagMaster: xxx"
-    */
-  private[this] def format(f: Any, desc: String): String = {
-    format(f) + ": " + desc
-  }
-
-  private[this] def format(f: Any): String = {
-    val name = f.getClass.getName
-    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
-    name.substring(idx + 1).dropRight(1) // Remove trailing $
-  }
-
   private[this] def isEnabled(settings: Settings, f: Any): Boolean = {
     format(f) match {
       case "SyncMasterSha" => settings.syncMasterSha
       case "TagMaster" => settings.tagMaster
-      case "SetDesiredState" => settings.setDesiredState
-      case "BuildDockerImage" => settings.buildDockerImage
-      case "Scale" => settings.scale
-      case other => sys.error(s"Cannot determine setting for function[$other]")
+      case other => sys.error(s"Cannot determine project setting for function[$other]")
     }
   }
 

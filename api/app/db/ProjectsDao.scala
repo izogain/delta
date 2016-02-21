@@ -1,12 +1,12 @@
 package db
 
+import anorm._
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
-import io.flow.delta.api.lib.GithubUtil
+import io.flow.delta.api.lib.{BuildNames, GithubUtil}
 import io.flow.play.util.UrlKey
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.User
-import anorm._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
@@ -76,7 +76,7 @@ object ProjectsDao {
 
 case class ProjectsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
-  imagesWriteDao: ImagesWriteDao,
+  buildsWriteDao: BuildsWriteDao,
   shasWriteDao: ShasWriteDao,
   tagsWriteDao: TagsWriteDao
 ) {
@@ -156,7 +156,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     nameErrors ++ visibilityErrors ++ uriErrors ++ organizationErrors
   }
 
-  def create(createdBy: User, form: ProjectForm): Either[Seq[String], Project] = {
+  def create(createdBy: User, form: ProjectForm, dockerfilePaths: Seq[String] = Nil): Either[Seq[String], Project] = {
     validate(createdBy, form) match {
       case Nil => {
 
@@ -166,7 +166,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         
         val id = urlKey.generate(form.name.trim)
 
-        DB.withTransaction { implicit c =>
+        val buildIds: Seq[String] = DB.withTransaction { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
             'organization_id -> org.id,
@@ -179,9 +179,17 @@ case class ProjectsWriteDao @javax.inject.Inject() (
           ).execute()
 
           SettingsDao.create(c, createdBy, id, form.settings)
+
+          dockerfilePaths.map { path =>
+            buildsWriteDao.create(c, createdBy, BuildNames.dockerfilePathToBuildForm(id, path))
+          }
         }
 
         mainActor ! MainActor.Messages.ProjectCreated(id)
+
+        buildIds.foreach { buildId =>
+          mainActor ! MainActor.Messages.BuildCreated(buildId)
+        }
 
         Right(
           ProjectsDao.findById(Authorization.All, id).getOrElse {
@@ -248,9 +256,9 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     }
 
     Pager.create { offset =>
-      ImagesDao.findAll(projectId = Some(project.id), offset = offset)
-    }.foreach { image =>
-      imagesWriteDao.delete(deletedBy, image)
+      BuildsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
+    }.foreach { build =>
+      buildsWriteDao.delete(deletedBy, build)
     }
 
     SettingsDao.deleteByProjectId(deletedBy, project.id)

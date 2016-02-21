@@ -1,9 +1,10 @@
 package controllers
 
-import db.{ProjectsDao,ProjectsWriteDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
+import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
+import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
+import io.flow.delta.v0.models.{Build, Project, ProjectForm, BuildState, SettingsForm}
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
@@ -57,7 +58,14 @@ class Projects @javax.inject.Inject() (
           UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
         }
         case s: JsSuccess[ProjectForm] => {
-          projectsWriteDao.create(request.user, s.get) match {
+          // TODO: val dockerfiles = getDockerfilesFromScms(request.user, form.scms, form.uri)
+          val dockerfiles = if (s.get.name == "delta") {
+            Seq("/Dockerfile.api", "/Dockerfile.www")
+          } else {
+            Seq("/Dockerfile")
+          }
+
+          projectsWriteDao.create(request.user, s.get, dockerfiles) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(project) => Created(Json.toJson(project))
           }
@@ -120,14 +128,18 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getStateAndLatestById(id: String) = Identified { request =>
+  def getBuildsAndStatesById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
       Ok(
         Json.toJson(
-          ProjectState(
-            desired = ProjectDesiredStatesDao.findByProjectId(authorization(request), id),
-            last = ProjectLastStatesDao.findByProjectId(authorization(request), id)
-          )
+          BuildsDao.findAllByProjectId(authorization(request), project.id).map { build =>
+            BuildState(
+              name = build.name,
+              desired = BuildDesiredStatesDao.findByBuildId(authorization(request), build.id),
+              last = BuildLastStatesDao.findByBuildId(authorization(request), build.id),
+              latestImage = ImagesDao.findAll(buildId = Some(build.id)).headOption.map( i => s"${i.name}:${i.version}" )
+            )
+          }.toSeq
         )
       )
     }
@@ -140,10 +152,23 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getStateAndDesiredById(id: String) = TODO
+  def getBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def postStateAndDesiredById(id: String) = TODO
+  def postBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def getStateAndLastById(id: String) = TODO
+  def getBuildsAndStatesAndLastByIdAndBuildName(id: String, buildName: String) = TODO
+
+  def withBuild(user: User, projectId: String, name: String)(
+    f: Build => Result
+  ): Result = {
+    BuildsDao.findByProjectIdAndName(Authorization.User(user.id), projectId, name) match {
+      case None => {
+        Results.NotFound
+      }
+      case Some(build) => {
+        f(build)
+      }
+    }
+  }
 
 }

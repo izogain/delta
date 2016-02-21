@@ -1,9 +1,9 @@
 package io.flow.delta.actors.functions
 
-import db.{ProjectLastStatesDao, ProjectDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, MainActorProvider, ProjectActor, SupervisorFunction, SupervisorResult}
+import db.{BuildLastStatesDao, BuildDesiredStatesDao}
+import io.flow.delta.actors.{MainActor, MainActorProvider, BuildActor, BuildSupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.Project
+import io.flow.delta.v0.models.Build
 import org.joda.time.DateTime
 import scala.concurrent.Future
 
@@ -13,17 +13,17 @@ import scala.concurrent.Future
   * scale up or down in production. Scale Up will always happen first;
   * scale down only initiatied after Scale Up is complete.
   */
-object Scale extends SupervisorFunction {
+object Scale extends BuildSupervisorFunction {
 
-  private[this] val SecondsUntilStale = (ProjectActor.CheckLastStateIntervalSeconds * 2.5).toInt
+  private[this] val SecondsUntilStale = (BuildActor.CheckLastStateIntervalSeconds * 2.5).toInt
 
   override def run(
-    project: Project
+    build: Build
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    val lastState = ProjectLastStatesDao.findByProjectId(Authorization.All, project.id)
-    val desiredState = ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id)
+    val lastState = BuildLastStatesDao.findByBuildId(Authorization.All, build.id)
+    val desiredState = BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id)
     Future {
       (lastState, desiredState) match {
 
@@ -32,18 +32,18 @@ object Scale extends SupervisorFunction {
         }
 
         case (None, Some(_)) => {
-          MainActorProvider.ref ! MainActor.Messages.CheckLastState(project.id)
+          MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
           SupervisorResult.Change(s"Requested CheckLastState as last state is not known")
         }
 
         case (Some(last), Some(desired)) => {
           Scale.isRecent(last.timestamp) match {
             case false => {
-              MainActorProvider.ref ! MainActor.Messages.CheckLastState(project.id)
+              MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
               SupervisorResult.NoChange(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
             }
             case true => {
-              Deployer(project, last, desired).scale()
+              Deployer(build, last, desired).scale()
             }
           }
         }

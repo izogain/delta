@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import io.flow.delta.v0.models.{Project, Settings}
+import io.flow.delta.v0.models.{Build, Project, Settings}
 import scala.concurrent.Future
 
 sealed trait SupervisorResult
@@ -11,7 +11,7 @@ object SupervisorResult {
   case class Error(description: String, ex: Throwable) extends SupervisorResult
 }
 
-trait SupervisorFunction {
+trait ProjectSupervisorFunction {
 
   /**
    * Responsible for actually running this function
@@ -23,3 +23,17 @@ trait SupervisorFunction {
   ): Future[SupervisorResult]
 
 }
+
+trait BuildSupervisorFunction {
+
+  /**
+   * Responsible for actually running this function
+   */
+  def run(
+    build: Build
+  ) (
+    implicit ec: scala.concurrent.ExecutionContext
+  ): Future[SupervisorResult]
+
+}
+

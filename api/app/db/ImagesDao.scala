@@ -13,24 +13,28 @@ object ImagesDao {
 
   private[this] val BaseQuery = Query(s"""
     select images.id,
-           images.project_id,
+           images.build_id,
            images.name,
            images.version,
-           projects.id as project_id,
-           projects.name as project_name,
-           projects.uri as project_uri,
-           projects.organization_id as project_organization_id
+           builds.id as build_id,
+           builds.name as build_name,
+           builds.dockerfile_path as build_dockerfile_path,
+           projects.id as build_project_id,
+           projects.name as build_project_name,
+           projects.uri as build_project_uri,
+           projects.organization_id as build_project_organization_id
       from images
-      join projects on projects.id = images.project_id
+      join builds on builds.id = images.build_id
+      join projects on projects.id = builds.project_id
   """)
 
   def findById(id: String): Option[Image] = {
     findAll(ids = Some(Seq(id)), limit = 1).headOption
   }
 
-  def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
+  def findByBuildIdAndVersion(buildId: String, version: String): Option[Image] = {
     findAll(
-      projectId = Some(projectId),
+      buildId = Some(buildId),
       versions = Some(Seq(version)),
       limit = 1
     ).headOption
@@ -38,10 +42,10 @@ object ImagesDao {
 
   def findAll(
    ids: Option[Seq[String]] = None,
-   projectId: Option[String] = None,
+   buildId: Option[String] = None,
    names: Option[Seq[String]] = None,
    versions: Option[Seq[String]] = None,
-   orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
+   orderBy: OrderBy = OrderBy("lower(images.name),-images.sort_key"),
    limit: Long = 25,
    offset: Long = 0
   ): Seq[Image] = {
@@ -49,7 +53,7 @@ object ImagesDao {
       BaseQuery.
         optionalIn("images.id", ids).
         optionalIn("images.name", names).
-        equals("images.project_id", projectId).
+        equals("images.build_id", buildId).
         optionalIn("images.version", versions).
         orderBy(orderBy.sql).
         limit(limit).
@@ -68,14 +72,14 @@ case class ImagesWriteDao @javax.inject.Inject() (
 
   private[this] val InsertQuery = """
     insert into images
-    (id, project_id, name, version, sort_key, updated_by_user_id)
+    (id, build_id, name, version, sort_key, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {version}, {sort_key}, {updated_by_user_id})
+    ({id}, {build_id}, {name}, {version}, {sort_key}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update images
-       set project_id = {project_id},
+       set build_id = {build_id},
            name = {name},
            version = {version},
            sort_key = {sort_key},
@@ -103,25 +107,25 @@ case class ImagesWriteDao @javax.inject.Inject() (
       }
     }
 
-    val projectErrors = ProjectsDao.findById(Authorization.All, form.projectId) match {
-      case None => Seq("Project not found")
-      case Some(project) => Nil
+    val buildErrors = BuildsDao.findById(Authorization.All, form.buildId) match {
+      case None => Seq("Build not found")
+      case Some(build) => Nil
     }
 
-    nameErrors ++ versionErrors ++ projectErrors
+    nameErrors ++ versionErrors ++ buildErrors
   }
 
   /**
     * If the tag exists, updates the hash to match (if
     * necessary). Otherwise creates the tag.
     */
-  def upsert(createdBy: User, projectId: String, name: String, version: String): Image = {
+  def upsert(createdBy: User, buildId: String, name: String, version: String): Image = {
     val form = ImageForm(
-      projectId = projectId,
+      buildId = buildId,
       name = name,
       version = version
     )
-    ImagesDao.findByProjectIdAndVersion(projectId, version) match {
+    ImagesDao.findByBuildIdAndVersion(buildId, version) match {
       case None => {
         create(createdBy, form) match {
           case Left(errors) => sys.error(errors.mkString(", "))
@@ -148,7 +152,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
-            'project_id -> form.projectId,
+            'build_id -> form.buildId,
             'name -> form.name.trim,
             'version -> form.version.trim,
             'sort_key -> Util.generateVersionSortKey(form.version.trim),
@@ -156,7 +160,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        mainActor ! MainActor.Messages.ImageCreated(form.projectId, id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.buildId, id, form.version.trim)
 
         Right(
           ImagesDao.findById(id).getOrElse {
@@ -174,7 +178,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'id -> image.id,
-            'project_id -> form.projectId,
+            'build_id -> form.buildId,
             'name -> form.name.trim,
             'version -> form.version.trim,
             'sort_key -> Util.generateVersionSortKey(form.version.trim),
@@ -182,7 +186,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        mainActor ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.buildId, image.id, form.version.trim)
 
         Right(
           ImagesDao.findById(image.id).getOrElse {

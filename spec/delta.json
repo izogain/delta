@@ -133,11 +133,13 @@
       ]
     },
 
-    "project_state": {
-      "description": "Returns the desired and last states for this project",
+    "build_state": {
+      "description": "Describes the last and desired states of a build",
       "fields": [
+        { "name": "name", "type": "string", "description": "The build name" },
         { "name": "desired", "type": "state", "required": false },
-        { "name": "last", "type": "state", "required": false }
+        { "name": "last", "type": "state", "required": false },
+        { "name": "latest_image", "type": "string", "required": false, "description": "If available, the full name of the latest image for this build" }
       ]
     },
 
@@ -311,10 +313,28 @@
       ]
     },
 
-    "image" : {
+    "build" : {
+      "description": "A build provides information abuot a dockerfile and the name of the build in the registry.",
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "project", "type": "project_summary" },
+        { "name": "name", "type": "string", "description": "This is the full name of the application that this build represents and is used to lookup information in the registry, in docker hub, in AWS, etc.", "example": "delta-api" },
+        { "name": "dockerfile_path", "type": "string", "example": "./Dockerfile" }
+      ]
+    },
+
+    "build_form" : {
+      "fields": [
+        { "name": "project_id", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "dockerfile_path", "type": "string" }
+      ]
+    },
+
+    "image" : {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "build", "type": "build" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]
@@ -322,12 +342,12 @@
 
     "image_form" : {
       "fields": [
-        { "name": "project_id", "type": "string" },
+        { "name": "build_id", "type": "string" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]
     },
-
+    
     "event": {
       "fields": [
         { "name": "id", "type": "string" },
@@ -541,9 +561,9 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/latest",
+          "path": "/:id/builds/states",
           "responses": {
-            "200": { "type": "project_state" },
+            "200": { "type": "[build_state]" },
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
@@ -551,7 +571,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/desired",
+          "path": "/:id/builds/:build_name/states/desired",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },
@@ -561,7 +581,7 @@
 
         {
           "method": "POST",
-          "path": "/:id/state/desired",
+          "path": "/:id/builds/:build_name/states/desired",
           "responses": {
             "200": { "type": "[state_form]" },
             "401": { "type": "unit" },
@@ -571,7 +591,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/last",
+          "path": "/:id/builds/:build_name/states/last",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },
@@ -919,7 +939,7 @@
             { "name": "name", "type": "string", "description": "Find images with this name.", "required": false, "example": "0.0.1" },
             { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
-            { "name": "sort", "type": "string", "default": "-images.sort_key" }
+            { "name": "sort", "type": "string", "default": "lower(images.name),-images.sort_key" }
 	  ],
           "responses": {
             "200": { "type": "[image]" },

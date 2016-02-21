@@ -9,12 +9,28 @@ trait EventLog {
     * class name (exluding its package)
     */
   def logPrefix: String = {
-    getClass.getName.split("\\.").lastOption match {
-      case None => getClass.getName
-      case Some(value) => value
-    }
+    format(this)
   }
 
+  /**
+    * Prepend the description with the class name of the
+    * function. This lets us have automatic messages like
+    * "TagMaster: xxx"
+    */
+  def format(f: Any, desc: String): String = {
+    format(f) + ": " + desc
+  }
+
+  def format(f: Any): String = {
+    val name = f.getClass.getName
+    val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
+    val className = name.substring(idx + 1)
+    className.endsWith("$") match {
+      case true => className.dropRight(1) // Remove trailing $
+      case false => className
+    }
+  }
+  
   /**
     * Event log relies on a project; this method can be provided by mixing in WithProject
     **/

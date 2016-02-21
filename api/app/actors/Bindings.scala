@@ -5,6 +5,7 @@ import play.api.libs.concurrent.AkkaGuiceSupport
 
 class ActorsModule extends AbstractModule with AkkaGuiceSupport {
   def configure = {
+    bindActorFactory[BuildActor, BuildActor.Factory]
     bindActorFactory[DockerHubActor, DockerHubActor.Factory]
     bindActorFactory[ProjectActor, ProjectActor.Factory]
     bindActor[MainActor]("main-actor")

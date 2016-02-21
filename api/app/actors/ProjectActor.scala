@@ -1,16 +1,10 @@
 package io.flow.delta.actors
 
-import com.amazonaws.services.ecs.model.Service
 import io.flow.postgresql.Authorization
-import org.joda.time.DateTime
-import io.flow.delta.api.lib.{Semver, StateFormatter}
-import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
-import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesWriteDao}
-import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
-import io.flow.delta.v0.models.{Project, StateForm}
-import io.flow.delta.lib.Text
+import io.flow.delta.api.lib.{GithubHelper, Repo}
+import io.flow.delta.v0.models.Project
 import io.flow.play.actors.ErrorHandler
-import io.flow.play.util.DefaultConfig
+import io.flow.play.util.Config
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -21,21 +15,9 @@ import scala.concurrent.Future
 
 object ProjectActor {
 
-  val CheckLastStateIntervalSeconds = 45
-
   trait Message
 
   object Messages {
-    case object CheckLastState extends Message
-
-    case object ConfigureAWS extends Message // One-time AWS setup
-
-    case object CreateHooks extends Message
-
-    case class MonitorScale(imageName: String, imageVersion: String) extends Message
-
-    case class Scale(diffs: Seq[StateDiff]) extends Message
-
     case object Setup extends Message    
   }
 
@@ -46,58 +28,17 @@ object ProjectActor {
 }
 
 class ProjectActor @javax.inject.Inject() (
-  registryClient: RegistryClient,
-  config: DefaultConfig,
+  config: Config,
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with ErrorHandler with DataProject with EventLog {
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] lazy val ecs = EC2ContainerService(registryClient)
-  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
-  private[this] lazy val asg = AutoScalingGroup(
-    ecs,
-    dockerHubToken = config.requiredString("dockerhub.delta.auth.token"),
-    dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
-  )
-
   def receive = {
 
-    // case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
     case msg @ ProjectActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setProjectId(projectId)
 
-      // Verify hooks, AWS have been setup
-      self ! ProjectActor.Messages.CreateHooks
-
-      if (isScaleEnabled) {
-        self ! ProjectActor.Messages.ConfigureAWS
-
-        withProject { project =>
-          Akka.system.scheduler.schedule(
-            Duration(1, "second"),
-            Duration(ProjectActor.CheckLastStateIntervalSeconds, "seconds")
-          ) {
-            self ! ProjectActor.Messages.CheckLastState
-          }
-        }
-      }
-    }
-
-    case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
-      withProject { project =>
-        captureLastState(project)
-      }
-    }
-
-    // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
-    case msg @ ProjectActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
-      withProject { project =>
-        configureAWS(project)
-      }
-    }
-
-    case msg @ ProjectActor.Messages.CreateHooks => withVerboseErrorHandler(msg) {
       withProject { project =>
         withRepo { repo =>
           createHooks(project, repo)
@@ -105,133 +46,8 @@ class ProjectActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
-      withProject { project =>
-        diffs.foreach { diff =>
-          scale(project, diff)
-        }
-      }
-    }
-
-    case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg) {
-      withProject { project =>
-        monitorScale(project, imageName, imageVersion)
-      }
-    }
-
     case msg: Any => logUnhandledMessage(msg)
 
-  }
-
-  private[this] def isScaleEnabled(): Boolean = {
-    withSettings { _.scale }.getOrElse(false)
-  }
-
-  def configureAWS(project: Project): Future[Unit] = {
-    log.runAsync("configureAWS") {
-      for {
-        cluster <- createCluster(project)
-        lc <- createLaunchConfiguration(project)
-        elb <- createLoadBalancer(project)
-        asg <- createAutoScalingGroup(project, lc, elb)
-      } yield {
-        // All steps have completed
-      }
-    }
-  }
-
-  def scale(project: Project, diff: StateDiff) {
-    val org = OrganizationsDao.findById(Authorization.All, project.organization.id).get
-    val imageName = s"${org.docker.organization}/${project.id}"
-    val imageVersion = diff.versionName
-
-    if (diff.lastInstances > diff.desiredInstances) {
-      val instances = diff.lastInstances - diff.desiredInstances
-      log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
-      }
-
-    } else if (diff.lastInstances < diff.desiredInstances) {
-      val instances = diff.desiredInstances - diff.lastInstances
-      log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
-      }
-    }
-
-    monitorScale(project, imageName, imageVersion)
-  }
-
-  def monitorScale(project: Project, imageName: String, imageVersion: String) {
-    captureLastState(project)
-
-    for {
-      ecsServiceOpt <- getServiceInfo(imageName, imageVersion, project)
-    } yield {
-      ecsServiceOpt match {
-        case None => {
-          sys.error(s"ECS Service not found for project $project.id, image $imageName, version $imageVersion")
-        }
-
-        case Some(service) => {
-          val summary = ecs.summary(service)
-          val intervalSeconds = 5
-
-          if (service.getRunningCount == service.getDesiredCount) {
-            log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
-
-          } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
-
-            Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
-              self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def captureLastState(project: Project): Future[String] = {
-    log.runAsync("captureLastState") {
-      ecs.getClusterInfo(project.id).map { versions =>
-        play.api.Play.current.injector.instanceOf[ProjectLastStatesWriteDao].upsert(
-          UsersDao.systemUser,
-          project,
-          StateForm(versions = versions)
-        )
-        StateFormatter.label(versions)
-      }
-    }
-  }
-
-  def getServiceInfo(imageName: String, imageVersion: String, project: Project): Future[Option[Service]] = {
-    log.runSync("Getting ECS service Info", quiet = true) {
-      ecs.getServiceInfo(imageName, imageVersion, project.id)
-    }
-  }
-
-  def createLaunchConfiguration(project: Project): Future[String] = {
-    log.runSync("EC2 auto scaling group launch configuration") {
-      asg.createLaunchConfiguration(project.id)
-    }
-  }
-
-  def createLoadBalancer(project: Project): Future[String] = {
-    log.runAsync("EC2 load balancer") {
-      elb.createLoadBalancerAndHealthCheck(project.id)
-    }
-  }
-
-  def createAutoScalingGroup(project: Project, launchConfigName: String, loadBalancerName: String): Future[String] = {
-    log.runSync("EC2 auto scaling group") {
-      asg.createAutoScalingGroup(project.id, launchConfigName, loadBalancerName)
-    }
-  }
-
-  def createCluster(project: Project): Future[String] = {
-    log.runSync("Create cluster") {
-       ecs.createCluster(project.id)
-    }
   }
 
   private[this] val HookBaseUrl = config.requiredString("delta.api.host") + "/webhooks/github/"

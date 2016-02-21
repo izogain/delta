@@ -1,13 +1,13 @@
 package io.flow.delta.actors.functions
 
-import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
 import io.flow.postgresql.Authorization
 import db.{ShasDao, ShasWriteDao, UsersDao}
 import scala.concurrent.Future
 
-object SyncMasterSha extends SupervisorFunction {
+object SyncMasterSha extends ProjectSupervisorFunction {
 
   def run(
     project: Project

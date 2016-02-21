@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
 import io.flow.delta.api.lib.{Semver, StateDiff}
-import io.flow.delta.v0.models.{Project, State, StateForm, Version}
+import io.flow.delta.v0.models.{Build, Project, State, StateForm, Version}
 import io.flow.delta.v0.models.json._
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
@@ -12,48 +12,52 @@ import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
 
-object ProjectDesiredStatesDao extends ProjectStatesDao("project_desired_states")
+object BuildDesiredStatesDao extends BuildStatesDao("build_desired_states")
 
-case class ProjectDesiredStatesWriteDao @javax.inject.Inject() (
+case class BuildDesiredStatesWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: ActorRef
-) extends ProjectStatesWriteDao(ProjectDesiredStatesDao, mainActor, "pds") {
+) extends BuildStatesWriteDao(BuildDesiredStatesDao, mainActor, "bds") {
 
-  override def onChange(mainActor: ActorRef, projectId: String) {
-    mainActor ! MainActor.Messages.ProjectDesiredStateUpdated(projectId)
+  override def onChange(mainActor: ActorRef, buildId: String) {
+    mainActor ! MainActor.Messages.BuildDesiredStateUpdated(buildId)
   }
 
 }
 
 
-object ProjectLastStatesDao extends ProjectStatesDao("project_last_states")
+object BuildLastStatesDao extends BuildStatesDao("build_last_states")
 
-case class ProjectLastStatesWriteDao @javax.inject.Inject() (
+case class BuildLastStatesWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: ActorRef
-) extends ProjectStatesWriteDao(ProjectLastStatesDao, mainActor, "pls") {
+) extends BuildStatesWriteDao(BuildLastStatesDao, mainActor, "bls") {
 
-  override def onChange(mainActor: ActorRef, projectId: String) {
-    mainActor ! MainActor.Messages.ProjectLastStateUpdated(projectId)
+  override def onChange(mainActor: ActorRef, buildId: String) {
+    mainActor ! MainActor.Messages.BuildLastStateUpdated(buildId)
   }
 
 }
 
-private[db] class ProjectStatesDao(val table: String) {
+private[db] class BuildStatesDao(val table: String) {
   
   private[this] val BaseQuery = Query(s"""
     select ${table}.id,
            ${table}.versions,
            ${table}.timestamp,
-           projects.id as project_id,
-           projects.name as project_name,
-           projects.uri as project_uri,
-           projects.organization_id as project_organization_id
+           builds.id as build_id,
+           builds.name as build_name,
+           builds.dockerfile_path as build_dockerfile_path,
+           projects.id as build_project_id,
+           projects.name as build_project_name,
+           projects.uri as build_project_uri,
+           projects.organization_id as build_project_organization_id
       from $table
-      join projects on ${table}.project_id = projects.id
+      join builds on builds.id = ${table}.build_id
+      join projects on projects.id = builds.project_id
   """)
 
 
-  def findByProjectId(auth: Authorization, projectId: String): Option[State] = {
-    findAll(auth, projectId = Some(projectId), limit = 1).headOption
+  def findByBuildId(auth: Authorization, buildId: String): Option[State] = {
+    findAll(auth, buildId = Some(buildId), limit = 1).headOption
   }
 
   def findById(auth: Authorization, id: String): Option[State] = {
@@ -63,7 +67,7 @@ private[db] class ProjectStatesDao(val table: String) {
   def findAll(
     auth: Authorization,
     ids: Option[Seq[String]] = None,
-    projectId: Option[String] = None,
+    buildId: Option[String] = None,
     orderBy: OrderBy = OrderBy(s"-${table}.timestamp,-${table}.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -79,7 +83,7 @@ private[db] class ProjectStatesDao(val table: String) {
         limit = limit,
         offset = offset
       ).
-        equals("projects.id", projectId).
+        equals("builds.id", buildId).
         as(
           io.flow.delta.v0.anorm.parsers.State.parser().*
         )
@@ -88,8 +92,8 @@ private[db] class ProjectStatesDao(val table: String) {
   
 }
 
-private[db] class ProjectStatesWriteDao(
-  reader: ProjectStatesDao,
+private[db] class BuildStatesWriteDao(
+  reader: BuildStatesDao,
   mainActor: ActorRef,
   idPrefix: String
 ) {
@@ -100,17 +104,17 @@ private[db] class ProjectStatesWriteDao(
     * Invoked whenever a state record is created or updated (when
     * something in the versions actually changed)
     */
-  def onChange(mainActor: ActorRef, projectId: String) {
+  def onChange(mainActor: ActorRef, buildId: String) {
     // No-op
   }
   
-  private[this] val LookupIdQuery = s"select id from $table where project_id = {project_id}"
+  private[this] val LookupIdQuery = s"select id from $table where build_id = {build_id}"
 
   private[this] val InsertQuery = s"""
     insert into $table
-    (id, project_id, versions, timestamp, updated_by_user_id)
+    (id, build_id, versions, timestamp, updated_by_user_id)
     values
-    ({id}, {project_id}, {versions}::json, now(), {updated_by_user_id})
+    ({id}, {build_id}, {versions}::json, now(), {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = s"""
@@ -118,24 +122,24 @@ private[db] class ProjectStatesWriteDao(
        set versions = {versions}::json,
            timestamp = now(),
            updated_by_user_id = {updated_by_user_id}
-     where project_id = {project_id}
+     where build_id = {build_id}
   """
 
   private[this] val idGenerator = io.flow.play.util.IdGenerator(idPrefix)
 
   private[db] def validate(
     user: User,
-    project: Project,
+    build: Build,
     form: StateForm
   ): Seq[String] = {
-    ProjectsDao.findById(Authorization.All, project.id) match {
-      case None => Seq("Project not found")
-      case Some(project) => Nil
+    BuildsDao.findById(Authorization.All, build.id) match {
+      case None => Seq("Build not found")
+      case Some(build) => Nil
     }
   }
 
-  def create(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
-    validate(createdBy, project, form) match {
+  def create(createdBy: User, build: Build, form: StateForm): Either[Seq[String], State] = {
+    validate(createdBy, build, form) match {
       case Nil => {
 
         val id = idGenerator.randomId()
@@ -143,13 +147,13 @@ private[db] class ProjectStatesWriteDao(
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
-            'project_id -> project.id,
+            'build_id -> build.id,
             'versions -> Json.toJson(normalize(form.versions)).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
 
-        onChange(mainActor, project.id)
+        onChange(mainActor, build.id)
 
         Right(
           reader.findById(Authorization.All, id).getOrElse {
@@ -161,32 +165,32 @@ private[db] class ProjectStatesWriteDao(
     }
   }
 
-  def upsert(createdBy: User, project: Project, form: StateForm): Either[Seq[String], State] = {
-    reader.findByProjectId(Authorization.All, project.id) match {
-      case None => create(createdBy, project, form)
-      case Some(existing) => update(createdBy, project, existing, form)
+  def upsert(createdBy: User, build: Build, form: StateForm): Either[Seq[String], State] = {
+    reader.findByBuildId(Authorization.All, build.id) match {
+      case None => create(createdBy, build, form)
+      case Some(existing) => update(createdBy, build, existing, form)
     }
   }
 
-  private[this] def update(createdBy: User, project: Project, existing: State, form: StateForm): Either[Seq[String], State] = {
+  private[this] def update(createdBy: User, build: Build, existing: State, form: StateForm): Either[Seq[String], State] = {
 
-    validate(createdBy, project, form) match {
+    validate(createdBy, build, form) match {
       case Nil => {
         DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
-            'project_id -> project.id,
+            'build_id -> build.id,
             'versions -> Json.toJson(normalize(form.versions)).toString,
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
 
-        val updated = reader.findByProjectId(Authorization.All, project.id).getOrElse {
+        val updated = reader.findByBuildId(Authorization.All, build.id).getOrElse {
           sys.error(s"Failed to update $table")
         }
 
         StateDiff.diff(existing.versions, updated.versions) match {
           case Nil => // No-op
-          case _ => onChange(mainActor, project.id)
+          case _ => onChange(mainActor, build.id)
         }
 
         Right(updated)
@@ -210,16 +214,16 @@ private[db] class ProjectStatesWriteDao(
       }
   }
   
-  def delete(deletedBy: User, project: Project) {
-    lookupId(project.id).map { id =>
+  def delete(deletedBy: User, build: Build) {
+    lookupId(build.id).map { id =>
       Delete.delete(table, deletedBy.id, id)
     }
   }
 
-  private[this] def lookupId(projectId: String): Option[String] = {
+  private[this] def lookupId(buildId: String): Option[String] = {
     DB.withConnection { implicit c =>
       SQL(LookupIdQuery).on(
-        'project_id -> projectId
+        'build_id -> buildId
       ).as(SqlParser.get[Option[String]]("id").single).headOption
     }
   }
