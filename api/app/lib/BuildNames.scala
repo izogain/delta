@@ -16,9 +16,12 @@ object BuildNames {
     * ./Dockerfile => "root"
     * ./api/Dockerfile => "api"
     * www/Dockerfile => "www"
+    * /Dockerfile.www => "www"
+    * /Dockerfile.api => "api"
+    * /a/b/c/Dockerfile => "a-b-c"
     */
   def dockerfilePathToBuildForm(projectId: String, path: String): BuildForm = {
-    val name = path.split("/").dropRight(1).filter(!_.startsWith(".")).filter(!_.isEmpty).toList match {
+    val name = path.replace("Dockerfile.", "").replace("Dockerfile", "").split("/").filter(!_.startsWith(".")).filter(!_.isEmpty).toList match {
       case Nil => DefaultBuildName
       case multiple => multiple.mkString("-")
     }
@@ -36,6 +39,10 @@ object BuildNames {
     */
   def dockerImageName(docker: Docker, build: Build): String = {
     docker.organization + "/" + projectName(build)
+  }
+
+  def dockerImageName(docker: Docker, build: Build, version: String): String = {
+    dockerImageName(docker, build) + s":$version"
   }
 
   /**
