@@ -144,7 +144,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
           create(c, createdBy, form)
         }
 
-        mainActor ! MainActor.Messages.BuildCreated(form.projectId, id)
+        mainActor ! MainActor.Messages.BuildCreated(id)
 
         Right(
           BuildsDao.findById(Authorization.All, id).getOrElse {
@@ -197,7 +197,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        mainActor ! MainActor.Messages.BuildUpdated(build.project.id, build.id)
+        mainActor ! MainActor.Messages.BuildUpdated(build.id)
 
         Right(
           BuildsDao.findById(Authorization.All, build.id).getOrElse {
@@ -217,7 +217,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
 
     Delete.delete("builds", deletedBy.id, build.id)
-    mainActor ! MainActor.Messages.BuildDeleted(build.project.id, build.id)
+    mainActor ! MainActor.Messages.BuildDeleted(build.id)
   }
 
 }

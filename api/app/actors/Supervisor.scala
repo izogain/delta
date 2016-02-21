@@ -11,7 +11,7 @@ object SupervisorResult {
   case class Error(description: String, ex: Throwable) extends SupervisorResult
 }
 
-trait SupervisorProjectFunction {
+trait ProjectSupervisorFunction {
 
   /**
    * Responsible for actually running this function
@@ -24,7 +24,7 @@ trait SupervisorProjectFunction {
 
 }
 
-trait SupervisorBuildFunction {
+trait BuildSupervisorFunction {
 
   /**
    * Responsible for actually running this function
@@ -36,3 +36,4 @@ trait SupervisorBuildFunction {
   ): Future[SupervisorResult]
 
 }
+

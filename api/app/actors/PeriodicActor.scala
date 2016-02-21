@@ -23,6 +23,11 @@ class PeriodicActor extends Actor with ErrorHandler {
   
   def receive = {
 
+    /**
+      * For any project that is not active (defined by not having a
+      * pursue desired event logged in last n minutes), we send a
+      * message to sync the project.
+      */
     case msg @ PeriodicActor.Messages.CheckProjects => withVerboseErrorHandler(msg) {
       Pager.create { offset =>
         ProjectsDao.findAll(Authorization.All, offset = offset)
@@ -62,7 +67,7 @@ class PeriodicActor extends Actor with ErrorHandler {
     EventsDao.findAll(
       projectId = Some(projectId),
       numberMinutesSinceCreation = Some(MinutesUntilInactive),
-      summary = Some(SupervisorActor.StartedMessage),
+      summary = Some(ProjectSupervisorActor.StartedMessage),
       limit = 1
     ).headOption match {
       case None => false

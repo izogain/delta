@@ -25,9 +25,11 @@ object MainActor {
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
 
-    case class BuildCreated(projectId: String, id: String)
-    case class BuildUpdated(projectId: String, id: String)
-    case class BuildDeleted(projectId: String, id: String)
+    case class BuildCreated(id: String)
+    case class BuildUpdated(id: String)
+    case class BuildDeleted(id: String)
+    case class BuildSync(id: String)
+    case class BuildCheckTag(id: String, name: String)
 
     case class BuildDesiredStateUpdated(buildId: String)
     case class BuildLastStateUpdated(buildId: String)
@@ -63,9 +65,10 @@ class MainActor @javax.inject.Inject() (
   private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
 
   private[this] val buildActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val buildSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val dockerHubActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
-  private[this] val supervisorActors = scala.collection.mutable.Map[String, ActorRef]()
+  private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
   private[this] val periodicActor = system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
@@ -80,20 +83,28 @@ class MainActor @javax.inject.Inject() (
 
   def receive = akka.event.LoggingReceive {
 
-    case msg @ MainActor.Messages.BuildCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+    case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
+      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
 
-    case msg @ MainActor.Messages.BuildUpdated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+    case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
+      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
     
-    case msg @ MainActor.Messages.BuildDeleted(projectId, id) => withVerboseErrorHandler(msg) {
-      (buildActors -= projectId).map { actor =>
+    case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
+      (buildActors -= id).map { actor =>
         // TODO: Terminate actor
       }
     }
-    
+
+    case msg @ MainActor.Messages.BuildSync(id) => withVerboseErrorHandler(msg) {
+      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
+    }
+
+    case msg @ MainActor.Messages.BuildCheckTag(id, name) => withVerboseErrorHandler(msg) {
+      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.CheckTag(name)
+    }
+
     case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
       upsertUserActor(id) ! UserActor.Messages.Created
     }
@@ -104,7 +115,7 @@ class MainActor @javax.inject.Inject() (
 
     case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
       searchActor ! SearchActor.Messages.SyncProject(id)
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
+      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
@@ -113,7 +124,7 @@ class MainActor @javax.inject.Inject() (
 
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
       upsertProjectActor(id) // Start the project actor
-      upsertSupervisorActor(id) ! SupervisorActor.Messages.PursueDesiredState
+      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
 
@@ -122,23 +133,23 @@ class MainActor @javax.inject.Inject() (
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.ShaUpdated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.CheckTag(name)
+      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
     }
 
     case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.CheckTag(name)
+      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
     }
 
     case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(buildId) ! SupervisorActor.Messages.CheckTag(version)
+      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.CheckTag(version)
     }
 
     case msg @ MainActor.Messages.BuildDockerImage(buildId, version) => withVerboseErrorHandler(msg) {
@@ -150,11 +161,11 @@ class MainActor @javax.inject.Inject() (
     }
 
     case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(buildId) ! SupervisorActor.Messages.PursueDesiredState
+      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withVerboseErrorHandler(msg) {
-      upsertSupervisorActor(buildId) ! SupervisorActor.Messages.PursueDesiredState
+      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg: Any => logUnhandledMessage(msg)
@@ -197,11 +208,20 @@ class MainActor @javax.inject.Inject() (
     }
   }
   
-  def upsertSupervisorActor(id: String): ActorRef = {
-    supervisorActors.lift(id).getOrElse {
-      val ref = system.actorOf(Props[SupervisorActor], name = s"$name:supervisorActor:$id")
-      ref ! SupervisorActor.Messages.Data(id)
-      supervisorActors += (id -> ref)
+  def upsertProjectSupervisorActor(id: String): ActorRef = {
+    projectSupervisorActors.lift(id).getOrElse {
+      val ref = system.actorOf(Props[ProjectSupervisorActor], name = s"$name:projectSupervisorActor:$id")
+      ref ! ProjectSupervisorActor.Messages.Data(id)
+      projectSupervisorActors += (id -> ref)
+      ref
+    }
+  }
+
+  def upsertBuildSupervisorActor(id: String): ActorRef = {
+    buildSupervisorActors.lift(id).getOrElse {
+      val ref = system.actorOf(Props[BuildSupervisorActor], name = s"$name:buildSupervisorActor:$id")
+      ref ! BuildSupervisorActor.Messages.Data(id)
+      buildSupervisorActors += (id -> ref)
       ref
     }
   }

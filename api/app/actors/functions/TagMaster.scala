@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
-import io.flow.delta.actors.{SupervisorProjectFunction, SupervisorResult}
+import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
@@ -15,7 +15,7 @@ import scala.concurrent.Future
   * If there is no tag pointing to the master sha, creates a tag in
   * github and records it here.
   */
-object TagMaster extends SupervisorProjectFunction {
+object TagMaster extends ProjectSupervisorFunction {
 
   val InitialTag = "0.0.1"
 

@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{BuildDesiredStatesDao, BuildDesiredStatesWriteDao, TagsDao, UsersDao}
-import io.flow.delta.actors.{SupervisorBuildFunction, SupervisorResult}
+import io.flow.delta.actors.{BuildSupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
 import io.flow.delta.v0.models.{Build, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
@@ -11,7 +11,7 @@ import scala.concurrent.Future
   * For builds that have auto deploy turned on, we set the desired
   * state to 100% of traffic on the latest tag.
   */
-object SetDesiredState extends SupervisorBuildFunction {
+object SetDesiredState extends BuildSupervisorFunction {
 
   val DefaultNumberInstances = 2
 

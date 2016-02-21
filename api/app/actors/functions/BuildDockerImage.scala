@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{ImagesDao, BuildDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, MainActorProvider, SupervisorBuildFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, MainActorProvider, BuildSupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Build
 import play.api.Logger
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * desired stated, triggering docker builds for each image that is
   * not found locally.
   */
-object BuildDockerImage extends SupervisorBuildFunction {
+object BuildDockerImage extends BuildSupervisorFunction {
 
   override def run(
     build: Build

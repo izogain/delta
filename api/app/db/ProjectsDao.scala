@@ -188,7 +188,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         mainActor ! MainActor.Messages.ProjectCreated(id)
 
         buildIds.foreach { buildId =>
-          mainActor ! MainActor.Messages.BuildCreated(id, buildId)
+          mainActor ! MainActor.Messages.BuildCreated(buildId)
         }
 
         Right(

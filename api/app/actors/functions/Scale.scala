@@ -1,7 +1,7 @@
 package io.flow.delta.actors.functions
 
 import db.{BuildLastStatesDao, BuildDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, MainActorProvider, BuildActor, SupervisorBuildFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, MainActorProvider, BuildActor, BuildSupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Build
 import org.joda.time.DateTime
@@ -13,7 +13,7 @@ import scala.concurrent.Future
   * scale up or down in production. Scale Up will always happen first;
   * scale down only initiatied after Scale Up is complete.
   */
-object Scale extends SupervisorBuildFunction {
+object Scale extends BuildSupervisorFunction {
 
   private[this] val SecondsUntilStale = (BuildActor.CheckLastStateIntervalSeconds * 2.5).toInt
 
