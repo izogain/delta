@@ -1,9 +1,10 @@
 package controllers
 
-import db.{ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
+import db.{BuildsDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
+import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
+import io.flow.delta.v0.models.{Build, Project, ProjectForm, BuildState, SettingsForm}
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
@@ -120,16 +121,18 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getStateAndLatestById(id: String) = Identified { request =>
+  def getBuildsAndLatestByIdAndBuildState(id: String, buildName: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      Ok(
-        Json.toJson(
-          ProjectState(
-            desired = BuildDesiredStatesDao.findByProjectId(authorization(request), id),
-            last = BuildLastStatesDao.findByProjectId(authorization(request), id)
+      withBuild(request.user, project.id, buildName) { build =>
+        Ok(
+          Json.toJson(
+            BuildState(
+              desired = BuildDesiredStatesDao.findByBuildId(authorization(request), id),
+              last = BuildLastStatesDao.findByBuildId(authorization(request), id)
+            )
           )
         )
-      )
+      }
     }
   }
 
@@ -140,10 +143,25 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getStateAndDesiredById(id: String) = TODO
+  def getBuildsAndLatestByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def postStateAndDesiredById(id: String) = TODO
+  def getBuildsAndStateAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def getStateAndLastById(id: String) = TODO
+  def postBuildsAndStateAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
+
+  def getBuildsAndStateAndLastByIdAndBuildName(id: String, buildName: String) = TODO
+
+  def withBuild(user: User, projectId: String, name: String)(
+    f: Build => Result
+  ): Result = {
+    BuildsDao.findByProjectIdAndName(Authorization.User(user.id), projectId, name) match {
+      case None => {
+        Results.NotFound
+      }
+      case Some(build) => {
+        f(build)
+      }
+    }
+  }
 
 }

@@ -76,7 +76,7 @@ object ProjectsDao {
 
 case class ProjectsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
-  imagesWriteDao: ImagesWriteDao,
+  buildsWriteDao: BuildsWriteDao,
   shasWriteDao: ShasWriteDao,
   tagsWriteDao: TagsWriteDao
 ) {
@@ -248,9 +248,9 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     }
 
     Pager.create { offset =>
-      ImagesDao.findAll(projectId = Some(project.id), offset = offset)
-    }.foreach { image =>
-      imagesWriteDao.delete(deletedBy, image)
+      BuildsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
+    }.foreach { build =>
+      buildsWriteDao.delete(deletedBy, build)
     }
 
     SettingsDao.deleteByProjectId(deletedBy, project.id)

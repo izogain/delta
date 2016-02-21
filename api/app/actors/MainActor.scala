@@ -25,6 +25,10 @@ object MainActor {
     case class ProjectDeleted(id: String)
     case class ProjectSync(id: String)
 
+    case class BuildCreated(projectId: String, id: String)
+    case class BuildUpdated(projectId: String, id: String)
+    case class BuildDeleted(projectId: String, id: String)
+
     case class BuildDesiredStateUpdated(buildId: String)
     case class BuildLastStateUpdated(buildId: String)
 
@@ -76,6 +80,20 @@ class MainActor @javax.inject.Inject() (
 
   def receive = akka.event.LoggingReceive {
 
+    case msg @ MainActor.Messages.BuildCreated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+    }
+
+    case msg @ MainActor.Messages.BuildUpdated(projectId, id) => withVerboseErrorHandler(msg) {
+      upsertSupervisorActor(projectId) ! SupervisorActor.Messages.PursueDesiredState
+    }
+    
+    case msg @ MainActor.Messages.BuildDeleted(projectId, id) => withVerboseErrorHandler(msg) {
+      (buildActors -= projectId).map { actor =>
+        // TODO: Terminate actor
+      }
+    }
+    
     case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
       upsertUserActor(id) ! UserActor.Messages.Created
     }

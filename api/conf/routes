@@ -32,7 +32,7 @@ PUT        /projects/:id                                      controllers.Projec
 DELETE     /projects/:id                                      controllers.Projects.deleteById(id: String)
 GET        /projects/:id/settings                             controllers.Projects.getSettingsById(id: String)
 PUT        /projects/:id/settings                             controllers.Projects.putSettingsById(id: String)
-GET        /projects/:id/builds/:build_state/latest           controllers.Projects.getBuildsAndLatestByIdAndBuildState(id: String, build_state: String)
+GET        /projects/:id/builds/:build_name/latest            controllers.Projects.getBuildsAndLatestByIdAndBuildName(id: String, build_name: String)
 GET        /projects/:id/builds/:build_name/state/desired     controllers.Projects.getBuildsAndStateAndDesiredByIdAndBuildName(id: String, build_name: String)
 POST       /projects/:id/builds/:build_name/state/desired     controllers.Projects.postBuildsAndStateAndDesiredByIdAndBuildName(id: String, build_name: String)
 GET        /projects/:id/builds/:build_name/state/last        controllers.Projects.getBuildsAndStateAndLastByIdAndBuildName(id: String, build_name: String)

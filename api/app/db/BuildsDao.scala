@@ -2,7 +2,7 @@ package db
 
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Build, BuildForm}
-import io.flow.postgresql.{Authorization, Query, OrderBy}
+import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
@@ -69,6 +69,7 @@ object BuildsDao {
 }
 
 case class BuildsWriteDao @javax.inject.Inject() (
+  imagesWriteDao: ImagesWriteDao,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
@@ -118,7 +119,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
       case Some(project) => Nil
     }
 
-    dockerfilePathErrors ++ nameErrors ++ projectErrors ++ existingErrors
+    dockerfilePathErrors ++ nameErrors ++ projectErrors
   }
 
   def create(createdBy: User, form: BuildForm): Either[Seq[String], Build] = {
@@ -163,7 +164,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        mainActor ! MainActor.Messages.BuildUpdated(form.projectId, build.id)
+        mainActor ! MainActor.Messages.BuildUpdated(build.project.id, build.id)
 
         Right(
           BuildsDao.findById(Authorization.All, build.id).getOrElse {
@@ -176,7 +177,14 @@ case class BuildsWriteDao @javax.inject.Inject() (
   }
 
   def delete(deletedBy: User, build: Build) {
+    Pager.create { offset =>
+      ImagesDao.findAll(buildId = Some(build.id), offset = offset)
+    }.foreach { image =>
+      imagesWriteDao.delete(deletedBy, image)
+    }
+
     Delete.delete("builds", deletedBy.id, build.id)
+    mainActor ! MainActor.Messages.BuildDeleted(build.project.id, build.id)
   }
 
 }

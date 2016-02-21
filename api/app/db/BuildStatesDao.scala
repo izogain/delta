@@ -79,7 +79,7 @@ private[db] class BuildStatesDao(val table: String) {
         limit = limit,
         offset = offset
       ).
-        equals("projects.id", projectId).
+        equals("builds.id", buildId).
         as(
           io.flow.delta.v0.anorm.parsers.State.parser().*
         )

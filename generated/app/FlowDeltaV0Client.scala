@@ -2199,11 +2199,11 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def getBuildsAndLatestByIdAndBuildState(
+      override def getBuildsAndLatestByIdAndBuildName(
         id: String,
-        buildState: String
+        buildName: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.BuildState] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildState, "UTF-8")}/latest").map {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/latest").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.delta.v0.models.BuildState", r, _.validate[io.flow.delta.v0.models.BuildState])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2857,9 +2857,9 @@ package io.flow.delta.v0 {
       settingsForm: io.flow.delta.v0.models.SettingsForm
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings]
 
-    def getBuildsAndLatestByIdAndBuildState(
+    def getBuildsAndLatestByIdAndBuildName(
       id: String,
-      buildState: String
+      buildName: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.BuildState]
 
     def getBuildsAndStateAndDesiredByIdAndBuildName(

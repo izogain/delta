@@ -559,7 +559,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/builds/:build_state/latest",
+          "path": "/:id/builds/:build_name/latest",
           "responses": {
             "200": { "type": "build_state" },
             "401": { "type": "unit" },
