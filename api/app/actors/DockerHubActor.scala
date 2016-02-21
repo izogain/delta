@@ -76,7 +76,12 @@ class DockerHubActor @javax.inject.Inject() (
               log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
             }.recover {
               case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
-                println(s"UNIT[$code]")
+                code match {
+                  case 400 => // automated build already exists
+                  case _ => {
+                    log.completed(s"Docker Hub returned HTTP $code when trying to create automated build")
+                  }
+                }
               }
               case err => {
                 err.printStackTrace(System.err)
