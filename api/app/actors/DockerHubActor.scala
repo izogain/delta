@@ -73,6 +73,7 @@ class DockerHubActor @javax.inject.Inject() (
             v2client.DockerRepositories.postAutobuild(
               org.docker.organization, BuildNames.projectName(build), createBuildForm(org.docker, project.scms, project.uri, build)
             ).map { dockerHubBuild =>
+              // TODO: Log the docker hub URL and not the VCS url
               log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
             }.recover {
               case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
