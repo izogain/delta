@@ -62,7 +62,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
           sender ! MainActor.Messages.BuildCheckTag(build.id, name)
-        }
+        }.toSeq
       }
     }
 
