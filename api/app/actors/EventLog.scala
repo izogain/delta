@@ -9,7 +9,7 @@ trait EventLog {
     * class name (exluding its package)
     */
   def logPrefix: String = {
-    format(getClass.getName)
+    format(this)
   }
 
   /**
