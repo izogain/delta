@@ -133,8 +133,8 @@
       ]
     },
 
-    "project_state": {
-      "description": "Returns the desired and last states for this project",
+    "build_state": {
+      "description": "Returns the desired and last states for a specific build",
       "fields": [
         { "name": "desired", "type": "state", "required": false },
         { "name": "last", "type": "state", "required": false }
@@ -311,10 +311,28 @@
       ]
     },
 
-    "image" : {
+    "build" : {
+      "description": "A build provides information abuot a dockerfile and the name of the build in the registry.",
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "project", "type": "project_summary" },
+        { "name": "name", "type": "string", "description": "This is the full name of the application that this build represents and is used to lookup information in the registry, in docker hub, in AWS, etc.", "example": "delta-api" },
+        { "name": "dockerfile_path", "type": "string", "example": "./Dockerfile" }
+      ]
+    },
+
+    "build_form" : {
+      "fields": [
+        { "name": "project_id", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "dockerfile_path", "type": "string" }
+      ]
+    },
+
+    "image" : {
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "build", "type": "build" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]
@@ -322,12 +340,12 @@
 
     "image_form" : {
       "fields": [
-        { "name": "project_id", "type": "string" },
+        { "name": "build_id", "type": "string" },
         { "name": "name", "type": "string" },
         { "name": "version", "type": "string" }
       ]
     },
-
+    
     "event": {
       "fields": [
         { "name": "id", "type": "string" },
@@ -541,9 +559,9 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/latest",
+          "path": "/:id/builds/:build_state/latest",
           "responses": {
-            "200": { "type": "project_state" },
+            "200": { "type": "build_state" },
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
@@ -551,7 +569,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/desired",
+          "path": "/:id/builds/:build_name/state/desired",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },
@@ -561,7 +579,7 @@
 
         {
           "method": "POST",
-          "path": "/:id/state/desired",
+          "path": "/:id/builds/:build_name/state/desired",
           "responses": {
             "200": { "type": "[state_form]" },
             "401": { "type": "unit" },
@@ -571,7 +589,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/state/last",
+          "path": "/:id/builds/:build_name/state/last",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },

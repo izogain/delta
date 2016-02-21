@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import db.{ImagesDao, ImagesWriteDao, UsersDao}
 import io.flow.delta.api.lib.Semver
 import io.flow.delta.v0.models._
-import io.flow.docker.registry.v0.models.{BuildTag, BuildForm}
+import io.flow.docker.registry.v0.models.{BuildTag => DockerBuildTag, BuildForm => DockerBuildForm}
 import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
@@ -36,15 +36,15 @@ object DockerHubActor {
   }
 
   trait Factory {
-    def apply(projectId: String): Actor
+    def apply(buildId: String): Actor
   }
   
 }
 
 class DockerHubActor @javax.inject.Inject() (
   imagesWriteDao: ImagesWriteDao,
-  @com.google.inject.assistedinject.Assisted projectId: String
-) extends Actor with ErrorHandler with DataProject with EventLog {
+  @com.google.inject.assistedinject.Assisted buildId: String
+) extends Actor with ErrorHandler with DataBuild with EventLog {
 
   implicit val dockerHubActorExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
@@ -62,14 +62,14 @@ class DockerHubActor @javax.inject.Inject() (
   def receive = {
 
     case msg @ DockerHubActor.Messages.Setup => withVerboseErrorHandler(msg) {
-      setProjectId(projectId)
+      setBuildId(buildId)
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
-      withProject { project =>
+      withBuild { build =>
         withOrganization { org =>
           v2client.DockerRepositories.postAutobuild(
-            org.docker.organization, project.id, createBuildForm(org.docker.organization, project.id)
+            org.docker.organization, build.name, createBuildForm(org.docker.organization, build.name)
           ).map { dockerHubBuild =>
             log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
           }.recover {
@@ -83,13 +83,13 @@ class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg @ DockerHubActor.Messages.Monitor(version) => withVerboseErrorHandler(msg) {
-      withProject { project =>
+      withBuild { build =>
         withOrganization { org =>
-          syncImages(org.docker, project)
+          syncImages(org.docker, build)
 
-          val imageFullName = s"${org.docker.organization}/${project.id}:$version"
+          val imageFullName = s"${org.docker.organization}/${build.name}:$version"
 
-          ImagesDao.findByProjectIdAndVersion(project.id, version) match {
+          ImagesDao.findByBuildIdAndVersion(build.id, version) match {
             case Some(image) => {
               log.checkpoint(s"Docker hub image $imageFullName is ready - image id[${image.id}]")
               // Don't fire an event; the ImagesDao will already have
@@ -111,14 +111,14 @@ class DockerHubActor @javax.inject.Inject() (
  }
 
 
-  def syncImages(docker: Docker, project: Project) {
+  def syncImages(docker: Docker, build: Build) {
     for {
-      tags <- v2client.V2Tags.get(docker.organization, project.id)
+      tags <- v2client.V2Tags.get(docker.organization, build.name)
     } yield {
 
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
         Try(
-          upsertImage(docker, project.id, tag.name)
+          upsertImage(docker, build, tag.name)
         ) match {
           case Success(_) => // No-op
           case Failure(ex) => {
@@ -129,13 +129,13 @@ class DockerHubActor @javax.inject.Inject() (
     }
   }
 
-  def upsertImage(docker: Docker, projectId: String, version: String) {
-    ImagesDao.findByProjectIdAndVersion(projectId, version).getOrElse {
+  def upsertImage(docker: Docker, build: Build, version: String) {
+    ImagesDao.findByBuildIdAndVersion(buildId, version).getOrElse {
       imagesWriteDao.create(
         UsersDao.systemUser,
         ImageForm(
-          projectId = projectId,
-          name = s"${docker.organization}/${projectId}",
+          buildId = buildId,
+          name = s"${docker.organization}/${build.name}",
           version = version
         )
       ) match {
@@ -145,9 +145,9 @@ class DockerHubActor @javax.inject.Inject() (
     }
   }
 
-  def createBuildForm(org: String, name: String): BuildForm = {
+  def createBuildForm(org: String, name: String): DockerBuildForm = {
     val fullName = s"$org/$name"
-    BuildForm(
+    DockerBuildForm(
       active = true,
       buildTags = createBuildTags(),
       description = s"Automated build for $fullName",
@@ -160,9 +160,9 @@ class DockerHubActor @javax.inject.Inject() (
     )
   }
 
-  def createBuildTags(): Seq[BuildTag] = {
+  def createBuildTags(): Seq[DockerBuildTag] = {
     Seq(
-      BuildTag(
+      DockerBuildTag(
         dockerfileLocation = "/",
         name = "{sourceref}",
         sourceName = "/^[0-9]+\\.[0-9]+\\.[0-9]+$/",

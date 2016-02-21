@@ -1,6 +1,6 @@
 package controllers
 
-import db.{ProjectsDao,ProjectsWriteDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
+import db.{ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
@@ -125,8 +125,8 @@ class Projects @javax.inject.Inject() (
       Ok(
         Json.toJson(
           ProjectState(
-            desired = ProjectDesiredStatesDao.findByProjectId(authorization(request), id),
-            last = ProjectLastStatesDao.findByProjectId(authorization(request), id)
+            desired = BuildDesiredStatesDao.findByProjectId(authorization(request), id),
+            last = BuildLastStatesDao.findByProjectId(authorization(request), id)
           )
         )
       )

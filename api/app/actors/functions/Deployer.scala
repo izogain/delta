@@ -3,13 +3,13 @@ package io.flow.delta.actors.functions
 import io.flow.delta.actors.{MainActor, MainActorProvider, SupervisorResult}
 import io.flow.delta.api.lib.{StateDiff, StateFormatter}
 import io.flow.delta.lib.Text
-import io.flow.delta.v0.models.{Project, State}
+import io.flow.delta.v0.models.{Build, State}
 import org.joda.time.DateTime
 
-case class Deployer(project: Project, last: State, desired: State) {
+case class Deployer(build: Build, last: State, desired: State) {
 
   /**
-    * Scales up or down the project instances to move last state
+    * Scales up or down the build instances to move last state
     * towards desired state. This works in two phases:
     * 
     *   1. Find any instances that need to be brought up, and issue
@@ -34,13 +34,13 @@ case class Deployer(project: Project, last: State, desired: State) {
             )
           }
           case diffs => {
-            MainActorProvider.ref() ! MainActor.Messages.Scale(project.id, diffs)
+            MainActorProvider.ref() ! MainActor.Messages.Scale(build.id, diffs)
             SupervisorResult.Change(s"Scale Down: " + toLabel(diffs))
           }
         }
       }
       case diffs => {
-        MainActorProvider.ref() ! MainActor.Messages.Scale(project.id, diffs)
+        MainActorProvider.ref() ! MainActor.Messages.Scale(build.id, diffs)
         SupervisorResult.Change(s"Scale Up: " + toLabel(diffs))
       }
     }

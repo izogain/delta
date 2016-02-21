@@ -1,38 +1,38 @@
 package io.flow.delta.actors.functions
 
-import db.{ProjectDesiredStatesDao, ProjectDesiredStatesWriteDao, TagsDao, UsersDao}
-import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
+import db.{BuildDesiredStatesDao, BuildDesiredStatesWriteDao, TagsDao, UsersDao}
+import io.flow.delta.actors.{SupervisorBuildFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
-import io.flow.delta.v0.models.{Project, StateForm, Version}
+import io.flow.delta.v0.models.{Build, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future
 
 /**
-  * For projects that have auto deploy turned on, we set the desired
+  * For builds that have auto deploy turned on, we set the desired
   * state to 100% of traffic on the latest tag.
   */
-object SetDesiredState extends SupervisorFunction {
+object SetDesiredState extends SupervisorBuildFunction {
 
   val DefaultNumberInstances = 2
 
   override def run(
-    project: Project
+    build: Build
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
     Future {
-      SetDesiredState(project).run
+      SetDesiredState(build).run
     }
   }
 
 }
 
-case class SetDesiredState(project: Project) extends Github {
+case class SetDesiredState(build: Build) extends Github {
 
   def run(): SupervisorResult = {
     TagsDao.findAll(
       Authorization.All,
-      projectId = Some(project.id),
+      projectId = Some(build.project.id),
       orderBy = OrderBy("-tags.sort_key"),
       limit = 1
     ).headOption match {
@@ -41,7 +41,7 @@ case class SetDesiredState(project: Project) extends Github {
       }
 
       case Some(latestTag) => {
-        ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) match {
+        BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
             setVersions(Seq(Version(latestTag.name, instances = SetDesiredState.DefaultNumberInstances)))
           }
@@ -68,13 +68,15 @@ case class SetDesiredState(project: Project) extends Github {
 
   def setVersions(versions: Seq[Version]): SupervisorResult = {
     assert(!versions.isEmpty, "Must have at least one version")
-    play.api.Play.current.injector.instanceOf[ProjectDesiredStatesWriteDao].upsert(
+
+    play.api.Play.current.injector.instanceOf[BuildDesiredStatesWriteDao].upsert(
       UsersDao.systemUser,
-      project,
+      build,
       StateForm(
         versions = versions
       )
     )
+
     SupervisorResult.Change("Desired state changed to: " + StateFormatter.label(versions))
   }
 

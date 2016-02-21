@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import akka.actor.Actor
-import db.{ProjectDesiredStatesDao, SettingsDao}
+import db.{BuildsDao, BuildDesiredStatesDao, SettingsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.v0.models.{Project, Settings, Version}
 import io.flow.play.actors.ErrorHandler
@@ -21,9 +21,12 @@ object SupervisorActor {
     case object PursueDesiredState extends Message
   }
 
-  val All = Seq(
+  val ProjectFunctions = Seq(
     functions.SyncMasterSha,
-    functions.TagMaster,
+    functions.TagMaster
+  )
+
+  val BuildFunctions = Seq(
     functions.SetDesiredState,
     functions.BuildDockerImage,
     functions.Scale
@@ -50,7 +53,17 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
         log.message(SupervisorActor.StartedMessage)
-        run(project, settings, SupervisorActor.All)
+        run(project, settings, SupervisorActor.ProjectFunctions)
+
+        BuildsDao.findAll(
+          Authorization.All,
+          projectId = Some(project.id),
+          limit = 100 // TODO : Use pager to paginate
+        ).foreach { build =>
+          // TODO: run(build, settings, SupervisorActor.BuildFunctions)
+          println("Need to execute build step")
+        }
+
         log.completed("PursueDesiredState")
       }
     }
@@ -63,15 +76,24 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
       */
     case msg @ SupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
       withProject { project =>
-        ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id).map { state =>
-          StateDiff.up(state.versions, Seq(Version(name, 1))) match {
-            case Nil => {
-              state.versions.find(_.name == name) match {
-                case None => // Nothing to do
-                case Some(_) => self ! SupervisorActor.Messages.PursueDesiredState
+        BuildsDao.findAll(
+          Authorization.All,
+          projectId = Some(project.id),
+          limit = 100 // TODO : Use pager to paginate
+        ).foreach { build =>
+          BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id).map { state =>
+            StateDiff.up(state.versions, Seq(Version(name, 1))) match {
+              case Nil => {
+                state.versions.find(_.name == name) match {
+                  case None => None
+                  case Some(_) => Some(build.name)
+                }
               }
+              case _ => Some(build.name)
             }
-            case _ => self ! SupervisorActor.Messages.PursueDesiredState
+          }.flatten.toList match {
+            case Nil => // Nothing to do
+            case builds => self ! SupervisorActor.Messages.PursueDesiredState
           }
         }
       }
@@ -85,7 +107,7 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
     * SupervisorResult.Error, returns that result. Otherwise will
     * return NoChange at the end of all the functions.
     */
-  private[this] def run(project: Project, settings: Settings, functions: Seq[SupervisorFunction]) {
+  private[this] def run(project: Project, settings: Settings, functions: Seq[SupervisorProjectFunction]) {
     functions.headOption match {
       case None => {
         SupervisorResult.NoChange("All functions returned without modification")

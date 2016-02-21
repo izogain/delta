@@ -19,7 +19,7 @@ class Images @javax.inject.Inject() (
 
   def get(
     id: Option[Seq[String]],
-    project: Option[String],
+    build: Option[String],
     name: Option[String],
     limit: Long,
     offset: Long,
@@ -30,7 +30,7 @@ class Images @javax.inject.Inject() (
         Json.toJson(
           ImagesDao.findAll(
             ids = optionals(id),
-            projectId = project,
+            buildId = build,
             names = name.map { n => Seq(n) },
             limit = limit,
             offset = offset,
