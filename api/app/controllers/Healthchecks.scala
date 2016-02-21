@@ -15,7 +15,6 @@ class Healthchecks @javax.inject.Inject() (
   private val HealthyJson = Json.toJson(Healthcheck(status = "healthy"))
 
   def getHealthcheck() = Action { request =>
-    println("MANI: " + mainActor)
     Ok(HealthyJson)
   }
 
