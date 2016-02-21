@@ -84,11 +84,11 @@ class MainActor @javax.inject.Inject() (
   def receive = akka.event.LoggingReceive {
 
     case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
+      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
     }
 
     case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
+      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
     }
     
     case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
