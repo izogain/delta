@@ -24,7 +24,11 @@ trait EventLog {
   def format(f: Any): String = {
     val name = f.getClass.getName
     val idx = name.lastIndexOf(".")  // Remove classpath to just get function name
-    name.substring(idx + 1).dropRight(1) // Remove trailing $
+    val className = name.substring(idx + 1)
+    className.endsWith("$") match {
+      case true => className.dropRight(1) // Remove trailing $
+      case false => className
+    }
   }
   
   /**
