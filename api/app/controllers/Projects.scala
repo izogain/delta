@@ -59,7 +59,11 @@ class Projects @javax.inject.Inject() (
         }
         case s: JsSuccess[ProjectForm] => {
           // TODO: val dockerfiles = getDockerfilesFromScms(request.user, form.scms, form.uri)
-          val dockerfiles = Seq("./Dockerfile")
+          val dockerfiles = if (s.get.name == "delta") {
+            Seq("/Dockerfile.api", "/Dockerfile.www")
+          } else {
+            Seq("/Dockerfile")
+          }
 
           projectsWriteDao.create(request.user, s.get, dockerfiles) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
