@@ -157,7 +157,7 @@ class MainActor @javax.inject.Inject() (
     }
 
     case msg @ MainActor.Messages.CheckLastState(buildId) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(buildId) ! BuildActor.Messages.CheckLastState
+      upsertBuildActor(buildId) ! BuildActor.Messages.CheckLastState
     }
 
     case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withVerboseErrorHandler(msg) {

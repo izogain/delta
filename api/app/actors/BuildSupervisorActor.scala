@@ -54,15 +54,21 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with E
       */
     case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withVerboseErrorHandler(msg) {  
       withBuild { build =>
-        BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id).map { state =>
-          StateDiff.up(state.versions, Seq(Version(name, 1))) match {
-            case Nil => {
-              state.versions.find(_.name == name) match {
-                case None => // no-op
-                case Some(_) => self ! BuildSupervisorActor.Messages.PursueDesiredState
+        BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
+          case None => {
+            // Might be first tag
+            self ! BuildSupervisorActor.Messages.PursueDesiredState
+          }
+          case Some(state) => {
+            StateDiff.up(state.versions, Seq(Version(name, 1))) match {
+              case Nil => {
+                state.versions.find(_.name == name) match {
+                  case None => // no-op
+                  case Some(_) => self ! BuildSupervisorActor.Messages.PursueDesiredState
+                }
               }
+              case _ => self ! BuildSupervisorActor.Messages.PursueDesiredState
             }
-            case _ => self ! BuildSupervisorActor.Messages.PursueDesiredState
           }
         }
       }

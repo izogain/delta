@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import db.{ImagesDao, ImagesWriteDao, UsersDao}
-import io.flow.delta.api.lib.Semver
+import io.flow.delta.api.lib.{BuildNames, Semver}
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag => DockerBuildTag, BuildForm => DockerBuildForm}
 import io.flow.docker.registry.v0.Client
@@ -9,6 +9,7 @@ import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
 import play.api.libs.concurrent.Akka
+import play.api.Logger
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import play.api.Play.current
@@ -66,18 +67,20 @@ class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
-      withBuild { build =>
-        withOrganization { org =>
-          v2client.DockerRepositories.postAutobuild(
-            org.docker.organization, build.name, createBuildForm(org.docker.organization, build.name)
-          ).map { dockerHubBuild =>
-            log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
-          }.recover {
-            case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
-            case err => log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
-          }
+      withOrganization { org =>
+        withProject { project =>
+          withBuild { build =>
+            v2client.DockerRepositories.postAutobuild(
+              org.docker.organization, build.name, createBuildForm(org.docker, project.scms, project.uri, build)
+            ).map { dockerHubBuild =>
+              log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+            }.recover {
+              case unitResponse: io.flow.docker.registry.v0.errors.UnitResponse => //don't want to log repository exists every time
+              case err => log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
+            }
 
-          self ! DockerHubActor.Messages.Monitor(version)
+            self ! DockerHubActor.Messages.Monitor(version)
+          }
         }
       }
     }
@@ -113,7 +116,7 @@ class DockerHubActor @javax.inject.Inject() (
 
   def syncImages(docker: Docker, build: Build) {
     for {
-      tags <- v2client.V2Tags.get(docker.organization, build.name)
+      tags <- v2client.V2Tags.get(docker.organization, BuildNames.toDockerImageName(build))
     } yield {
 
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
@@ -135,7 +138,7 @@ class DockerHubActor @javax.inject.Inject() (
         UsersDao.systemUser,
         ImageForm(
           buildId = buildId,
-          name = s"${docker.organization}/${build.name}",
+          name = BuildNames.toDockerImageName(docker, build),
           version = version
         )
       ) match {
@@ -145,18 +148,27 @@ class DockerHubActor @javax.inject.Inject() (
     }
   }
 
-  def createBuildForm(org: String, name: String): DockerBuildForm = {
-    val fullName = s"$org/$name"
+  def createBuildForm(docker: Docker, scms: Scms, scmsUri: String, build: Build): DockerBuildForm = {
+    val fullName = BuildNames.toDockerImageName(docker, build)
     DockerBuildForm(
       active = true,
       buildTags = createBuildTags(),
       description = s"Automated build for $fullName",
       dockerhubRepoName = fullName,
       isPrivate = true,
-      name = name,
-      namespace = org,
-      provider = "github",
-      vcsRepoName = fullName
+      name = BuildNames.toDockerImageName(build),
+      namespace = docker.organization,
+      provider = scms match {
+        case Scms.Github => "github"
+        case Scms.UNDEFINED(other) => other
+      },
+      vcsRepoName = io.flow.delta.api.lib.GithubUtil.parseUri(scmsUri) match {
+        case Left(errors) => {
+          Logger.warn(s"Error parsing VCS URI[$scmsUri]. defaulting vcsRepoName to[$fullName]: ${errors.mkString(", ")}")
+          fullName
+        }
+        case Right(repo) => repo.toString
+      }
     )
   }
 

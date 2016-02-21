@@ -1,12 +1,12 @@
 package db
 
+import anorm._
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
-import io.flow.delta.api.lib.GithubUtil
+import io.flow.delta.api.lib.{BuildNames, GithubUtil}
 import io.flow.play.util.UrlKey
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.User
-import anorm._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
@@ -181,7 +181,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
           SettingsDao.create(c, createdBy, id, form.settings)
 
           dockerfilePaths.map { path =>
-            buildsWriteDao.create(c, createdBy, Util.dockerfilePathToBuildForm(id, path))
+            buildsWriteDao.create(c, createdBy, BuildNames.dockerfilePathToBuildForm(id, path))
           }
         }
 

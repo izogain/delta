@@ -131,8 +131,8 @@ class Projects @javax.inject.Inject() (
           BuildsDao.findAllByProjectId(authorization(request), project.id).map { build =>
             BuildState(
               name = build.name,
-              desired = BuildDesiredStatesDao.findByBuildId(authorization(request), id),
-              last = BuildLastStatesDao.findByBuildId(authorization(request), id)
+              desired = BuildDesiredStatesDao.findByBuildId(authorization(request), build.id),
+              last = BuildLastStatesDao.findByBuildId(authorization(request), build.id)
             )
           }.toSeq
         )
