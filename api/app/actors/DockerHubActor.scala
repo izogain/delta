@@ -71,7 +71,7 @@ class DockerHubActor @javax.inject.Inject() (
         withProject { project =>
           withBuild { build =>
             v2client.DockerRepositories.postAutobuild(
-              org.docker.organization, build.name, createBuildForm(org.docker, project.scms, project.uri, build)
+              org.docker.organization, BuildNames.projectName(build), createBuildForm(org.docker, project.scms, project.uri, build)
             ).map { dockerHubBuild =>
               log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
             }.recover {
@@ -90,7 +90,7 @@ class DockerHubActor @javax.inject.Inject() (
         withOrganization { org =>
           syncImages(org.docker, build)
 
-          val imageFullName = s"${org.docker.organization}/${build.name}:$version"
+          val imageFullName = BuildNames.dockerImageName(org.docker, build, version)
 
           ImagesDao.findByBuildIdAndVersion(build.id, version) match {
             case Some(image) => {
