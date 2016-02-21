@@ -1,9 +1,9 @@
 package io.flow.delta.api.lib
 
-import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao}
+import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao, UsersWriteDao}
 import io.flow.delta.v0.models.{GithubUserForm, UserForm, Visibility}
 import io.flow.common.v0.models.{Name, User}
-import io.flow.play.util.{DefaultConfig, IdGenerator}
+import io.flow.play.util.{Config, IdGenerator}
 import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
 import io.flow.github.v0.{Client => GithubClient}
@@ -90,7 +90,7 @@ trait Github {
                 Right(user)
               }
               case None => {
-                UsersDao.create(
+                play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
                   createdBy = None,
                   form = UserForm(
                     email = githubUserWithToken.emails.headOption,
@@ -183,10 +183,12 @@ trait Github {
 }
 
 @javax.inject.Singleton
-class DefaultGithub @javax.inject.Inject() () extends Github {
+class DefaultGithub @javax.inject.Inject() (
+  config: Config
+) extends Github {
 
-  private[this] lazy val clientId = DefaultConfig.requiredString("github.delta.client.id")
-  private[this] lazy val clientSecret = DefaultConfig.requiredString("github.delta.client.secret")
+  private[this] lazy val clientId = config.requiredString("github.delta.client.id")
+  private[this] lazy val clientSecret = config.requiredString("github.delta.client.secret")
 
   private[this] lazy val oauthClient = new GithubOauthClient(
     apiUrl = "https://github.com",

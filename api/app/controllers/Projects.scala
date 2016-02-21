@@ -1,6 +1,6 @@
 package controllers
 
-import db.{ProjectsDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
+import db.{ProjectsDao,ProjectsWriteDao, ProjectDesiredStatesDao, ProjectLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Project, ProjectForm, ProjectState, SettingsForm}
@@ -14,7 +14,9 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Projects @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
+  projectsWriteDao: ProjectsWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
@@ -55,7 +57,7 @@ class Projects @javax.inject.Inject() (
           UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
         }
         case s: JsSuccess[ProjectForm] => {
-          ProjectsDao.create(request.user, s.get) match {
+          projectsWriteDao.create(request.user, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(project) => Created(Json.toJson(project))
           }
@@ -72,7 +74,7 @@ class Projects @javax.inject.Inject() (
             UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
           }
           case s: JsSuccess[ProjectForm] => {
-            ProjectsDao.update(request.user, project, s.get) match {
+            projectsWriteDao.update(request.user, project, s.get) match {
               case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
               case Right(updated) => Ok(Json.toJson(updated))
             }
@@ -84,7 +86,7 @@ class Projects @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      ProjectsDao.delete(request.user, project)
+      projectsWriteDao.delete(request.user, project)
       NoContent
     }
   }
@@ -133,7 +135,7 @@ class Projects @javax.inject.Inject() (
 
   def postEventsAndPursueDesiredStateById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      MainActor.ref ! MainActor.Messages.ProjectSync(project.id)
+      mainActor ! MainActor.Messages.ProjectSync(project.id)
       NoContent
     }
   }

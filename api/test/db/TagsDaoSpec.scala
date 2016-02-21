@@ -11,11 +11,13 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  lazy val tagsWriteDao = app.injector.instanceOf[TagsWriteDao]
+
   "create" in {
     val project = createProject()
     val hash = createTestKey()
     val form = createTagForm(project).copy(name = "0.0.1", hash = hash)
-    val tag = rightOrErrors(TagsDao.create(systemUser, form))
+    val tag = rightOrErrors(tagsWriteDao.create(systemUser, form))
     tag.project.id must be(project.id)
     tag.name must be("0.0.1")
     tag.hash must be(hash)
@@ -26,17 +28,17 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val name = "0.0.1"
     val hash = createTestKey()
 
-    val tag = TagsDao.upsert(systemUser, project.id, name, hash)
+    val tag = tagsWriteDao.upsert(systemUser, project.id, name, hash)
     tag.name must be(name)
     tag.hash must be(hash)
 
-    val tag2 = TagsDao.upsert(systemUser, project.id, name, hash)
+    val tag2 = tagsWriteDao.upsert(systemUser, project.id, name, hash)
     tag2.id must be(tag.id)
     tag2.name must be(name)
     tag2.hash must be(hash)
 
     val other = createTestKey()
-    val tag3 = TagsDao.upsert(systemUser, project.id, name, other)
+    val tag3 = tagsWriteDao.upsert(systemUser, project.id, name, other)
     tag3.id must be(tag2.id)
     tag3.name must be(name)
     tag3.hash must be(other)
@@ -44,7 +46,7 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "delete" in {
     val tag = createTag()
-    TagsDao.delete(systemUser, tag)
+    tagsWriteDao.delete(systemUser, tag)
     TagsDao.findById(Authorization.All, tag.id) must be(None)
   }
 
@@ -72,10 +74,10 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val project = createProject()
 
     val form1 = createTagForm(project).copy(name = "0.0.2")
-    val tag1 = rightOrErrors(TagsDao.create(systemUser, form1))
+    val tag1 = rightOrErrors(tagsWriteDao.create(systemUser, form1))
 
     val form2 = createTagForm(project).copy(name = "0.0.3")
-    val tag2 = rightOrErrors(TagsDao.create(systemUser, form2))
+    val tag2 = rightOrErrors(tagsWriteDao.create(systemUser, form2))
 
     TagsDao.findByProjectIdAndName(Authorization.All, project.id, "0.0.2").map(_.id) must be(Some(tag1.id))
     TagsDao.findByProjectIdAndName(Authorization.All, project.id, "0.0.3").map(_.id) must be(Some(tag2.id))
@@ -116,25 +118,25 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validate" must {
 
     "require hash" in {
-      TagsDao.validate(systemUser, createTagForm().copy(hash = "   ")) must be(
+      tagsWriteDao.validate(systemUser, createTagForm().copy(hash = "   ")) must be(
         Seq("Hash cannot be empty")
       )
     }
 
     "require name" in {
-      TagsDao.validate(systemUser, createTagForm().copy(name = "   ")) must be(
+      tagsWriteDao.validate(systemUser, createTagForm().copy(name = "   ")) must be(
         Seq("Name cannot be empty")
       )
     }
 
     "validate name is semver" in {
-      TagsDao.validate(systemUser, createTagForm().copy(name = "release")) must be(
+      tagsWriteDao.validate(systemUser, createTagForm().copy(name = "release")) must be(
         Seq("Name must match semver pattern (e.g. 0.1.2)")
       )
     }
 
     "validate project exists" in {
-      TagsDao.validate(systemUser, createTagForm().copy(projectId = createTestKey())) must be(
+      tagsWriteDao.validate(systemUser, createTagForm().copy(projectId = createTestKey())) must be(
         Seq("Project not found")
       )
     }
@@ -143,11 +145,11 @@ class TagsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       val form = createTagForm()
       val tag = createTag(form)
 
-      TagsDao.validate(systemUser, form) must be(
+      tagsWriteDao.validate(systemUser, form) must be(
         Seq("Project already has a tag with this name")
       )
 
-      TagsDao.validate(systemUser, form.copy(name = "9.1.2")) must be(Nil)
+      tagsWriteDao.validate(systemUser, form.copy(name = "9.1.2")) must be(Nil)
     }
 
   }

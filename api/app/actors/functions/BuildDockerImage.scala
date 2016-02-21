@@ -1,12 +1,12 @@
 package io.flow.delta.actors.functions
 
 import db.{ImagesDao, ProjectDesiredStatesDao}
-import io.flow.delta.actors.{MainActor, SupervisorFunction, SupervisorResult}
+import io.flow.delta.actors.{MainActor, MainActorProvider, SupervisorFunction, SupervisorResult}
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Project
 import play.api.Logger
 import play.libs.Akka
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -37,7 +37,7 @@ case class BuildDockerImage(project: Project) {
   ): SupervisorResult = {
     ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) match {
       case None => {
-        SupervisorResult.NoChange("Project does not have an desired state")
+        SupervisorResult.NoChange("Project does not have a desired state")
       }
 
       case Some(state) => {
@@ -47,7 +47,7 @@ case class BuildDockerImage(project: Project) {
               None
             }
             case None => {
-              MainActor.ref ! MainActor.Messages.BuildDockerImage(project.id, version.name)
+              MainActorProvider.ref ! MainActor.Messages.BuildDockerImage(project.id, version.name)
               Some(version.name)
             }
           }

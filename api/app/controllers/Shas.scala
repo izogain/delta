@@ -1,6 +1,6 @@
 package controllers
 
-import db.ShasDao
+import db.{ShasDao, ShasWriteDao}
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.Sha
 import io.flow.delta.v0.models.json._
@@ -13,7 +13,8 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Shas @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  shasWriteDao: ShasWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
@@ -51,7 +52,7 @@ class Shas @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withSha(request.user, id) { sha =>
-      ShasDao.delete(request.user, sha)
+      shasWriteDao.delete(request.user, sha)
       NoContent
     }
   }

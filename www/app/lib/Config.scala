@@ -6,8 +6,10 @@ import java.net.URLEncoder
 
 object Config {
 
-  lazy val githubClientId = DefaultConfig.requiredString("github.delta.client.id")
-  lazy val deltaWwwHost = DefaultConfig.requiredString("delta.www.host")
+  private[this] lazy val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
+
+  lazy val githubClientId = config.requiredString("github.delta.client.id")
+  lazy val deltaWwwHost = config.requiredString("delta.www.host")
   lazy val githubBaseUrl = s"$deltaWwwHost/login/github"
 
   val VersionsPerPage = 5

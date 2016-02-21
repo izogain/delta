@@ -9,7 +9,12 @@ import sun.misc.BASE64Encoder
 
 import collection.JavaConverters._
 
-object AutoScalingGroup extends Settings with Credentials {
+case class AutoScalingGroup(
+  eC2ContainerService: EC2ContainerService,
+  dockerHubToken: String,
+  dockerHubEmail: String
+) extends Settings with Credentials {
+
   lazy val client = new AmazonAutoScalingClient(awsCredentials)
   lazy val encoder = new BASE64Encoder()
 
@@ -83,9 +88,7 @@ object AutoScalingGroup extends Settings with Credentials {
   }
 
   def lcUserData(id: String): String = {
-    val ecsClusterName = EC2ContainerService.getClusterName(id)
-    val dockerHubToken = DefaultConfig.requiredString("dockerhub.delta.auth.token")
-    val dockerHubEmail = DefaultConfig.requiredString("dockerhub.delta.auth.email")
+    val ecsClusterName = eC2ContainerService.getClusterName(id)
 
     return Seq(
       """#!/bin/bash""",

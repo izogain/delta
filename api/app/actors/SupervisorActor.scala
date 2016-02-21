@@ -4,7 +4,7 @@ import akka.actor.Actor
 import db.{ProjectDesiredStatesDao, SettingsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.v0.models.{Project, Settings, Version}
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import play.libs.Akka
 
@@ -31,16 +31,14 @@ object SupervisorActor {
 
 }
 
-class SupervisorActor extends Actor with Util with DataProject with EventLog {
-
-  override val logPrefix = "Supervisor"
+class SupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
 
   private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
     case msg @ SupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      setDataProject(id)
+      setProjectId(id)
     }
 
     /**

@@ -24,6 +24,48 @@ object ImagesDao {
       join projects on projects.id = images.project_id
   """)
 
+  def findById(id: String): Option[Image] = {
+    findAll(ids = Some(Seq(id)), limit = 1).headOption
+  }
+
+  def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
+    findAll(
+      projectId = Some(projectId),
+      versions = Some(Seq(version)),
+      limit = 1
+    ).headOption
+  }
+
+  def findAll(
+   ids: Option[Seq[String]] = None,
+   projectId: Option[String] = None,
+   names: Option[Seq[String]] = None,
+   versions: Option[Seq[String]] = None,
+   orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
+   limit: Long = 25,
+   offset: Long = 0
+  ): Seq[Image] = {
+    DB.withConnection { implicit c =>
+      BaseQuery.
+        optionalIn("images.id", ids).
+        optionalIn("images.name", names).
+        equals("images.project_id", projectId).
+        optionalIn("images.version", versions).
+        orderBy(orderBy.sql).
+        limit(limit).
+        offset(offset).
+        as(
+          io.flow.delta.v0.anorm.parsers.Image.parser().*
+        )
+    }
+  }
+  
+}
+
+case class ImagesWriteDao @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
+) {
+
   private[this] val InsertQuery = """
     insert into images
     (id, project_id, name, version, sort_key, updated_by_user_id)
@@ -79,7 +121,7 @@ object ImagesDao {
       name = name,
       version = version
     )
-    findByProjectIdAndVersion(projectId, version) match {
+    ImagesDao.findByProjectIdAndVersion(projectId, version) match {
       case None => {
         create(createdBy, form) match {
           case Left(errors) => sys.error(errors.mkString(", "))
@@ -114,10 +156,10 @@ object ImagesDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.projectId, id, form.version.trim)
 
         Right(
-          findById(id).getOrElse {
+          ImagesDao.findById(id).getOrElse {
             sys.error("Failed to create image")
           }
         )
@@ -140,10 +182,10 @@ object ImagesDao {
           ).execute()
         }
 
-        MainActor.ref ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.version.trim)
+        mainActor ! MainActor.Messages.ImageCreated(form.projectId, image.id, form.version.trim)
 
         Right(
-          findById(image.id).getOrElse {
+          ImagesDao.findById(image.id).getOrElse {
             sys.error("Failed to create image")
           }
         )
@@ -158,39 +200,4 @@ object ImagesDao {
     Delete.delete("images", deletedBy.id, image.id)
   }
 
-  def findById(id: String): Option[Image] = {
-    findAll(ids = Some(Seq(id)), limit = 1).headOption
-  }
-
-  def findByProjectIdAndVersion(projectId: String, version: String): Option[Image] = {
-    findAll(
-      projectId = Some(projectId),
-      versions = Some(Seq(version)),
-      limit = 1
-    ).headOption
-  }
-
-  def findAll(
-   ids: Option[Seq[String]] = None,
-   projectId: Option[String] = None,
-   names: Option[Seq[String]] = None,
-   versions: Option[Seq[String]] = None,
-   orderBy: OrderBy = OrderBy("-images.sort_key, -images.created_at"),
-   limit: Long = 25,
-   offset: Long = 0
-  ): Seq[Image] = {
-    DB.withConnection { implicit c =>
-      BaseQuery.
-        optionalIn("images.id", ids).
-        optionalIn("images.name", names).
-        equals("images.project_id", projectId).
-        optionalIn("images.version", versions).
-        orderBy(orderBy.sql).
-        limit(limit).
-        offset(offset).
-        as(
-          io.flow.delta.v0.anorm.parsers.Image.parser().*
-        )
-    }
-  }
 }

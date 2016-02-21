@@ -1,6 +1,6 @@
 package controllers
 
-import db.ImagesDao
+import db.{ImagesDao, ImagesWriteDao}
 import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.Image
 import io.flow.delta.v0.models.json._
@@ -13,7 +13,8 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Images @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val userTokensClient: UserTokensClient,
+  imagesWriteDao: ImagesWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(
@@ -48,7 +49,7 @@ class Images @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withImage(request.user, id) { image =>
-      ImagesDao.delete(request.user, image)
+      imagesWriteDao.delete(request.user, image)
       NoContent
     }
   }

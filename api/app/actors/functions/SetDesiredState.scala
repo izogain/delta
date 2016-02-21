@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.{ProjectDesiredStatesDao, TagsDao, UsersDao}
+import db.{ProjectDesiredStatesDao, ProjectDesiredStatesWriteDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.StateFormatter
 import io.flow.delta.v0.models.{Project, StateForm, Version}
@@ -68,7 +68,7 @@ case class SetDesiredState(project: Project) extends Github {
 
   def setVersions(versions: Seq[Version]): SupervisorResult = {
     assert(!versions.isEmpty, "Must have at least one version")
-    ProjectDesiredStatesDao.upsert(
+    play.api.Play.current.injector.instanceOf[ProjectDesiredStatesWriteDao].upsert(
       UsersDao.systemUser,
       project,
       StateForm(

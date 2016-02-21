@@ -13,9 +13,11 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  lazy val organizationsWriteDao = app.injector.instanceOf[OrganizationsWriteDao]
+
   "create" in {
     val form = createOrganizationForm()
-    val organization = OrganizationsDao.create(systemUser, form).right.getOrElse {
+    val organization = organizationsWriteDao.create(systemUser, form).right.getOrElse {
       sys.error("Failed to create org")
     }
     organization.id must be(form.id)
@@ -26,7 +28,7 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val org = createOrganization()
     val form = OrganizationForm(id = org.id, docker = Docker(provider=DockerProvider.DockerHub, organization="updated"))
 
-    val updated = OrganizationsDao.update(systemUser, org, form).right.getOrElse {
+    val updated = organizationsWriteDao.update(systemUser, org, form).right.getOrElse {
       sys.error("Failed to update org")
     }
     updated.id must be(form.id)
@@ -36,7 +38,7 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "creation users added as admin of org" in {
     val user = createUser()
     val form = createOrganizationForm()
-    val org = OrganizationsDao.create(user, form).right.getOrElse {
+    val org = organizationsWriteDao.create(user, form).right.getOrElse {
       sys.error("Failed to create org")
     }
     val membership = MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, org.id, user.id).getOrElse {
@@ -47,7 +49,7 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "delete" in {
     val org = createOrganization()
-    OrganizationsDao.delete(systemUser, org)
+    organizationsWriteDao.delete(systemUser, org)
     OrganizationsDao.findById(Authorization.All, org.id) must be(None)
   }
 
@@ -76,21 +78,21 @@ class OrganizationsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validate" must {
 
     "keep key url friendly" in {
-      OrganizationsDao.validate(createOrganizationForm().copy(id = "flow commerce")) must be(
+      organizationsWriteDao.validate(createOrganizationForm().copy(id = "flow commerce")) must be(
         Seq("Id must be in all lower case and contain alphanumerics only (-, _, and . are supported). A valid id would be: flow-commerce")
       )
     }
 
     "requires valid docker provider" in {
       val form = createOrganizationForm()
-      OrganizationsDao.validate(form.copy(docker = Docker(provider = DockerProvider.UNDEFINED("other"), organization="flow"))) must be(
+      organizationsWriteDao.validate(form.copy(docker = Docker(provider = DockerProvider.UNDEFINED("other"), organization="flow"))) must be(
         Seq("Docker provider not found")
       )
     }
 
     "requires docker organization" in {
       val form = createOrganizationForm()
-      OrganizationsDao.validate(form.copy(docker = Docker(provider = DockerProvider.DockerHub, organization=" "))) must be(
+      organizationsWriteDao.validate(form.copy(docker = Docker(provider = DockerProvider.DockerHub, organization=" "))) must be(
         Seq("Docker organization is required")
       )
     }

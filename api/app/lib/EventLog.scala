@@ -76,27 +76,34 @@ case class EventLog(
     * entry in the log. Catches and handles errors as well.
     */
   def runSync[T](
-    message: String
+    message: String,
+    quiet: Boolean = false
   ) (
     f: => T
   ) (
     implicit ec: ExecutionContext
   ): Future[T] = {
-    runAsync(message) {
+    runAsync(message, quiet) {
       Future { f }
     }
   }
 
   def runAsync[T](
-    message: String
+    message: String,
+    quiet: Boolean = false
   ) (
     f: => Future[T]
   ) (
     implicit ec: ExecutionContext
   ): Future[T] = {
-    started(message)
+    if (!quiet) {
+      started(message)
+    }
+
     f.map { result =>
-      completed(message + ": " + result)
+      if (!quiet) {
+        completed(message + ": " + result)
+      }
       result
     }.recover {
       case ex: Throwable => {

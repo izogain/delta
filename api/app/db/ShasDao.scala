@@ -17,7 +17,7 @@ case class ShaForm(
 
 object ShasDao {
 
-  private[this] val Master = "master"
+  private[db] val Master = "master"
 
   private[this] val BaseQuery = Query(s"""
     select shas.id,
@@ -32,153 +32,6 @@ object ShasDao {
       join projects on shas.project_id = projects.id
   """)
 
-  private[this] val InsertQuery = """
-    insert into shas
-    (id, project_id, branch, hash, updated_by_user_id)
-    values
-    ({id}, {project_id}, {branch}, {hash}, {updated_by_user_id})
-  """
-
-  private[this] val UpdateQuery = """
-    update shas
-       set project_id = {project_id},
-           branch = {branch},
-           hash = {hash},
-           updated_by_user_id = {updated_by_user_id}
-     where id = {id}
-  """
-
-  private[db] def validate(
-    user: User,
-    form: ShaForm,
-    existing: Option[Sha] = None
-  ): Seq[String] = {
-    val hashErrors = if (form.hash.trim == "") {
-      Seq("Hash cannot be empty")
-    } else {
-      Nil
-    }
-
-    val branchErrors = if (form.branch.trim == "") {
-      Seq("Branch cannot be empty")
-    } else {
-      Nil
-    }
-
-    val projectErrors = ProjectsDao.findById(Authorization.All, form.projectId) match {
-      case None => Seq("Project not found")
-      case Some(project) => Nil
-    }
-
-    val existingErrors = findByProjectIdAndBranch(Authorization.All, form.projectId, form.branch) match {
-      case None => Nil
-      case Some(found) => {
-        existing.map(_.id) == Some(found.id) match {
-          case true => Nil
-          case false => Seq("Project already has a hash for this branch")
-        }
-      }
-    }
-
-    hashErrors ++ branchErrors ++ projectErrors ++ existingErrors
-  }
-
-  def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
-    validate(createdBy, form) match {
-      case Nil => {
-        val id = io.flow.play.util.IdGenerator("sha").randomId()
-
-        DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
-            'id -> id,
-            'project_id -> form.projectId,
-            'branch -> form.branch.trim,
-            'hash -> form.hash.trim,
-            'updated_by_user_id -> createdBy.id
-          ).execute()
-        }
-
-        MainActor.ref ! MainActor.Messages.ShaCreated(form.projectId, id)
-
-        Right(
-          findById(Authorization.All, id).getOrElse {
-            sys.error("Failed to create sha")
-          }
-        )
-      }
-      case errors => {
-        Left(errors)
-      }
-    }
-  }
-
-  /**
-    * Sets the value of the hash for the master branch, creating or
-    * updated the sha record as needed. Returns the created or updated
-    * sha.
-    */
-  def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
-    upsertBranch(createdBy, projectId, Master, hash)
-  }
-
-  private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
-    val form = ShaForm(
-      projectId = projectId,
-      branch = branch,
-      hash = hash
-    )
-
-    findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
-      case None => {
-        create(createdBy, form) match {
-          case Left(errors) => {
-            sys.error(errors.mkString(", "))
-          }
-          case Right(sha) => sha
-        }
-      }
-      case Some(existing) => {
-        existing.hash == hash match {
-          case true => existing
-          case false => {
-            update(createdBy, existing, form) match {
-              case Left(errors) => sys.error(errors.mkString(", "))
-              case Right(sha) => sha
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private[this] def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
-    validate(createdBy, form, Some(sha)) match {
-      case Nil => {
-        DB.withConnection { implicit c =>
-          SQL(UpdateQuery).on(
-            'id -> sha.id,
-            'project_id -> form.projectId,
-            'branch -> form.branch.trim,
-            'hash -> form.hash.trim,
-            'updated_by_user_id -> createdBy.id
-          ).execute()
-        }
-
-        MainActor.ref ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
-
-        Right(
-          findById(Authorization.All, sha.id).getOrElse {
-            sys.error("Failed to update sha")
-          }
-        )
-      }
-      case errors => Left(errors)
-    }
-  }
-
-  def delete(deletedBy: User, sha: Sha) {
-    Delete.delete("shas", deletedBy.id, sha.id)
-  }
 
   def findByProjectIdAndMaster(auth: Authorization, projectId: String): Option[Sha] = {
     findByProjectIdAndBranch(auth, projectId, Master)
@@ -231,6 +84,160 @@ object ShasDao {
           io.flow.delta.v0.anorm.parsers.Sha.parser().*
         )
     }
+  }
+
+}
+
+case class ShasWriteDao @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
+) {
+
+  private[this] val InsertQuery = """
+    insert into shas
+    (id, project_id, branch, hash, updated_by_user_id)
+    values
+    ({id}, {project_id}, {branch}, {hash}, {updated_by_user_id})
+  """
+
+  private[this] val UpdateQuery = """
+    update shas
+       set project_id = {project_id},
+           branch = {branch},
+           hash = {hash},
+           updated_by_user_id = {updated_by_user_id}
+     where id = {id}
+  """
+
+  private[db] def validate(
+    user: User,
+    form: ShaForm,
+    existing: Option[Sha] = None
+  ): Seq[String] = {
+    val hashErrors = if (form.hash.trim == "") {
+      Seq("Hash cannot be empty")
+    } else {
+      Nil
+    }
+
+    val branchErrors = if (form.branch.trim == "") {
+      Seq("Branch cannot be empty")
+    } else {
+      Nil
+    }
+
+    val projectErrors = ProjectsDao.findById(Authorization.All, form.projectId) match {
+      case None => Seq("Project not found")
+      case Some(project) => Nil
+    }
+
+    val existingErrors = ShasDao.findByProjectIdAndBranch(Authorization.All, form.projectId, form.branch) match {
+      case None => Nil
+      case Some(found) => {
+        existing.map(_.id) == Some(found.id) match {
+          case true => Nil
+          case false => Seq("Project already has a hash for this branch")
+        }
+      }
+    }
+
+    hashErrors ++ branchErrors ++ projectErrors ++ existingErrors
+  }
+
+  def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
+    validate(createdBy, form) match {
+      case Nil => {
+        val id = io.flow.play.util.IdGenerator("sha").randomId()
+
+        DB.withConnection { implicit c =>
+          SQL(InsertQuery).on(
+            'id -> id,
+            'project_id -> form.projectId,
+            'branch -> form.branch.trim,
+            'hash -> form.hash.trim,
+            'updated_by_user_id -> createdBy.id
+          ).execute()
+        }
+
+        mainActor ! MainActor.Messages.ShaCreated(form.projectId, id)
+
+        Right(
+          ShasDao.findById(Authorization.All, id).getOrElse {
+            sys.error("Failed to create sha")
+          }
+        )
+      }
+      case errors => {
+        Left(errors)
+      }
+    }
+  }
+
+  /**
+    * Sets the value of the hash for the master branch, creating or
+    * updated the sha record as needed. Returns the created or updated
+    * sha.
+    */
+  def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
+    upsertBranch(createdBy, projectId, ShasDao.Master, hash)
+  }
+
+  private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
+    val form = ShaForm(
+      projectId = projectId,
+      branch = branch,
+      hash = hash
+    )
+
+    ShasDao.findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
+      case None => {
+        create(createdBy, form) match {
+          case Left(errors) => {
+            sys.error(errors.mkString(", "))
+          }
+          case Right(sha) => sha
+        }
+      }
+      case Some(existing) => {
+        existing.hash == hash match {
+          case true => existing
+          case false => {
+            update(createdBy, existing, form) match {
+              case Left(errors) => sys.error(errors.mkString(", "))
+              case Right(sha) => sha
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private[this] def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
+    validate(createdBy, form, Some(sha)) match {
+      case Nil => {
+        DB.withConnection { implicit c =>
+          SQL(UpdateQuery).on(
+            'id -> sha.id,
+            'project_id -> form.projectId,
+            'branch -> form.branch.trim,
+            'hash -> form.hash.trim,
+            'updated_by_user_id -> createdBy.id
+          ).execute()
+        }
+
+        mainActor ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
+
+        Right(
+          ShasDao.findById(Authorization.All, sha.id).getOrElse {
+            sys.error("Failed to update sha")
+          }
+        )
+      }
+      case errors => Left(errors)
+    }
+  }
+
+  def delete(deletedBy: User, sha: Sha) {
+    Delete.delete("shas", deletedBy.id, sha.id)
   }
 
 }

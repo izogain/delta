@@ -13,8 +13,11 @@ import play.api.Play.current
 
 import scala.concurrent.Future
 
-object EC2ContainerService extends Settings with Credentials {
+case class EC2ContainerService(registryClient: RegistryClient) extends Settings with Credentials {
 
+  // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
+  private[this] val ImagePattern = "(\\w+)/(\\w+):(.+)".r
+  
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
   private[this] lazy val client = new AmazonECSClient(awsCredentials)
@@ -85,7 +88,7 @@ object EC2ContainerService extends Settings with Credentials {
       client.listServices(
         new ListServicesRequest()
         .withCluster(cluster)
-      ).getServiceArns().asScala.map{serviceArn =>
+      ).getServiceArns().asScala.map{ serviceArn =>
         val service = client.describeServices(
           new DescribeServicesRequest()
           .withCluster(cluster)
@@ -100,12 +103,14 @@ object EC2ContainerService extends Settings with Credentials {
         ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
           case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
           case Some(containerDef) => {
-            val image = containerDef.getImage()
-
-            // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
-            val pattern = "(\\w+)/(\\w+):(.+)".r
-            val pattern(o, p, version) = image
-            Version(version, service.getRunningCount.toInt)
+            containerDef.getImage() match {
+              case ImagePattern(o, p, version) => {
+                Version(version, service.getRunningCount.toInt)
+              }
+              case _ => {
+                sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
+              }
+            }
           }
         }
       }  
@@ -127,8 +132,11 @@ object EC2ContainerService extends Settings with Credentials {
   def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    RegistryClient.getById(projectId).map {
-      case None => sys.error(s"project[$projectId] was not found in the registry")
+    registryClient.getById(projectId).map {
+      case None => {
+        sys.error(s"project[$projectId] was not found in the registry")
+      }
+
       case Some(application) => {
         val registryPorts = application.ports.headOption.getOrElse {
           sys.error(s"project[$projectId] does not have any ports in the registry")
@@ -164,10 +172,13 @@ object EC2ContainerService extends Settings with Credentials {
     val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
+    val loadBalancerName = ElasticLoadBalancer(registryClient).getLoadBalancerName(projectId)
 
-    RegistryClient.getById(projectId).map {
-      case None => sys.error(s"project[$projectId] was not found in the registry")
+    registryClient.getById(projectId).map {
+      case None => {
+        sys.error(s"project[$projectId] was not found in the registry")
+      }
+
       case Some(application) => {
         val registryPorts = application.ports.headOption.getOrElse {
           sys.error(s"project[$projectId] does not have any ports in the registry")
@@ -203,5 +214,15 @@ object EC2ContainerService extends Settings with Credentials {
       }
     }
   }
+  
+  def summary(service: Service): String = {
+    val status = service.getStatus
+    val running = service.getRunningCount
+    val desired = service.getDesiredCount
+    val pending = service.getPendingCount
 
+    s"status[$status] running[$running] desired[$desired] pending[$pending]"
+  }
+  
+  
 }

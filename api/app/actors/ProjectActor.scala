@@ -5,11 +5,11 @@ import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import io.flow.delta.api.lib.{Semver, StateFormatter}
 import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
-import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesDao}
+import db.{OrganizationsDao, TokensDao, UsersDao, ProjectLastStatesWriteDao}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.v0.models.{Project, StateForm}
 import io.flow.delta.lib.Text
-import io.flow.play.actors.Util
+import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
 import play.api.Logger
 import play.libs.Akka
@@ -26,36 +26,53 @@ object ProjectActor {
   trait Message
 
   object Messages {
-    case class Data(id: String) extends Message
-
     case object CheckLastState extends Message
 
     case object ConfigureAWS extends Message // One-time AWS setup
 
     case object CreateHooks extends Message
 
-    case class Scale(diffs: Seq[StateDiff]) extends Message
     case class MonitorScale(imageName: String, imageVersion: String) extends Message
+
+    case class Scale(diffs: Seq[StateDiff]) extends Message
+
+    case object Setup extends Message    
+  }
+
+  trait Factory {
+    def apply(projectId: String): Actor
   }
 
 }
 
-class ProjectActor extends Actor with Util with DataProject with EventLog {
-
-  override val logPrefix = "ProjectActor"
+class ProjectActor @javax.inject.Inject() (
+  registryClient: RegistryClient,
+  config: DefaultConfig,
+  @com.google.inject.assistedinject.Assisted projectId: String
+) extends Actor with ErrorHandler with DataProject with EventLog {
 
   implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
 
-  private[this] lazy val ecs = EC2ContainerService
-  private[this] lazy val elb = ElasticLoadBalancer
-  private[this] lazy val asg = AutoScalingGroup
+  private[this] lazy val ecs = EC2ContainerService(registryClient)
+  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
+  private[this] lazy val asg = AutoScalingGroup(
+    ecs,
+    dockerHubToken = config.requiredString("dockerhub.delta.auth.token"),
+    dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
+  )
 
   def receive = {
 
-    case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
-      setDataProject(id)
+    // case msg @ ProjectActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.Setup => withVerboseErrorHandler(msg) {
+      setProjectId(projectId)
+
+      // Verify hooks, AWS have been setup
+      self ! ProjectActor.Messages.CreateHooks
 
       if (isScaleEnabled) {
+        self ! ProjectActor.Messages.ConfigureAWS
+
         withProject { project =>
           Akka.system.scheduler.schedule(
             Duration(1, "second"),
@@ -69,24 +86,14 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
 
     case msg @ ProjectActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          captureLastState(project)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Error checking last state", Some(e))
-        }
+        captureLastState(project)
       }
     }
 
     // Configure EC2 LC, ELB, ASG for a project (id: user, fulfillment, splashpage, etc)
     case msg @ ProjectActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          configureAWS(project)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Error configuring EC2", Some(e))
-        }
+        configureAWS(project)
       }
     }
 
@@ -101,24 +108,14 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     case msg @ ProjectActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
       withProject { project =>
         diffs.foreach { diff =>
-          Try(
-            scale(project, diff)
-          ) match {
-            case Success(_) => // do nothing
-            case Failure(e) => log.completed("Scale attempt ended with failure", Some(e))
-          }
+          scale(project, diff)
         }
       }
     }
 
     case msg @ ProjectActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg) {
       withProject { project =>
-        Try(
-          monitorScale(project, imageName, imageVersion)
-        ) match {
-          case Success(_) => // do nothing
-          case Failure(e) => log.completed("Monitor Scale attempt ended with failure", Some(e))
-        }
+        monitorScale(project, imageName, imageVersion)
       }
     }
 
@@ -153,6 +150,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
       log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         ecs.scale(imageName, imageVersion, project.id, diff.desiredInstances)
       }
+
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
@@ -174,17 +172,15 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
           sys.error(s"ECS Service not found for project $project.id, image $imageName, version $imageVersion")
         }
 
-        case Some(ecsService) => {
-          val running = ecsService.getRunningCount
-          val desired = ecsService.getDesiredCount
-          val pending = ecsService.getPendingCount
-          val status = ecsService.getStatus
+        case Some(service) => {
+          val summary = ecs.summary(service)
           val intervalSeconds = 5
 
-          if (running == desired) {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
+          if (service.getRunningCount == service.getDesiredCount) {
+            log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
+
           } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~$intervalSeconds seconds.")
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
 
             Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
               self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
@@ -195,20 +191,21 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  def captureLastState(project: Project): Future[Unit] = {
+  def captureLastState(project: Project): Future[String] = {
     log.runAsync("captureLastState") {
       ecs.getClusterInfo(project.id).map { versions =>
-        ProjectLastStatesDao.upsert(
+        play.api.Play.current.injector.instanceOf[ProjectLastStatesWriteDao].upsert(
           UsersDao.systemUser,
           project,
           StateForm(versions = versions)
         )
+        StateFormatter.label(versions)
       }
     }
   }
 
   def getServiceInfo(imageName: String, imageVersion: String, project: Project): Future[Option[Service]] = {
-    log.runSync("Getting ECS service Info") {
+    log.runSync("Getting ECS service Info", quiet = true) {
       ecs.getServiceInfo(imageName, imageVersion, project.id)
     }
   }
@@ -237,7 +234,7 @@ class ProjectActor extends Actor with Util with DataProject with EventLog {
     }
   }
 
-  private[this] val HookBaseUrl = DefaultConfig.requiredString("delta.api.host") + "/webhooks/github/"
+  private[this] val HookBaseUrl = config.requiredString("delta.api.host") + "/webhooks/github/"
   private[this] val HookName = "web"
   private[this] val HookEvents = Seq(io.flow.github.v0.models.HookEvent.Push)
 

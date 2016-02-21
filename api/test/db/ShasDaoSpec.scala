@@ -11,11 +11,13 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  lazy val shasWriteDao = app.injector.instanceOf[ShasWriteDao]
+
   "create" in {
     val project = createProject()
     val hash = createTestKey()
     val form = createShaForm(project).copy(branch = "master", hash = hash)
-    val sha = rightOrErrors(ShasDao.create(systemUser, form))
+    val sha = rightOrErrors(shasWriteDao.create(systemUser, form))
     sha.project.id must be(project.id)
     sha.branch must be("master")
     sha.hash must be(hash)
@@ -26,20 +28,20 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
     val hash = createTestKey()
 
-    val sha = ShasDao.upsertMaster(systemUser, project.id, hash)
+    val sha = shasWriteDao.upsertMaster(systemUser, project.id, hash)
     sha.hash must be(hash)
 
-    val sha2 = ShasDao.upsertMaster(systemUser, project.id, hash)
+    val sha2 = shasWriteDao.upsertMaster(systemUser, project.id, hash)
     sha2.hash must be(hash)
 
     val other = createTestKey()
-    val sha3 = ShasDao.upsertMaster(systemUser, project.id, other)
+    val sha3 = shasWriteDao.upsertMaster(systemUser, project.id, other)
     sha3.hash must be(other)
   }
 
   "delete" in {
     val sha = createSha()
-    ShasDao.delete(systemUser, sha)
+    shasWriteDao.delete(systemUser, sha)
     ShasDao.findById(Authorization.All, sha.id) must be(None)
   }
 
@@ -56,10 +58,10 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val project = createProject()
 
     val masterForm = createShaForm(project).copy(branch = "master")
-    val master = rightOrErrors(ShasDao.create(systemUser, masterForm))
+    val master = rightOrErrors(shasWriteDao.create(systemUser, masterForm))
 
     val fooForm = createShaForm(project).copy(branch = "foo")
-    val foo = rightOrErrors(ShasDao.create(systemUser, fooForm))
+    val foo = rightOrErrors(shasWriteDao.create(systemUser, fooForm))
 
     ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "master").map(_.hash) must be(Some(masterForm.hash))
     ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, "foo").map(_.hash) must be(Some(fooForm.hash))
@@ -100,19 +102,19 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validate" must {
 
     "require sha" in {
-      ShasDao.validate(systemUser, createShaForm().copy(hash = "   ")) must be(
+      shasWriteDao.validate(systemUser, createShaForm().copy(hash = "   ")) must be(
         Seq("Hash cannot be empty")
       )
     }
 
     "require branch" in {
-      ShasDao.validate(systemUser, createShaForm().copy(branch = "   ")) must be(
+      shasWriteDao.validate(systemUser, createShaForm().copy(branch = "   ")) must be(
         Seq("Branch cannot be empty")
       )
     }
 
     "validate project exists" in {
-      ShasDao.validate(systemUser, createShaForm().copy(projectId = createTestKey())) must be(
+      shasWriteDao.validate(systemUser, createShaForm().copy(projectId = createTestKey())) must be(
         Seq("Project not found")
       )
     }
@@ -121,11 +123,11 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       val form = createShaForm()
       val sha = createSha(form)
 
-      ShasDao.validate(systemUser, form) must be(
+      shasWriteDao.validate(systemUser, form) must be(
         Seq("Project already has a hash for this branch")
       )
 
-      ShasDao.validate(systemUser, form.copy(branch = createTestKey())) must be(Nil)
+      shasWriteDao.validate(systemUser, form.copy(branch = createTestKey())) must be(Nil)
     }
 
   }

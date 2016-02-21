@@ -12,6 +12,8 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  lazy val projectsWriteDao = app.injector.instanceOf[ProjectsWriteDao]
+
   lazy val org = createOrganization()
   lazy val project1 = createProject(org)
   lazy val project2 = createProject(org)
@@ -31,6 +33,12 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     )
 
     ProjectsDao.findById(Authorization.All, UUID.randomUUID.toString) must be(None)
+  }
+
+  "delete" in {
+    val project = createProject()
+    projectsWriteDao.delete(systemUser, project)
+    ProjectsDao.findById(Authorization.All, project.id) must be(None)
   }
 
   "create respects settings" in {
@@ -80,7 +88,7 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "update" in {
     val form = createProjectForm(org)
     val project = createProject(org)(form)
-    ProjectsDao.update(systemUser, project, form.copy(uri = "http://github.com/mbryzek/test"))
+    projectsWriteDao.update(systemUser, project, form.copy(uri = "http://github.com/mbryzek/test"))
     ProjectsDao.findById(Authorization.All, project.id).map(_.uri) must be(Some("http://github.com/mbryzek/test"))
   }
 
@@ -88,7 +96,7 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val form = createProjectForm(org)
     val project = createProject(org)(form)
     val newName = project.name + "2"
-    val updated = ProjectsDao.update(systemUser, project, form.copy(name = newName)).right.get
+    val updated = projectsWriteDao.update(systemUser, project, form.copy(name = newName)).right.get
     updated.id must be(project.id)
     updated.name must be(newName)
   }
@@ -96,35 +104,35 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   "validates" must {
     "SCMS" in {
       val form = createProjectForm(org).copy(scms = Scms.UNDEFINED("other"))
-      ProjectsDao.create(systemUser, form) must be(Left(Seq("Scms not found")))
+      projectsWriteDao.create(systemUser, form) must be(Left(Seq("Scms not found")))
     }
 
     "SCMS URI" in {
       val form = createProjectForm(org).copy(scms = Scms.Github, uri = "http://github.com/mbryzek")
-      ProjectsDao.create(systemUser, form) must be(
+      projectsWriteDao.create(systemUser, form) must be(
         Left(Seq("Invalid uri path[http://github.com/mbryzek] missing project name"))
       )
     }
 
     "empty name" in {
       val form = createProjectForm(org).copy(name = "   ")
-      ProjectsDao.create(systemUser, form) must be(Left(Seq("Name cannot be empty")))
+      projectsWriteDao.create(systemUser, form) must be(Left(Seq("Name cannot be empty")))
     }
 
     "duplicate names" in {
       val project = createProject(org)
       val form = createProjectForm(org).copy(name = project.name.toString.toUpperCase)
-      ProjectsDao.create(systemUser, form) must be(Left(Seq("Project with this name already exists")))
-      ProjectsDao.validate(systemUser, form, existing = Some(project)) must be(Nil)
+      projectsWriteDao.create(systemUser, form) must be(Left(Seq("Project with this name already exists")))
+      projectsWriteDao.validate(systemUser, form, existing = Some(project)) must be(Nil)
 
       val org2 = createOrganization()
       val form2 = createProjectForm(org2).copy(name = project.name)
-      ProjectsDao.validate(systemUser, form2) must be(Nil)
+      projectsWriteDao.validate(systemUser, form2) must be(Nil)
     }
 
     "empty uri" in {
       val form = createProjectForm(org).copy(uri = "   ")
-      ProjectsDao.create(systemUser, form) must be(Left(Seq("Uri cannot be empty")))
+      projectsWriteDao.create(systemUser, form) must be(Left(Seq("Uri cannot be empty")))
     }
 
   }

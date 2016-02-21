@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import scala.concurrent.Future
 
-object ElasticLoadBalancer extends Settings with Credentials {
+case class ElasticLoadBalancer(registryClient: RegistryClient) extends Settings with Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
@@ -24,7 +24,7 @@ object ElasticLoadBalancer extends Settings with Credentials {
     // they do not allow this in a single API call
     val name = getLoadBalancerName(projectId)
 
-    RegistryClient.getById(projectId).map {
+    registryClient.getById(projectId).map {
       case None => sys.error(s"project[$projectId] was not found in the registry")
       case Some(application) => {
         val registryPorts = application.ports.headOption.getOrElse {

@@ -33,65 +33,6 @@ object UsersDao {
       from users
   """)
 
-  private[this] val InsertQuery = """
-    insert into users
-    (id, email, first_name, last_name, updated_by_user_id)
-    values
-    ({id}, {email}, {first_name}, {last_name}, {updated_by_user_id})
-  """
-
-  def validate(form: UserForm): Seq[String] = {
-    form.email match {
-      case None => {
-        Nil
-      }
-      case Some(email) => {
-        if (email.trim.isEmpty) {
-          Seq("Email address cannot be empty")
-
-        } else if (!isValidEmail(email)) {
-          Seq("Please enter a valid email address")
-
-        } else {
-          UsersDao.findByEmail(email) match {
-            case None => Nil
-            case Some(_) => Seq("Email is already registered")
-          }
-        }
-      }
-    }
-  }
-
-  private def isValidEmail(email: String): Boolean = {
-    email.indexOf("@") >= 0
-  }
-
-  def create(createdBy: Option[User], form: UserForm): Either[Seq[String], User] = {
-    validate(form) match {
-      case Nil => {
-        val id = io.flow.play.util.IdGenerator("usr").randomId()
-
-        DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
-            'id -> id,
-            'email -> form.email.map(_.trim),
-            'first_name -> Util.trimmedString(form.name.flatMap(_.first)),
-            'last_name -> Util.trimmedString(form.name.flatMap(_.last)),
-            'updated_by_user_id -> createdBy.getOrElse(UsersDao.anonymousUser).id
-          ).execute()
-        }
-
-        MainActor.ref ! MainActor.Messages.UserCreated(id.toString)
-
-        Right(
-          findById(id).getOrElse {
-            sys.error("Failed to create user")
-          }
-        )
-      }
-      case errors => Left(errors)
-    }
-  }
 
   def findByGithubUserId(githubUserId: Long): Option[User] = {
     findAll(githubUserId = Some(githubUserId), limit = 1).headOption
@@ -155,6 +96,71 @@ object UsersDao {
         as(
           io.flow.common.v0.anorm.parsers.User.parser().*
         )
+    }
+  }
+}
+
+case class UsersWriteDao @javax.inject.Inject() (
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
+) {
+
+  private[this] val InsertQuery = """
+    insert into users
+    (id, email, first_name, last_name, updated_by_user_id)
+    values
+    ({id}, {email}, {first_name}, {last_name}, {updated_by_user_id})
+  """
+
+  def validate(form: UserForm): Seq[String] = {
+    form.email match {
+      case None => {
+        Nil
+      }
+      case Some(email) => {
+        if (email.trim.isEmpty) {
+          Seq("Email address cannot be empty")
+
+        } else if (!isValidEmail(email)) {
+          Seq("Please enter a valid email address")
+
+        } else {
+          UsersDao.findByEmail(email) match {
+            case None => Nil
+            case Some(_) => Seq("Email is already registered")
+          }
+        }
+      }
+    }
+  }
+
+  private def isValidEmail(email: String): Boolean = {
+    email.indexOf("@") >= 0
+  }
+
+  def create(createdBy: Option[User], form: UserForm): Either[Seq[String], User] = {
+    validate(form) match {
+      case Nil => {
+        val id = io.flow.play.util.IdGenerator("usr").randomId()
+
+        DB.withConnection { implicit c =>
+          SQL(InsertQuery).on(
+            'id -> id,
+            'email -> form.email.map(_.trim),
+            'first_name -> Util.trimmedString(form.name.flatMap(_.first)),
+            'last_name -> Util.trimmedString(form.name.flatMap(_.last)),
+            'updated_by_user_id -> createdBy.getOrElse(UsersDao.anonymousUser).id
+          ).execute()
+        }
+
+        mainActor ! MainActor.Messages.UserCreated(id.toString)
+
+        Right(
+          UsersDao.findById(id).getOrElse {
+            sys.error("Failed to create user")
+          }
+        )
+      }
+      case errors => Left(errors)
     }
   }
 

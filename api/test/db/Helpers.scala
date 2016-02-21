@@ -6,10 +6,14 @@ import io.flow.play.util.Random
 import io.flow.delta.v0.models._
 import io.flow.common.v0.models.{Name, User}
 import java.util.UUID
+import play.api.Application
 
 trait Helpers {
 
   lazy val systemUser = createUser()
+
+  def injector = play.api.Play.current.injector
+
   val random = Random()
 
   def createTestEmail(): String = {
@@ -61,7 +65,7 @@ trait Helpers {
     form: OrganizationForm = createOrganizationForm(),
     user: User = systemUser
   ): Organization = {
-    OrganizationsDao.create(user, form).right.getOrElse {
+    injector.instanceOf[OrganizationsWriteDao].create(user, form).right.getOrElse {
       sys.error("Failed to create organization")
     }
   }
@@ -84,7 +88,7 @@ trait Helpers {
       sys.error("Could not find user that created org")
     }
 
-    rightOrErrors(ProjectsDao.create(user, form))
+    rightOrErrors(injector.instanceOf[ProjectsWriteDao].create(user, form))
   }
 
   def createProjectForm(
@@ -124,7 +128,7 @@ trait Helpers {
   def createUser(
     form: UserForm = createUserForm()
   ): User = {
-    rightOrErrors(UsersDao.create(None, form))
+    rightOrErrors(injector.instanceOf[UsersWriteDao].create(None, form))
   }
 
   def createUserForm(
@@ -244,7 +248,7 @@ trait Helpers {
     form: ShaForm = createShaForm(),
     user: User = systemUser
   ): Sha = {
-    rightOrErrors(ShasDao.create(user, form))
+    rightOrErrors(injector.instanceOf[ShasWriteDao].create(user, form))
   }
 
   def createShaForm(
@@ -261,7 +265,7 @@ trait Helpers {
     form: TagForm = createTagForm(),
     user: User = systemUser
   ): Tag = {
-    rightOrErrors(TagsDao.create(user, form))
+    rightOrErrors(injector.instanceOf[TagsWriteDao].create(user, form))
   }
 
   def createTagForm(
@@ -290,7 +294,7 @@ trait Helpers {
    form: ImageForm = createImageForm(),
    user: User = systemUser
   ): Image = {
-    rightOrErrors(ImagesDao.create(user, form))
+    rightOrErrors(injector.instanceOf[ImagesWriteDao].create(user, form))
   }
 
   def createImageForm(

@@ -6,6 +6,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import java.util.concurrent.TimeUnit
+import play.api.test.WithApplication
 
 trait MockClient extends db.Helpers {
 

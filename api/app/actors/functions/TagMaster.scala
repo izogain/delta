@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import db.{ShasDao, TagsDao, UsersDao}
+import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{SupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, Semver}
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
@@ -9,8 +9,6 @@ import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
 import play.api.Logger
-import play.libs.Akka
-import akka.actor.Actor
 import scala.concurrent.Future
 
 /**
@@ -33,11 +31,15 @@ object TagMaster extends SupervisorFunction {
 
 case class TagMaster(project: Project) extends Github {
 
+  private[this] lazy val tagsWriteDao = play.api.Play.current.injector.instanceOf[TagsWriteDao]
+
   private[this] case class Tag(semver: Semver, sha: String)
 
   private[this] val repo = GithubUtil.parseUri(project.uri).right.getOrElse {
     sys.error(s"Project id[${project.id}] uri[${project.uri}]: Could not parse")
   }
+
+  private[this] val email = play.api.Play.current.injector.instanceOf[Email]
 
   def run(
     implicit ec: scala.concurrent.ExecutionContext
@@ -104,8 +106,8 @@ case class TagMaster(project: Project) extends Github {
           message = s"Delta automated tag $name",
           `object` = sha,
           tagger = Tagger(
-            name = Seq(Email.fromName.first, Email.fromName.last).flatten.mkString(" "),
-            email = Email.fromEmail,
+            name = Seq(email.fromName.first, email.fromName.last).flatten.mkString(" "),
+            email = email.fromEmail,
             date = new DateTime()
           )
         )
@@ -118,7 +120,7 @@ case class TagMaster(project: Project) extends Github {
             sha = sha
           )
         ).map { githubRef =>
-          TagsDao.upsert(UsersDao.systemUser, project.id, name, sha)
+          tagsWriteDao.upsert(UsersDao.systemUser, project.id, name, sha)
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
@@ -134,7 +136,7 @@ case class TagMaster(project: Project) extends Github {
     */
   private[this] def persist(tags: Seq[Tag]) = {
     tags.foreach { tag =>
-      TagsDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
+      tagsWriteDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
     }
   }
 

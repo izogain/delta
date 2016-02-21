@@ -1,6 +1,6 @@
 package io.flow.delta.actors.functions
 
-import io.flow.delta.actors.{MainActor, SupervisorResult}
+import io.flow.delta.actors.{MainActor, MainActorProvider, SupervisorResult}
 import io.flow.delta.api.lib.{StateDiff, StateFormatter}
 import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Project, State}
@@ -34,13 +34,13 @@ case class Deployer(project: Project, last: State, desired: State) {
             )
           }
           case diffs => {
-            MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
+            MainActorProvider.ref() ! MainActor.Messages.Scale(project.id, diffs)
             SupervisorResult.Change(s"Scale Down: " + toLabel(diffs))
           }
         }
       }
       case diffs => {
-        MainActor.ref ! MainActor.Messages.Scale(project.id, diffs)
+        MainActorProvider.ref() ! MainActor.Messages.Scale(project.id, diffs)
         SupervisorResult.Change(s"Scale Up: " + toLabel(diffs))
       }
     }

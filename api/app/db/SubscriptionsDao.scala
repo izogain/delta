@@ -7,6 +7,7 @@ import anorm._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
+import scala.util.{Failure, Success, Try}
 
 object SubscriptionsDao {
 
@@ -42,13 +43,18 @@ object SubscriptionsDao {
 
   def upsert(createdBy: User, form: SubscriptionForm): Subscription = {
     findByUserIdAndPublication(form.userId, form.publication).getOrElse {
-      create(createdBy, form) match {
-        case Left(errors) => {
+      Try {
+        create(createdBy, form) match {
+          case Left(errors) => sys.error(errors.mkString(", "))
+          case Right(sub) => sub
+        }
+      } match {
+        case Success(sub) => sub
+        case Failure(ex) => {
           findByUserIdAndPublication(form.userId, form.publication).getOrElse {
-            sys.error(errors.mkString(", "))
+            throw new Exception("Failed to upsert subscription", ex)
           }
         }
-        case Right(subscription) => subscription
       }
     }
   }
