@@ -19,7 +19,7 @@ object PeriodicActor {
 
 class PeriodicActor extends Actor with ErrorHandler {
 
-  private[this] val MinutesUntilInactive = 2
+  private[this] val MinutesUntilInactive = 15
   
   def receive = {
 
