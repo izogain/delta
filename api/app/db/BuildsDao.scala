@@ -26,6 +26,12 @@ object BuildsDao {
       join projects on builds.project_id = projects.id
   """)
 
+  def findAllByProjectId(auth: Authorization, projectId: String): Iterator[Build] = {
+    Pager.create { offset =>
+      BuildsDao.findAll(auth, projectId = Some(projectId), offset = offset)
+    }
+  }
+  
   def findByProjectIdAndName(auth: Authorization, projectId: String, name: String): Option[Build] = {
     findAll(auth, projectId = Some(projectId), name = Some(name), limit = 1).headOption
   }
@@ -39,7 +45,7 @@ object BuildsDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     name: Option[String] = None,
-    orderBy: OrderBy = OrderBy("lower(builds.name), builds.created_at"),
+    orderBy: OrderBy = OrderBy("lower(projects.name), builds.position"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[Build] = {
@@ -76,9 +82,9 @@ case class BuildsWriteDao @javax.inject.Inject() (
 
   private[this] val InsertQuery = """
     insert into builds
-    (id, project_id, name, dockerfile_path, updated_by_user_id)
+    (id, project_id, name, dockerfile_path, position, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {dockerfile_path}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {dockerfile_path}, {position}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
@@ -88,6 +94,10 @@ case class BuildsWriteDao @javax.inject.Inject() (
            dockerfile_path = {dockerfile_path},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
+  """
+
+  private[this] val MaxPositionQuery = """
+    select max(position) as position from builds where project_id = {project_id}
   """
 
   private[this] val urlKey = UrlKey(minKeyLength = 3)
@@ -138,6 +148,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
             'project_id -> form.projectId,
             'name -> form.name.trim,
             'dockerfile_path -> form.dockerfilePath.trim,
+            'position -> nextPosition(form.projectId),
             'updated_by_user_id -> createdBy.id
           ).execute()
         }
@@ -153,6 +164,17 @@ case class BuildsWriteDao @javax.inject.Inject() (
       case errors => {
         Left(errors)
       }
+    }
+  }
+
+  private[this] def nextPosition(projectId: String)(
+    implicit c: java.sql.Connection
+  ): Long = {
+    SQL(MaxPositionQuery).on(
+      'project_id -> projectId
+    ).as(SqlParser.get[Option[Long]]("position").single).headOption match {
+      case None => 0
+      case Some(n) => n + 1
     }
   }
 

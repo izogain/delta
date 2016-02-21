@@ -83,6 +83,16 @@ class BuildsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     BuildsDao.findAll(Authorization.All, projectId = Some(createTestKey())) must be(Nil)
   }
 
+  "findAllByProjectId" in {
+    val project = createProject()
+    val build1 = createBuild(createBuildForm(project))
+    val build2 = createBuild(createBuildForm(project))
+
+    BuildsDao.findAllByProjectId(Authorization.All, project.id).toSeq.map(_.id) must be(
+      Seq(build1.id, build2.id)
+    )
+  }
+
   "validate" must {
 
     "require dockerfile path" in {

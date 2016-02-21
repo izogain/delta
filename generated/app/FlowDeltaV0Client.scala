@@ -25,9 +25,10 @@ package io.flow.delta.v0.models {
   )
 
   /**
-   * Returns the desired and last states for a specific build
+   * Describes the last and desired states of a build
    */
   case class BuildState(
+    name: String,
     desired: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
     last: _root_.scala.Option[io.flow.delta.v0.models.State] = None
   )
@@ -754,13 +755,16 @@ package io.flow.delta.v0.models {
 
     implicit def jsonReadsDeltaBuildState: play.api.libs.json.Reads[BuildState] = {
       (
+        (__ \ "name").read[String] and
         (__ \ "desired").readNullable[io.flow.delta.v0.models.State] and
         (__ \ "last").readNullable[io.flow.delta.v0.models.State]
       )(BuildState.apply _)
     }
 
     def jsObjectBuildState(obj: io.flow.delta.v0.models.BuildState) = {
-      (obj.desired match {
+      play.api.libs.json.Json.obj(
+        "name" -> play.api.libs.json.JsString(obj.name)
+      ) ++ (obj.desired match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("desired" -> jsObjectState(x))
       }) ++
@@ -2199,23 +2203,22 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def getBuildsAndLatestByIdAndBuildName(
-        id: String,
-        buildName: String
-      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.BuildState] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/latest").map {
-          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("io.flow.delta.v0.models.BuildState", r, _.validate[io.flow.delta.v0.models.BuildState])
+      override def getBuildsAndStatesById(
+        id: String
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.BuildState]] = {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/states").map {
+          case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.BuildState]", r, _.validate[Seq[io.flow.delta.v0.models.BuildState]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r => throw new io.flow.delta.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 401, 404")
         }
       }
 
-      override def getBuildsAndStateAndDesiredByIdAndBuildName(
+      override def getBuildsAndStatesAndDesiredByIdAndBuildName(
         id: String,
         buildName: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/state/desired").map {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/states/desired").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2223,11 +2226,11 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def postBuildsAndStateAndDesiredByIdAndBuildName(
+      override def postBuildsAndStatesAndDesiredByIdAndBuildName(
         id: String,
         buildName: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]] = {
-        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/state/desired").map {
+        _executeRequest("POST", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/states/desired").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.StateForm]", r, _.validate[Seq[io.flow.delta.v0.models.StateForm]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2235,11 +2238,11 @@ package io.flow.delta.v0 {
         }
       }
 
-      override def getBuildsAndStateAndLastByIdAndBuildName(
+      override def getBuildsAndStatesAndLastByIdAndBuildName(
         id: String,
         buildName: String
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]] = {
-        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/state/last").map {
+        _executeRequest("GET", s"/projects/${play.utils.UriEncoding.encodePathSegment(id, "UTF-8")}/builds/${play.utils.UriEncoding.encodePathSegment(buildName, "UTF-8")}/states/last").map {
           case r if r.status == 200 => _root_.io.flow.delta.v0.Client.parseJson("Seq[io.flow.delta.v0.models.State]", r, _.validate[Seq[io.flow.delta.v0.models.State]])
           case r if r.status == 401 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
           case r if r.status == 404 => throw new io.flow.delta.v0.errors.UnitResponse(r.status)
@@ -2857,22 +2860,21 @@ package io.flow.delta.v0 {
       settingsForm: io.flow.delta.v0.models.SettingsForm
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.Settings]
 
-    def getBuildsAndLatestByIdAndBuildName(
-      id: String,
-      buildName: String
-    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.delta.v0.models.BuildState]
+    def getBuildsAndStatesById(
+      id: String
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.BuildState]]
 
-    def getBuildsAndStateAndDesiredByIdAndBuildName(
+    def getBuildsAndStatesAndDesiredByIdAndBuildName(
       id: String,
       buildName: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]
 
-    def postBuildsAndStateAndDesiredByIdAndBuildName(
+    def postBuildsAndStatesAndDesiredByIdAndBuildName(
       id: String,
       buildName: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.StateForm]]
 
-    def getBuildsAndStateAndLastByIdAndBuildName(
+    def getBuildsAndStatesAndLastByIdAndBuildName(
       id: String,
       buildName: String
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.delta.v0.models.State]]

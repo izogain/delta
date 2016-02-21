@@ -134,8 +134,9 @@
     },
 
     "build_state": {
-      "description": "Returns the desired and last states for a specific build",
+      "description": "Describes the last and desired states of a build",
       "fields": [
+        { "name": "name", "type": "string", "description": "The build name" },
         { "name": "desired", "type": "state", "required": false },
         { "name": "last", "type": "state", "required": false }
       ]
@@ -559,9 +560,9 @@
 
         {
           "method": "GET",
-          "path": "/:id/builds/:build_name/latest",
+          "path": "/:id/builds/states",
           "responses": {
-            "200": { "type": "build_state" },
+            "200": { "type": "[build_state]" },
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
@@ -569,7 +570,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/builds/:build_name/state/desired",
+          "path": "/:id/builds/:build_name/states/desired",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },
@@ -579,7 +580,7 @@
 
         {
           "method": "POST",
-          "path": "/:id/builds/:build_name/state/desired",
+          "path": "/:id/builds/:build_name/states/desired",
           "responses": {
             "200": { "type": "[state_form]" },
             "401": { "type": "unit" },
@@ -589,7 +590,7 @@
 
         {
           "method": "GET",
-          "path": "/:id/builds/:build_name/state/last",
+          "path": "/:id/builds/:build_name/states/last",
           "responses": {
             "200": { "type": "[state]" },
             "401": { "type": "unit" },

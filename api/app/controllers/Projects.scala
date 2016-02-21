@@ -121,18 +121,19 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getBuildsAndLatestByIdAndBuildState(id: String, buildName: String) = Identified { request =>
+  def getBuildsAndStatesById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
-      withBuild(request.user, project.id, buildName) { build =>
-        Ok(
-          Json.toJson(
+      Ok(
+        Json.toJson(
+          BuildsDao.findAllByProjectId(authorization(request), project.id).map { build =>
             BuildState(
+              name = build.name,
               desired = BuildDesiredStatesDao.findByBuildId(authorization(request), id),
               last = BuildLastStatesDao.findByBuildId(authorization(request), id)
             )
-          )
+          }.toSeq
         )
-      }
+      )
     }
   }
 
@@ -143,13 +144,11 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getBuildsAndLatestByIdAndBuildName(id: String, buildName: String) = TODO
+  def getBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def getBuildsAndStateAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
+  def postBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def postBuildsAndStateAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
-
-  def getBuildsAndStateAndLastByIdAndBuildName(id: String, buildName: String) = TODO
+  def getBuildsAndStatesAndLastByIdAndBuildName(id: String, buildName: String) = TODO
 
   def withBuild(user: User, projectId: String, name: String)(
     f: Build => Result

@@ -1,7 +1,7 @@
 @(
   data: io.flow.delta.www.lib.UiData,
   project: io.flow.delta.v0.models.Project,
-  state: io.flow.delta.v0.models.ProjectState,
+  buildStates: Seq[io.flow.delta.v0.models.BuildState],
   settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
@@ -27,16 +27,20 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Last State</th>
+          <th>Build</th>
+          <th>Last State</th>          
           <th>Desired State</th>
         </tr>
       </thead>
-      <tbody>
-        <tr>
-          <td>@stateTable(state.last)</td>
-          <td>@stateTable(state.desired)</td>
-        </tr>
-      </tbody>
+      @buildStates.map { buildState =>
+        <tbody>
+          <tr>
+            <td>@buildState.name</td>
+            <td>@stateTable(buildState.last)</td>
+            <td>@stateTable(buildState.desired)</td>
+          </tr>
+        </tbody>
+      }
     </table>
   </div>
   
