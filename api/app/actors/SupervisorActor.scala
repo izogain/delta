@@ -65,7 +65,12 @@ class SupervisorActor extends Actor with ErrorHandler with DataProject with Even
       withProject { project =>
         ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id).map { state =>
           StateDiff.up(state.versions, Seq(Version(name, 1))) match {
-            case Nil => // This tag would not move the project forward
+            case Nil => {
+              state.versions.find(_.name == name) match {
+                case None => // Nothing to do
+                case Some(_) => self ! SupervisorActor.Messages.PursueDesiredState
+              }
+            }
             case _ => self ! SupervisorActor.Messages.PursueDesiredState
           }
         }
