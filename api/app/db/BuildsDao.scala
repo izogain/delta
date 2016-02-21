@@ -140,17 +140,8 @@ case class BuildsWriteDao @javax.inject.Inject() (
   def create(createdBy: User, form: BuildForm): Either[Seq[String], Build] = {
     validate(createdBy, form) match {
       case Nil => {
-        val id = io.flow.play.util.IdGenerator("bld").randomId()
-
-        DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
-            'id -> id,
-            'project_id -> form.projectId,
-            'name -> form.name.trim,
-            'dockerfile_path -> form.dockerfilePath.trim,
-            'position -> nextPosition(form.projectId),
-            'updated_by_user_id -> createdBy.id
-          ).execute()
+        val id = DB.withConnection { implicit c =>
+          create(c, createdBy, form)
         }
 
         mainActor ! MainActor.Messages.BuildCreated(form.projectId, id)
@@ -165,6 +156,21 @@ case class BuildsWriteDao @javax.inject.Inject() (
         Left(errors)
       }
     }
+  }
+
+  private[db] def create(implicit c: java.sql.Connection, createdBy: User, form: BuildForm): String = {
+    val id = io.flow.play.util.IdGenerator("bld").randomId()
+
+    SQL(InsertQuery).on(
+      'id -> id,
+      'project_id -> form.projectId,
+      'name -> form.name.trim,
+      'dockerfile_path -> form.dockerfilePath.trim,
+      'position -> nextPosition(form.projectId),
+      'updated_by_user_id -> createdBy.id
+    ).execute()
+
+    id
   }
 
   private[this] def nextPosition(projectId: String)(

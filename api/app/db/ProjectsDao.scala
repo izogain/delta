@@ -156,7 +156,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     nameErrors ++ visibilityErrors ++ uriErrors ++ organizationErrors
   }
 
-  def create(createdBy: User, form: ProjectForm): Either[Seq[String], Project] = {
+  def create(createdBy: User, form: ProjectForm, dockerfilePaths: Seq[String] = Nil): Either[Seq[String], Project] = {
     validate(createdBy, form) match {
       case Nil => {
 
@@ -166,7 +166,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         
         val id = urlKey.generate(form.name.trim)
 
-        DB.withTransaction { implicit c =>
+        val buildIds: Seq[String] = DB.withTransaction { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
             'organization_id -> org.id,
@@ -179,9 +179,17 @@ case class ProjectsWriteDao @javax.inject.Inject() (
           ).execute()
 
           SettingsDao.create(c, createdBy, id, form.settings)
+
+          dockerfilePaths.map { path =>
+            buildsWriteDao.create(c, createdBy, Util.dockerfilePathToBuildForm(id, path))
+          }
         }
 
         mainActor ! MainActor.Messages.ProjectCreated(id)
+
+        buildIds.foreach { buildId =>
+          mainActor ! MainActor.Messages.BuildCreated(id, buildId)
+        }
 
         Right(
           ProjectsDao.findById(Authorization.All, id).getOrElse {
