@@ -5,7 +5,6 @@
   settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
-  latestImage: Option[io.flow.delta.v0.models.Image],
   changeEvents: Seq[io.flow.delta.v0.models.Event],
   recentEvents: Seq[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
@@ -30,6 +29,7 @@
           <th>Build</th>
           <th>Last State</th>          
           <th>Desired State</th>
+          <th>Latest Image</th>
         </tr>
       </thead>
       @buildStates.map { buildState =>
@@ -38,6 +38,7 @@
             <td>@buildState.name</td>
             <td>@stateTable(buildState.last)</td>
             <td>@stateTable(buildState.desired)</td>
+            <td>@buildState.latestImage.getOrElse("-")</td>
           </tr>
         </tbody>
       }
@@ -45,13 +46,6 @@
   </div>
   
   <ul>
-    <li>Latest Image:
-      @if(latestImage.isEmpty) {
-        -
-      } else {
-        @latestImage.get.name:@latestImage.get.version
-      }
-    </li>
     <li>Latest Tag:
       @if(latestTag.isEmpty) {
         -

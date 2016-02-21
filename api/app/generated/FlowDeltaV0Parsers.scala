@@ -146,22 +146,26 @@ package io.flow.delta.v0.anorm.parsers {
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       name = s"$prefix${sep}name",
       desiredPrefix = s"$prefix${sep}desired",
-      lastPrefix = s"$prefix${sep}last"
+      lastPrefix = s"$prefix${sep}last",
+      latestImage = s"$prefix${sep}latest_image"
     )
 
     def parser(
       name: String = "name",
       desiredPrefix: String = "desired",
-      lastPrefix: String = "last"
+      lastPrefix: String = "last",
+      latestImage: String = "latest_image"
     ): RowParser[io.flow.delta.v0.models.BuildState] = {
       SqlParser.str(name) ~
       io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(desiredPrefix).? ~
-      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(lastPrefix).? map {
-        case name ~ desired ~ last => {
+      io.flow.delta.v0.anorm.parsers.State.parserWithPrefix(lastPrefix).? ~
+      SqlParser.str(latestImage).? map {
+        case name ~ desired ~ last ~ latestImage => {
           io.flow.delta.v0.models.BuildState(
             name = name,
             desired = desired,
-            last = last
+            last = last,
+            latestImage = latestImage
           )
         }
       }

@@ -30,7 +30,8 @@ package io.flow.delta.v0.models {
   case class BuildState(
     name: String,
     desired: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
-    last: _root_.scala.Option[io.flow.delta.v0.models.State] = None
+    last: _root_.scala.Option[io.flow.delta.v0.models.State] = None,
+    latestImage: _root_.scala.Option[String] = None
   )
 
   case class Docker(
@@ -757,7 +758,8 @@ package io.flow.delta.v0.models {
       (
         (__ \ "name").read[String] and
         (__ \ "desired").readNullable[io.flow.delta.v0.models.State] and
-        (__ \ "last").readNullable[io.flow.delta.v0.models.State]
+        (__ \ "last").readNullable[io.flow.delta.v0.models.State] and
+        (__ \ "latest_image").readNullable[String]
       )(BuildState.apply _)
     }
 
@@ -771,6 +773,10 @@ package io.flow.delta.v0.models {
       (obj.last match {
         case None => play.api.libs.json.Json.obj()
         case Some(x) => play.api.libs.json.Json.obj("last" -> jsObjectState(x))
+      }) ++
+      (obj.latestImage match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("latest_image" -> play.api.libs.json.JsString(x))
       })
     }
 

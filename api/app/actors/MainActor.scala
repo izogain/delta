@@ -129,7 +129,7 @@ class MainActor @javax.inject.Inject() (
     }
 
     case msg @ MainActor.Messages.Scale(buildId, diffs) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(buildId) ! BuildActor.Messages.Scale(diffs)
+      upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
     }
 
     case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {

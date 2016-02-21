@@ -60,11 +60,6 @@ class ProjectsController @javax.inject.Inject() (
           sort = "-tags.sort_key",
           limit = 1
         )
-        images <- deltaClient(request).images.get(
-          projectId = Some(id),
-          sort = "-images.sort_key",
-          limit = 1
-        )
         shas <- deltaClient(request).shas.get(
           projectId = Some(id),
           branch = Some("master"),
@@ -79,7 +74,6 @@ class ProjectsController @javax.inject.Inject() (
             settings,
             shas.headOption.map(_.hash),
             tags.headOption,
-            images.headOption,
             changeEvents,
             recentEvents
           )

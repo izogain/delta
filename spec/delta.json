@@ -138,7 +138,8 @@
       "fields": [
         { "name": "name", "type": "string", "description": "The build name" },
         { "name": "desired", "type": "state", "required": false },
-        { "name": "last", "type": "state", "required": false }
+        { "name": "last", "type": "state", "required": false },
+        { "name": "latest_image", "type": "string", "required": false, "description": "If available, the full name of the latest image for this build" }
       ]
     },
 
@@ -938,7 +939,7 @@
             { "name": "name", "type": "string", "description": "Find images with this name.", "required": false, "example": "0.0.1" },
             { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
-            { "name": "sort", "type": "string", "default": "-images.sort_key" }
+            { "name": "sort", "type": "string", "default": "lower(images.name),-images.sort_key" }
 	  ],
           "responses": {
             "200": { "type": "[image]" },

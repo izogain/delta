@@ -1,6 +1,6 @@
 package controllers
 
-import db.{BuildsDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
+import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
 import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
@@ -132,7 +132,8 @@ class Projects @javax.inject.Inject() (
             BuildState(
               name = build.name,
               desired = BuildDesiredStatesDao.findByBuildId(authorization(request), build.id),
-              last = BuildLastStatesDao.findByBuildId(authorization(request), build.id)
+              last = BuildLastStatesDao.findByBuildId(authorization(request), build.id),
+              latestImage = ImagesDao.findAll(buildId = Some(build.id)).headOption.map( i => s"${i.name}:${i.version}" )
             )
           }.toSeq
         )

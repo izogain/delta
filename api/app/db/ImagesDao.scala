@@ -45,7 +45,7 @@ object ImagesDao {
    buildId: Option[String] = None,
    names: Option[Seq[String]] = None,
    versions: Option[Seq[String]] = None,
-   orderBy: OrderBy = OrderBy("-lower(images.name), images.created_at"),
+   orderBy: OrderBy = OrderBy("lower(images.name),-images.sort_key"),
    limit: Long = 25,
    offset: Long = 0
   ): Seq[Image] = {
