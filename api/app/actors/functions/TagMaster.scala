@@ -56,7 +56,10 @@ case class TagMaster(project: Project) extends Github {
         withGithubClient(project.user.id) { client =>
           client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
             val localTags = toTags(tags)
-            persist(localTags)
+            // latest tag version first to set the expected state to
+            // that version, if needed. Otherwise we will trigger a
+            // state update for every tag.
+            persist(localTags.reverse)
 
             localTags.reverse.headOption match {
               case None => {

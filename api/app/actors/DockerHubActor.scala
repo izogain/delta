@@ -191,7 +191,7 @@ class DockerHubActor @javax.inject.Inject() (
   def createBuildTags(dockerfilePath: String): Seq[DockerBuildTag] = {
     Seq(
       DockerBuildTag(
-        dockerfileLocation = dockerfilePath,
+        dockerfileLocation = dockerfilePath.replace("Dockerfile", ""),
         name = "{sourceref}",
         sourceName = "/^[0-9]+\\.[0-9]+\\.[0-9]+$/",
         sourceType = "Tag"

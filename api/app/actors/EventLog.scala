@@ -9,7 +9,10 @@ trait EventLog {
     * class name (exluding its package)
     */
   def logPrefix: String = {
-    format(this)
+    val base = format(this)
+    withProject { project =>
+      base + s"[${project.id}]"
+    }.getOrElse(base)
   }
 
   /**
