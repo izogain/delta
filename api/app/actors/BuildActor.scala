@@ -1,16 +1,15 @@
 package io.flow.delta.actors
 
 import com.amazonaws.services.ecs.model.Service
-import io.flow.postgresql.Authorization
-import org.joda.time.DateTime
-import io.flow.delta.api.lib.{Semver, StateFormatter}
-import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import db.{OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
+import io.flow.postgresql.Authorization
+import io.flow.delta.api.lib.{BuildNames, Semver, StateFormatter}
+import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
-import io.flow.delta.v0.models.{Build, StateForm}
 import io.flow.delta.lib.Text
+import io.flow.delta.v0.models.{Build, Docker, StateForm}
 import io.flow.play.actors.ErrorHandler
-import io.flow.play.util.DefaultConfig
+import io.flow.play.util.Config
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -45,7 +44,7 @@ object BuildActor {
 
 class BuildActor @javax.inject.Inject() (
   registryClient: RegistryClient,
-  config: DefaultConfig,
+  config: Config,
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with EventLog {
 
@@ -93,9 +92,11 @@ class BuildActor @javax.inject.Inject() (
     }
 
     case msg @ BuildActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
-      withBuild { build =>
-        diffs.foreach { diff =>
-          scale(build, diff)
+      withOrganization { org =>
+        withBuild { build =>
+          diffs.foreach { diff =>
+            scale(org.docker, build, diff)
+          }
         }
       }
     }
@@ -127,23 +128,21 @@ class BuildActor @javax.inject.Inject() (
     }
   }
 
-  def scale(build: Build, diff: StateDiff) {
-    val org = OrganizationsDao.findById(Authorization.All, build.project.organization.id).getOrElse {
-      sys.error("Build organization[${build.project.organization.id}] does not exist")
-    }
-    val imageName = s"${org.docker.organization}/${build.name}"
+  def scale(docker: Docker, build: Build, diff: StateDiff) {
+    val projectName = BuildNames.projectName(build)
+    val imageName = BuildNames.dockerImageName(docker, build)
     val imageVersion = diff.versionName
 
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
       log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, build.name, diff.desiredInstances)
+        ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
 
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, build.name, diff.desiredInstances)
+        ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
 
@@ -180,13 +179,9 @@ class BuildActor @javax.inject.Inject() (
     }
   }
 
-  def ecsName(build: Build): String = {
-    "%s-%s".format(build.project.id, build.name)
-  }
-
   def captureLastState(build: Build): Future[String] = {
     log.runAsync("captureLastState") {
-      ecs.getClusterInfo(ecsName(build)).map { versions =>
+      ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
         play.api.Play.current.injector.instanceOf[BuildLastStatesWriteDao].upsert(
           UsersDao.systemUser,
           build,
@@ -199,31 +194,31 @@ class BuildActor @javax.inject.Inject() (
 
   def getServiceInfo(imageName: String, imageVersion: String, build: Build): Future[Option[Service]] = {
     log.runSync("Getting ECS service Info", quiet = true) {
-      ecs.getServiceInfo(imageName, imageVersion, ecsName(build))
+      ecs.getServiceInfo(imageName, imageVersion, BuildNames.projectName(build))
     }
   }
 
   def createLaunchConfiguration(build: Build): Future[String] = {
     log.runSync("EC2 auto scaling group launch configuration") {
-      asg.createLaunchConfiguration(ecsName(build))
+      asg.createLaunchConfiguration(BuildNames.projectName(build))
     }
   }
 
   def createLoadBalancer(build: Build): Future[String] = {
     log.runAsync("EC2 load balancer") {
-      elb.createLoadBalancerAndHealthCheck(ecsName(build))
+      elb.createLoadBalancerAndHealthCheck(BuildNames.projectName(build))
     }
   }
 
   def createAutoScalingGroup(build: Build, launchConfigName: String, loadBalancerName: String): Future[String] = {
     log.runSync("EC2 auto scaling group") {
-      asg.createAutoScalingGroup(ecsName(build), launchConfigName, loadBalancerName)
+      asg.createAutoScalingGroup(BuildNames.projectName(build), launchConfigName, loadBalancerName)
     }
   }
 
   def createCluster(build: Build): Future[String] = {
     log.runSync("Create cluster") {
-       ecs.createCluster(ecsName(build))
+       ecs.createCluster(BuildNames.projectName(build))
     }
   }
 

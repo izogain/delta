@@ -34,15 +34,15 @@ object BuildNames {
     * Given a build, returns the full docker image name
     * (e.g. flowcommerce/delta-api)
     */
-  def toDockerImageName(docker: Docker, build: Build): String = {
-    docker.organization + "/" + toDockerImageName(build)
+  def dockerImageName(docker: Docker, build: Build): String = {
+    docker.organization + "/" + projectName(build)
   }
 
   /**
-    * Given a build, returns the image name (without organization).
-    * (e.g. delta-api)
+    * Given a build, returns the project name (without organization).
+    * (e.g. registry or delta-api)
     */
-  def toDockerImageName(build: Build): String = {
+  def projectName(build: Build): String = {
     build.name match {
       case DefaultBuildName => build.project.name
       case _ => build.project.name + "-" + build.name

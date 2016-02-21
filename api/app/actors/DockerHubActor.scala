@@ -116,7 +116,7 @@ class DockerHubActor @javax.inject.Inject() (
 
   def syncImages(docker: Docker, build: Build) {
     for {
-      tags <- v2client.V2Tags.get(docker.organization, BuildNames.toDockerImageName(build))
+      tags <- v2client.V2Tags.get(docker.organization, BuildNames.projectName(build))
     } yield {
 
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
@@ -138,7 +138,7 @@ class DockerHubActor @javax.inject.Inject() (
         UsersDao.systemUser,
         ImageForm(
           buildId = buildId,
-          name = BuildNames.toDockerImageName(docker, build),
+          name = BuildNames.dockerImageName(docker, build),
           version = version
         )
       ) match {
@@ -149,14 +149,14 @@ class DockerHubActor @javax.inject.Inject() (
   }
 
   def createBuildForm(docker: Docker, scms: Scms, scmsUri: String, build: Build): DockerBuildForm = {
-    val fullName = BuildNames.toDockerImageName(docker, build)
+    val fullName = BuildNames.dockerImageName(docker, build)
     DockerBuildForm(
       active = true,
       buildTags = createBuildTags(),
       description = s"Automated build for $fullName",
       dockerhubRepoName = fullName,
       isPrivate = true,
-      name = BuildNames.toDockerImageName(build),
+      name = BuildNames.projectName(build),
       namespace = docker.organization,
       provider = scms match {
         case Scms.Github => "github"
