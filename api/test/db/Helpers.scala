@@ -244,6 +244,23 @@ trait Helpers {
     )
   }
 
+  def createBuild(
+    form: BuildForm = createBuildForm(),
+    user: User = systemUser
+  ): Build = {
+    rightOrErrors(injector.instanceOf[BuildsWriteDao].create(user, form))
+  }
+
+  def createBuildForm(
+    project: Project = createProject()
+  ) = {
+    BuildForm(
+      projectId = project.id,
+      name = createTestKey(),
+      dockerfilePath = "./Dockerfile"
+    )
+  }
+  
   def createSha(
     form: ShaForm = createShaForm(),
     user: User = systemUser
@@ -298,11 +315,11 @@ trait Helpers {
   }
 
   def createImageForm(
-   project: Project = createProject()
+   build: Build = createBuild()
   ) = {
     ImageForm(
-      projectId = project.id,
-      name = createTestName(),
+      buildId = build.id,
+      name = createTestKey(),
       version = createTestVersion()
     )
   }

@@ -4,6 +4,7 @@ import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Build, BuildForm}
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.User
+import io.flow.play.util.UrlKey
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -89,6 +90,8 @@ case class BuildsWriteDao @javax.inject.Inject() (
      where id = {id}
   """
 
+  private[this] val urlKey = UrlKey(minKeyLength = 3)
+
   private[db] def validate(
     user: User,
     form: BuildForm,
@@ -104,7 +107,9 @@ case class BuildsWriteDao @javax.inject.Inject() (
       Seq("Name cannot be empty")
     } else {
       BuildsDao.findByProjectIdAndName(Authorization.All, form.projectId, form.name) match {
-        case None => Nil
+        case None => {
+          urlKey.validate(form.name.trim, "Name")
+        }
         case Some(found) => {
           existing.map(_.id) == Some(found.id) match {
             case true => Nil
@@ -125,7 +130,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
   def create(createdBy: User, form: BuildForm): Either[Seq[String], Build] = {
     validate(createdBy, form) match {
       case Nil => {
-        val id = io.flow.play.util.IdGenerator("build").randomId()
+        val id = io.flow.play.util.IdGenerator("bld").randomId()
 
         DB.withConnection { implicit c =>
           SQL(InsertQuery).on(

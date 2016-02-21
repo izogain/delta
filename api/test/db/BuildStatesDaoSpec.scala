@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.{Project, State, StateForm, Version}
+import io.flow.delta.v0.models.{Build, State, StateForm, Version}
 import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
@@ -8,18 +8,18 @@ import play.api.test.Helpers._
 import org.scalatestplus.play._
 import java.util.UUID
 
-class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
+class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[this] lazy val projectDesiredStatesWriteDao = app.injector.instanceOf[ProjectDesiredStatesWriteDao]
-  private[this] lazy val projectLastStatesWriteDao = app.injector.instanceOf[ProjectLastStatesWriteDao]
+  private[this] lazy val buildDesiredStatesWriteDao = app.injector.instanceOf[BuildDesiredStatesWriteDao]
+  private[this] lazy val buildLastStatesWriteDao = app.injector.instanceOf[BuildLastStatesWriteDao]
 
-  def createProjectDesiredState(
-    project: Project = createProject(),
+  def createBuildDesiredState(
+    build: Build = createBuild(),
     form: StateForm = createStateForm()
   ): State = {
-    rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, form))
+    rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, form))
   }
 
   def createStateForm(): StateForm = {
@@ -32,32 +32,32 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "create desired" in {
-    val project = createProject()
-    val state = rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, createStateForm()))
+    val build = createBuild()
+    val state = rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "create actual" in {
-    val project = createProject()
-    val state = rightOrErrors(projectLastStatesWriteDao.create(systemUser, project, createStateForm()))
+    val build = createBuild()
+    val state = rightOrErrors(buildLastStatesWriteDao.create(systemUser, build, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "upsert" in {
-    val project = createProject()
-    val state = rightOrErrors(projectDesiredStatesWriteDao.upsert(systemUser, project, createStateForm()))
-    val second = rightOrErrors(projectDesiredStatesWriteDao.upsert(systemUser, project, createStateForm()))
+    val build = createBuild()
+    val state = rightOrErrors(buildDesiredStatesWriteDao.upsert(systemUser, build, createStateForm()))
+    val second = rightOrErrors(buildDesiredStatesWriteDao.upsert(systemUser, build, createStateForm()))
     second.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "delete" in {
-    val project = createProject()
-    val state = createProjectDesiredState(project)
-    projectDesiredStatesWriteDao.delete(systemUser, project)
-    ProjectDesiredStatesDao.findByProjectId(Authorization.All, project.id) must be(None)
+    val build = createBuild()
+    val state = createBuildDesiredState(build)
+    buildDesiredStatesWriteDao.delete(systemUser, build)
+    BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) must be(None)
   }
 
   "saving prunes records w/ zero instances" in {
@@ -68,8 +68,8 @@ class ProjectStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       )
     )
     
-    val project = createProject()
-    val state = rightOrErrors(projectDesiredStatesWriteDao.create(systemUser, project, form))
+    val build = createBuild()
+    val state = rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, form))
     state.versions.map(_.name) must be(Seq("0.0.2"))
     state.versions.map(_.instances) must be(Seq(2))
   }
