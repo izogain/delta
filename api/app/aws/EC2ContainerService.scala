@@ -214,5 +214,15 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
       }
     }
   }
+  
+  def summary(service: Service): String = {
+    val status = service.getStatus
+    val running = service.getRunningCount
+    val desired = service.getDesiredCount
+    val pending = service.getPendingCount
 
+    s"status[$status] running[$running] desired[$desired] pending[$pending]"
+  }
+  
+  
 }

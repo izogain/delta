@@ -172,17 +172,15 @@ class ProjectActor @javax.inject.Inject() (
           sys.error(s"ECS Service not found for project $project.id, image $imageName, version $imageVersion")
         }
 
-        case Some(ecsService) => {
-          val running = ecsService.getRunningCount
-          val desired = ecsService.getDesiredCount
-          val pending = ecsService.getPendingCount
-          val status = ecsService.getStatus
+        case Some(service) => {
+          val summary = ecs.summary(service)
           val intervalSeconds = 5
 
-          if (running == desired) {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired.")
+          if (service.getRunningCount == service.getDesiredCount) {
+            log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
+
           } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, Running: $running, Pending: $pending, Desired: $desired. Next update in ~$intervalSeconds seconds.")
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
 
             Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
               self ! ProjectActor.Messages.MonitorScale(imageName, imageVersion)
@@ -207,7 +205,7 @@ class ProjectActor @javax.inject.Inject() (
   }
 
   def getServiceInfo(imageName: String, imageVersion: String, project: Project): Future[Option[Service]] = {
-    log.runSync("Getting ECS service Info") {
+    log.runSync("Getting ECS service Info", quiet = true) {
       ecs.getServiceInfo(imageName, imageVersion, project.id)
     }
   }
