@@ -58,12 +58,6 @@
         }
       }
     </li>
-    <li> Latest event at: @if(recentEvents.headOption.isEmpty) {
-           -
-         } else {
-           @io.flow.play.util.DateHelper.consoleLongDateTime(recentEvents.head.createdAt)
-         }
-    </li>
     <li> Master: @masterHash.getOrElse("-")</li>
     <li> Visbility: @project.visibility.toString</li>
     <li> SCMS: <a href="@project.uri">@project.uri</a></li>
