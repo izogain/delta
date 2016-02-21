@@ -60,7 +60,7 @@ class Projects @javax.inject.Inject() (
         case s: JsSuccess[ProjectForm] => {
           // TODO: val dockerfiles = getDockerfilesFromScms(request.user, form.scms, form.uri)
           val dockerfiles = if (s.get.name == "delta") {
-            Seq("/Dockerfile.api", "/Dockerfile.www")
+            Seq("/api/Dockerfile", "/www/Dockerfile")
           } else {
             Seq("/Dockerfile")
           }

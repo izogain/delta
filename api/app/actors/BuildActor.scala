@@ -168,7 +168,7 @@ class BuildActor @javax.inject.Inject() (
             log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
 
           } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
+            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}: image not ready. Will try again in $intervalSeconds seconds. $summary")
 
             Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
               self ! BuildActor.Messages.MonitorScale(imageName, imageVersion)
