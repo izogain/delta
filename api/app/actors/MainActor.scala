@@ -1,8 +1,9 @@
 package io.flow.delta.actors
 
+import db.ProjectsDao
 import io.flow.delta.api.lib.StateDiff
 import io.flow.play.actors.{ErrorHandler, Scheduler}
-import io.flow.postgresql.Authorization
+import io.flow.postgresql.{Authorization, Pager}
 import play.api.libs.concurrent.Akka
 import akka.actor._
 import play.api.{Application, Logger}
@@ -71,14 +72,12 @@ class MainActor @javax.inject.Inject() (
   private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
-  private[this] val periodicActor = system.actorOf(Props[PeriodicActor], name = s"$name:periodicActor")
-
-  scheduleRecurring(system, "io.flow.delta.api.CheckProjects.seconds") {
-    periodicActor ! PeriodicActor.Messages.CheckProjects
-  }
-
   system.scheduler.scheduleOnce(Duration(10, "seconds")) {
-    periodicActor ! PeriodicActor.Messages.Startup
+    Pager.create { offset =>
+      ProjectsDao.findAll(Authorization.All, offset = offset)
+    }.foreach { project =>
+      self ! MainActor.Messages.ProjectSync(project.id)
+    }
   }
 
   def receive = akka.event.LoggingReceive {
