@@ -23,6 +23,10 @@ class SemverSpec extends Specification {
     Semver(0, 1, 2).next must beEqualTo(Semver(0, 1, 3))
   }
 
+  "next prevents minor from exceeded 100" in {
+    Semver(0, 1, 99).next must beEqualTo(Semver(0, 2, 0))
+  }
+
   "label" in {
     Semver(0, 1, 2).label must beEqualTo("0.1.2")
   }
