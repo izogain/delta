@@ -9,7 +9,7 @@ case class Semver(major: Int, minor: Int, micro: Int) extends Ordered[Semver] {
   val sortKey: String = "%s.%s.%s".format(Semver.Pad + major, Semver.Pad + minor, Semver.Pad + micro)
   
   def next(): Semver = {
-    if (micro + 1 > 99) {
+    if (micro >= 99) {
       Semver(major, minor + 1, 0)
     } else {
       Semver(major, minor, micro + 1)
