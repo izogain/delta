@@ -45,7 +45,7 @@ trait Settings {
   val launchConfigIamInstanceProfile = "ecsInstanceRole"
 
   // Should this be higher? And if so, probably should use something other than t2.micro
-  val containerMemory = 500
+  val containerMemory = 400
 
   // Launch configuration EC2 instance type. t2 micro for now, but probably change later or make configurable
   val launchConfigInstanceType = "t2.micro"
