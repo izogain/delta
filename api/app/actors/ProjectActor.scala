@@ -1,5 +1,6 @@
 package io.flow.delta.actors
 
+import db.BuildsDao
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.{GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
@@ -18,7 +19,8 @@ object ProjectActor {
   trait Message
 
   object Messages {
-    case object Setup extends Message    
+    case object Setup extends Message
+    case object SyncBuilds extends Message
   }
 
   trait Factory {
@@ -42,6 +44,19 @@ class ProjectActor @javax.inject.Inject() (
       withProject { project =>
         withRepo { repo =>
           createHooks(project, repo)
+        }
+      }
+
+      self ! ProjectActor.Messages.SyncBuilds
+    }
+
+    case msg @ ProjectActor.Messages.SyncBuilds => withVerboseErrorHandler(msg) {
+      withProject { project =>
+        BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
+          println("--------------------------------------------------")
+          println(s"Project[${project.id}] actor startup - triggering BuildDesiredStateUpdated for build[${build.name}]")
+          println("--------------------------------------------------")
+            sender ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
         }
       }
     }
