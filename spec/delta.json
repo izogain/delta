@@ -1023,6 +1023,7 @@
             { "name": "project_id", "type": "string", "description": "Find events for this project.", "required": false },
             { "name": "type", "type": "event_type", "required": false },
             { "name": "number_minutes_since_creation", "type": "long", "required": false },
+            { "name": "has_error", "type": "boolean", "required": false },
             { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 },
             { "name": "sort", "type": "string", "default": "-events.created_at" }

@@ -82,6 +82,7 @@ object EventsDao {
     `type`: Option[EventType] = None,
     summary: Option[String] = None,
     numberMinutesSinceCreation: Option[Long] = None,
+    hasError: Option[Boolean] = None,
     orderBy: OrderBy = OrderBy("-events.created_at, events.id"),
     limit: Long = 25,
     offset: Long = 0
@@ -95,6 +96,14 @@ object EventsDao {
         and(numberMinutesSinceCreation.map { minutes =>
           s"events.created_at >= now() - interval '$minutes minutes'"
         }).
+        and(
+          hasError.map { v =>
+            v match {
+              case true => "events.error is not null"
+              case false => "events.error is null"
+            }
+          }
+        ).
         orderBy(orderBy.sql).
         limit(limit).
         offset(offset).

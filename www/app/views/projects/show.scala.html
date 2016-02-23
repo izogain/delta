@@ -6,7 +6,8 @@
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
   changeEvents: Seq[io.flow.delta.v0.models.Event],
-  recentEvents: Seq[io.flow.delta.v0.models.Event]
+  recentEvents: Seq[io.flow.delta.v0.models.Event],
+  recentErrorEvents: Seq[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(s"${project.organization.id}/${project.name}"))) {
@@ -79,6 +80,15 @@
     @eventsTable(changeEvents)
   }
 
+  <h3>Recent Error Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
+  @if(recentErrorEvents.isEmpty) {
+    <em>No events in past 60 minutes</em>
+  } else {
+    <em>We show up to the 5 most recent events w/ errors that were created in past 60 minutes</em>
+    
+    @eventsTable(recentErrorEvents)
+  }
+  
   <h3>Recent Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
   @if(recentEvents.isEmpty) {
     <em>No events in past 10 minutes</em>

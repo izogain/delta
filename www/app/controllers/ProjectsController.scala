@@ -55,6 +55,12 @@ class ProjectsController @javax.inject.Inject() (
           numberMinutesSinceCreation = Some(10),
           limit = 5
         )
+        recentErrorEvents <- deltaClient(request).events.get(
+          projectId = Some(project.id),
+          numberMinutesSinceCreation = Some(60),
+          hasError = Some(true),
+          limit = 5
+        )
         tags <- deltaClient(request).tags.get(
           projectId = Some(id),
           sort = "-tags.sort_key",
@@ -75,7 +81,8 @@ class ProjectsController @javax.inject.Inject() (
             shas.headOption.map(_.hash),
             tags.headOption,
             changeEvents,
-            recentEvents
+            recentEvents,
+            recentErrorEvents
           )
         )
       }
