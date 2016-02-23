@@ -16,7 +16,7 @@ POST    /projects/:id/delete                    controllers.ProjectsController.p
 POST    /projects/:id/settings/:name            controllers.ProjectsController.postSettingsToggle(id: String, name: String)
 
 GET     /events                                 controllers.ApplicationController.redirect
-GET     /events/                                controllers.EventsController.index(page: Int ?= 0, project_id: Option[String] ?= None, event_type: Option[io.flow.delta.v0.models.EventType] ?= None)
+GET     /events/                                controllers.EventsController.index(page: Int ?= 0, project_id: Option[String] ?= None, event_type: Option[io.flow.delta.v0.models.EventType] ?= None, has_error: Option[Boolean] ?= None)
 
 GET     /search                                 controllers.SearchController.index(q: Option[String] ?= None, page: Int ?= 0)
 

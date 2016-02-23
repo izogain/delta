@@ -2,6 +2,7 @@
   data: io.flow.delta.www.lib.UiData,
   projectId: Option[String],
   typ: Option[io.flow.delta.v0.models.EventType],
+  hasError: Option[Boolean],
   events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
 )(implicit flash: Flash, messages: Messages)
 
@@ -23,10 +24,10 @@
     @if(events.hasPrevious || events.hasNext) {
       <ul class="pager">
         @if(events.hasPrevious) {
-          <li><a href="@routes.EventsController.index(events.page - 1, project_id = projectId, event_type = typ)">Previous</a></li>
+          <li><a href="@routes.EventsController.index(events.page - 1, project_id = projectId, event_type = typ, has_error = hasError)">Previous</a></li>
         }
         @if(events.hasNext) {
-          <li><a href="@routes.EventsController.index(events.page + 1, project_id = projectId, event_type = typ)">Next</a></li>
+          <li><a href="@routes.EventsController.index(events.page + 1, project_id = projectId, event_type = typ, has_error = hasError)">Next</a></li>
         }
       </ul>
     }
