@@ -15,9 +15,6 @@ import scala.concurrent.Future
 
 case class EC2ContainerService(registryClient: RegistryClient) extends Settings with Credentials {
 
-  // image name = "flow/user:0.0.1" - o = flow, p = user, version = 0.0.1
-  private[this] val ImagePattern = "(\\w+)/(\\w+):(.+)".r
-  
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
   private[this] lazy val client = new AmazonECSClient(awsCredentials)
@@ -103,14 +100,10 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
         ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
           case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
           case Some(containerDef) => {
-            containerDef.getImage() match {
-              case ImagePattern(o, p, version) => {
-                Version(version, service.getRunningCount.toInt)
-              }
-              case _ => {
-                sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
-              }
+            val image = Util.parseImage(containerDef.getImage()).getOrElse {
+              sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
             }
+            Version(image.version, service.getRunningCount.toInt)
           }
         }
       }  

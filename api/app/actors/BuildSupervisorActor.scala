@@ -2,7 +2,7 @@ package io.flow.delta.actors
 
 import akka.actor.Actor
 import db.{BuildsDao, BuildDesiredStatesDao, SettingsDao}
-import io.flow.delta.api.lib.StateDiff
+import io.flow.delta.api.lib.{BuildNames, StateDiff}
 import io.flow.delta.v0.models.{Build, Settings, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
@@ -29,6 +29,12 @@ object BuildSupervisorActor {
 class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with EventLog {
 
   private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+
+  override def logPrefix: String = {
+    withBuild { build =>
+      s"BuildSupervisorActor[${BuildNames.projectName(build)}]"
+    }.getOrElse("BuildSupervisorActor[unknown build]")
+  }
 
   def receive = {
 
