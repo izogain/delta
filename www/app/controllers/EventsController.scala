@@ -25,12 +25,14 @@ class EventsController @javax.inject.Inject() (
   def index(
     page: Int = 0,
     projectId: Option[String],
-    `type`: Option[EventType]
+    `type`: Option[EventType],
+    hasError: Option[Boolean]
   ) = Identified.async { implicit request =>
     for {
       events <- deltaClient(request).events.get(
         projectId = projectId,
         `type` = `type`,
+        hasError = hasError,
         limit = Limit+1,
         offset = page * Limit
       )
@@ -55,6 +57,7 @@ class EventsController @javax.inject.Inject() (
           uiData(request).copy(title = Some(title)),
           projectId,
           `type`,
+          hasError,
           PaginatedCollection(page, events, Limit)
         )
       )

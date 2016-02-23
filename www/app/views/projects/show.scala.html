@@ -80,7 +80,7 @@
     @eventsTable(changeEvents)
   }
 
-  <h3>Recent Error Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
+  <h3>Recent Error Events (<a href="@routes.EventsController.index(project_id = Some(project.id), has_error = Some(true))">View all</a>)</h3>
   @if(recentErrorEvents.isEmpty) {
     <em>No events in past 60 minutes</em>
   } else {
