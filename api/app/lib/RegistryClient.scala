@@ -14,10 +14,13 @@ class RegistryClient @javax.inject.Inject() (
   config: DefaultConfig
 ) extends RegistryConstants {
 
-  lazy val instance = new Client(
-    registry.host("registry"),
-    auth = Some(Authorization.Basic(config.requiredString(TokenVariableName)))
-  )
+  lazy val instance = {
+      println("registry.host(registry): " + registry.host("registry"))
+    new Client(
+      registry.host("registry"),
+      auth = Some(Authorization.Basic(config.requiredString(TokenVariableName)))
+    )
+  }
 
   /**
     * Get an application, turning a 404 into a None
