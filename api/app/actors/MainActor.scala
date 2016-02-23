@@ -122,7 +122,7 @@ class MainActor @javax.inject.Inject() (
     }
 
     case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(id) // Start the project actor
+      upsertProjectActor(id) ! ProjectActor.Messages.SyncBuilds
       upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
       searchActor ! SearchActor.Messages.SyncProject(id)
     }
