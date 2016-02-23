@@ -135,13 +135,13 @@ class BuildActor @javax.inject.Inject() (
 
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
-      log.runSync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
 
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
-      log.runSync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+      log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
