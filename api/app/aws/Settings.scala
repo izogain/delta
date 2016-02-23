@@ -27,13 +27,13 @@ trait Settings {
   val asgHealthCheckGracePeriod = 300
 
   // The minimum size of the Auto Scaling group
-  val asgMinSize = 3
+  val asgMinSize = 4
 
   // The maximum size of the Auto Scaling group
-  val asgMaxSize = 3
+  val asgMaxSize = 4
 
   // The number of Amazon EC2 instances that should be running in the autoscaling group
-  val asgDesiredSize = 3
+  val asgDesiredSize = 4
 
   // Keypair name used to SSH into EC2 instances created by the autoscaling group
   val ec2KeyName = "flow-admin"
