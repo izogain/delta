@@ -21,15 +21,9 @@ object ProjectSupervisorActor {
     case object PursueDesiredState extends Message
   }
 
-  val ProjectFunctions = Seq(
+  val Functions = Seq(
     functions.SyncMasterSha,
     functions.TagMaster
-  )
-
-  val BuildFunctions = Seq(
-    functions.SetDesiredState,
-    functions.BuildDockerImage,
-    functions.Scale
   )
 
 }
@@ -48,7 +42,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
       withProject { project =>
         val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
         log.message(ProjectSupervisorActor.StartedMessage)
-        run(project, settings, ProjectSupervisorActor.ProjectFunctions)
+        run(project, settings, ProjectSupervisorActor.Functions)
 
         BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
           sender ! MainActor.Messages.BuildSync(build.id)
@@ -62,7 +56,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
           sender ! MainActor.Messages.BuildCheckTag(build.id, name)
-        }.toSeq
+        }
       }
     }
 
