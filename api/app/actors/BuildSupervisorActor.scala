@@ -49,8 +49,8 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
     /**
       * Indicates that something has happened for the tag with
       * specified name (e.g. 0.0.2). If this tag is in the build's
-      * desired state, triggers PursueDesiredState. Otherwise a
-      * no-op.
+      * desired state (or ahead of the desired state), triggers
+      * PursueDesiredState. Otherwise a no-op.
       */
     case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withVerboseErrorHandler(msg) {  
       withBuild { build =>
