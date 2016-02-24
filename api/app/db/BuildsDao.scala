@@ -26,10 +26,10 @@ object BuildsDao {
       join projects on builds.project_id = projects.id
   """)
 
-  def findAllByProjectId(auth: Authorization, projectId: String): Iterator[Build] = {
+  def findAllByProjectId(auth: Authorization, projectId: String): Seq[Build] = {
     Pager.create { offset =>
       BuildsDao.findAll(auth, projectId = Some(projectId), offset = offset)
-    }
+    }.toSeq
   }
   
   def findByProjectIdAndName(auth: Authorization, projectId: String, name: String): Option[Build] = {
