@@ -1,9 +1,10 @@
 package io.flow.delta.actors.functions
 
-import db.{ImagesDao, BuildDesiredStatesDao}
+import db.{EventsDao, ImagesDao, BuildDesiredStatesDao}
 import io.flow.delta.actors.{MainActor, MainActorProvider, BuildSupervisorFunction, SupervisorResult}
+import io.flow.delta.v0.models.{Build, EventType}
+import io.flow.delta.lib.Text
 import io.flow.postgresql.Authorization
-import io.flow.delta.v0.models.Build
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.{Actor, ActorRef}
@@ -37,7 +38,7 @@ case class BuildDockerImage(build: Build) {
   ): SupervisorResult = {
     BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
       case None => {
-        SupervisorResult.NoChange("Build does not have a desired state")
+        SupervisorResult.Error("Build does not have a desired state")
       }
 
       case Some(state) => {
@@ -55,13 +56,21 @@ case class BuildDockerImage(build: Build) {
 
         versions.toList match {
           case Nil => {
-            SupervisorResult.NoChange(s"All images exist for versions in desired state[%s]".format(state.versions.map(_.name).mkString(", ")))
+            SupervisorResult.Ready(s"All images exist for versions in desired state[%s]".format(state.versions.map(_.name).mkString(", ")))
           }
-          case one :: Nil => {
-            SupervisorResult.Change(s"Started build of docker image for version $one")
-          }
-          case multiple => {
-            SupervisorResult.Change(s"Started build of docker images for versions %s".format(multiple.mkString(", ")))
+          case _ => {
+            val label = Text.pluralize(versions.size, "version", "versions") + versions.mkString(", ")
+            val msg = s"Started build of docker image for $label"
+
+            EventsDao.findAll(
+              projectId = Some(build.project.id),
+              `type` = Some(EventType.Change),
+              summary = Some(msg),
+              limit = 1
+            ).headOption match {
+              case None => SupervisorResult.Change(msg)
+              case Some(_) => SupervisorResult.Checkpoint(s"Waiting for build of docker image for $label")
+            }
           }
         }
       }

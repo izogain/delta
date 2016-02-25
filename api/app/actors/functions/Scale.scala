@@ -28,7 +28,7 @@ object Scale extends BuildSupervisorFunction {
       (lastState, desiredState) match {
 
         case (_, None) => {
-          SupervisorResult.NoChange(s"Desired state is not known")
+          SupervisorResult.Error("Desired state is not known")
         }
 
         case (None, Some(_)) => {
@@ -40,7 +40,7 @@ object Scale extends BuildSupervisorFunction {
           Scale.isRecent(last.timestamp) match {
             case false => {
               MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
-              SupervisorResult.NoChange(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
+              SupervisorResult.Error(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
             }
             case true => {
               Deployer(build, last, desired).scale()

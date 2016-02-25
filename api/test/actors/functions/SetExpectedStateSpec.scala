@@ -13,7 +13,7 @@ class SetDesiredStateSpec extends PlaySpec with OneAppPerSuite with db.Helpers {
 
   "no-op if no tags" in {
     val build = createBuild()
-    SetDesiredState(build).run() must be(SupervisorResult.NoChange("Project does not have any tags"))
+    SetDesiredState(build).run() must be(SupervisorResult.Error("Project does not have any tags"))
   }
 
   "sets desired state to latest tag" in {
@@ -27,7 +27,7 @@ class SetDesiredStateSpec extends PlaySpec with OneAppPerSuite with db.Helpers {
     SetDesiredState(build).run() must be(SupervisorResult.Change("Desired state changed to: 0.0.2: 2 instances"))
 
     // No-op if no change
-    SetDesiredState(build).run() must be(SupervisorResult.NoChange("Desired state remains: 0.0.2: 2 instances"))
+    SetDesiredState(build).run() must be(SupervisorResult.Ready("Desired state remains: 0.0.2: 2 instances"))
   }
 
 }
