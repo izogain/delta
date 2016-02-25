@@ -48,7 +48,7 @@ case class TagMaster(project: Project) extends Github {
 
       case None => {
         Future {
-          SupervisorResult.NoChange("Shas table does not have an entry for master branch")
+          SupervisorResult.Error("Shas table does not have an entry for master branch")
         }
       }
 
@@ -69,7 +69,7 @@ case class TagMaster(project: Project) extends Github {
                 tag.sha == master match {
                   case true => {
                     Future {
-                      SupervisorResult.NoChange(s"Latest tag[${tag.semver.label}] already points to master[${master}]")
+                      SupervisorResult.Ready(s"Latest tag[${tag.semver.label}] already points to master[${master}]")
                     }
                   }
                   case false => {
@@ -86,9 +86,7 @@ case class TagMaster(project: Project) extends Github {
 
   /**
     * For projects with auto tag enabled, this method actually creates
-    * a new tag with the given name, pointing to the specified sha. If
-    * auto tag is disabled, returns a nice message in a
-    * SupervisorResult.NoChange.
+    * a new tag with the given name, pointing to the specified sha.
     * 
     * @param name e.g. 0.0.2
     * @param sha e.g. ff731cfdad6e5b05ec40535fd7db03c91bbcb8ff
@@ -127,7 +125,7 @@ case class TagMaster(project: Project) extends Github {
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
-            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", r)
+            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", Some(r))
           }
         }
       }

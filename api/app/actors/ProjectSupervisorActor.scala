@@ -66,12 +66,12 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
     * Sequentially runs through the list of functions. If any of the
     * functions returns a SupervisorResult.Changed or
     * SupervisorResult.Error, returns that result. Otherwise will
-    * return NoChange at the end of all the functions.
+    * return Ready at the end of all the functions.
     */
   private[this] def run(project: Project, settings: Settings, functions: Seq[ProjectSupervisorFunction]) {
     functions.headOption match {
       case None => {
-        SupervisorResult.NoChange("All functions returned without modification")
+        SupervisorResult.Ready("All functions returned without modification")
       }
       case Some(f) => {
         isEnabled(settings, f) match {
@@ -86,12 +86,18 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
                 case SupervisorResult.Change(desc) => {
                   log.changed(format(f, desc))
                 }
-                case SupervisorResult.NoChange(desc)=> {
-                  log.completed(format(f, desc))
-                  run(project, settings, functions.drop(1))
+                case SupervisorResult.Checkpoint(desc) => {
+                  log.checkpoint(format(f, desc))
                 }
                 case SupervisorResult.Error(desc, ex)=> {
-                  log.completed(format(f, desc), Some(ex))
+                  val err = ex.getOrElse {
+                    new Exception(desc)
+                  }
+                  log.completed(format(f, desc), Some(err))
+                }
+                case SupervisorResult.Ready(desc)=> {
+                  log.completed(format(f, desc))
+                  run(project, settings, functions.drop(1))
                 }
               }
 

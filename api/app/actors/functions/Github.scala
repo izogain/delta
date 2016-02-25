@@ -18,7 +18,7 @@ trait Github {
     GithubHelper.apiClientFromUser(userId) match {
       case None => {
         Future {
-          SupervisorResult.NoChange("Could not get a client for the project's user")
+          SupervisorResult.Error(s"Could not get a client for the project's user[$userId]")
         }
       }
       case Some(client) => {

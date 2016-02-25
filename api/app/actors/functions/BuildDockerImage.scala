@@ -38,7 +38,7 @@ case class BuildDockerImage(build: Build) {
   ): SupervisorResult = {
     BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
       case None => {
-        SupervisorResult.NoChange("Build does not have a desired state")
+        SupervisorResult.Error("Build does not have a desired state")
       }
 
       case Some(state) => {
@@ -56,7 +56,7 @@ case class BuildDockerImage(build: Build) {
 
         versions.toList match {
           case Nil => {
-            SupervisorResult.NoChange(s"All images exist for versions in desired state[%s]".format(state.versions.map(_.name).mkString(", ")))
+            SupervisorResult.Ready(s"All images exist for versions in desired state[%s]".format(state.versions.map(_.name).mkString(", ")))
           }
           case _ => {
             val label = Text.pluralize(versions.size, "version", "versions") + versions.mkString(", ")
@@ -69,7 +69,7 @@ case class BuildDockerImage(build: Build) {
               limit = 1
             ).headOption match {
               case None => SupervisorResult.Change(msg)
-              case Some(_) => SupervisorResult.NoChange(s"Waiting for build of docker image for $label")
+              case Some(_) => SupervisorResult.Checkpoint(s"Waiting for build of docker image for $label")
             }
           }
         }

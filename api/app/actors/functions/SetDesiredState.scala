@@ -37,7 +37,7 @@ case class SetDesiredState(build: Build) extends Github {
       limit = 1
     ).headOption match {
       case None => {
-        SupervisorResult.NoChange("Project does not have any tags")
+        SupervisorResult.Error("Project does not have any tags")
       }
 
       case Some(latestTag) => {
@@ -56,7 +56,7 @@ case class SetDesiredState(build: Build) extends Github {
             val targetVersions = Seq(Version(latestTag.name, instances = instances))
 
             if (state.versions == targetVersions) {
-              SupervisorResult.NoChange("Desired state remains: " + StateFormatter.label(targetVersions))
+              SupervisorResult.Ready("Desired state remains: " + StateFormatter.label(targetVersions))
             } else {
               setVersions(targetVersions)
             }

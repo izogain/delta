@@ -26,7 +26,7 @@ case class Deployer(build: Build, last: State, desired: State) {
       case Nil => {
         StateDiff.down(last.versions, desired.versions).toList match {
           case Nil => {
-            SupervisorResult.NoChange(
+            SupervisorResult.Ready(
               s"Last state[%s] matches desired state[%s]".format(
                 StateFormatter.label(last.versions),
                 StateFormatter.label(desired.versions)

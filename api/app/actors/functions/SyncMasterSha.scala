@@ -32,7 +32,9 @@ case class SyncMasterSha(project: Project) extends Github {
   ): Future[SupervisorResult] = {
     GithubUtil.parseUri(project.uri) match {
       case Left(error) => {
-        Future { SupervisorResult.NoChange(s"Could not parse project uri[${project.uri}]") }
+        Future {
+          SupervisorResult.Error(s"Could not parse project uri[${project.uri}]")
+        }
       }
 
       case Right(repo) => {
@@ -43,7 +45,7 @@ case class SyncMasterSha(project: Project) extends Github {
             val masterSha = master.`object`.sha
             existing == Some(masterSha) match {
               case true => {
-                SupervisorResult.NoChange(s"Shas table already records that master is at $masterSha")
+                SupervisorResult.Ready(s"Shas table already records that master is at $masterSha")
               }
               case false => {
                 shasWriteDao.upsertMaster(UsersDao.systemUser, project.id, masterSha)
