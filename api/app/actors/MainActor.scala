@@ -55,7 +55,7 @@ class MainActor @javax.inject.Inject() (
   buildFactory: BuildActor.Factory,
   dockerHubFactory: DockerHubActor.Factory, 
   projectFactory: ProjectActor.Factory,
-  override val config: io.flow.play.util.DefaultConfig,
+  override val config: io.flow.play.util.Config,
   system: ActorSystem
 ) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
 
