@@ -10,6 +10,7 @@ import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
+import org.joda.time.DateTime
 import play.api.Logger
 import play.libs.Akka
 import akka.actor.Actor
@@ -29,7 +30,7 @@ object BuildActor {
 
     case object ConfigureAWS extends Message // One-time AWS setup
 
-    case class MonitorScale(imageName: String, imageVersion: String) extends Message
+    case class MonitorScale(imageName: String, imageVersion: String, start: DateTime) extends Message
 
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
@@ -50,6 +51,7 @@ class BuildActor @javax.inject.Inject() (
 
   implicit val buildActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("build-actor-context")
 
+  private[this] val TimeoutSeconds = 450
   private[this] lazy val ecs = EC2ContainerService(registryClient)
   private[this] lazy val elb = ElasticLoadBalancer(registryClient)
   private[this] lazy val asg = AutoScalingGroup(
@@ -101,9 +103,9 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ BuildActor.Messages.MonitorScale(imageName, imageVersion) => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.MonitorScale(imageName, imageVersion, start) => withVerboseErrorHandler(msg) {
       withBuild { build =>
-        monitorScale(build, imageName, imageVersion)
+        monitorScale(build, imageName, imageVersion, start)
       }
     }
 
@@ -146,10 +148,10 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
-    monitorScale(build, imageName, imageVersion)
+    monitorScale(build, imageName, imageVersion, new DateTime())
   }
 
-  def monitorScale(build: Build, imageName: String, imageVersion: String) {
+  def monitorScale(build: Build, imageName: String, imageVersion: String, startTime: DateTime) {
     captureLastState(build)
 
     for {
@@ -165,13 +167,17 @@ class BuildActor @javax.inject.Inject() (
           val intervalSeconds = 5
 
           if (service.getRunningCount == service.getDesiredCount) {
-            log.completed(s"Scaling ${imageName}, Version: ${imageVersion}, $summary")
+            log.completed(s"${imageName}:${imageVersion} $summary")
+
+          } else if (startTime.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
+            val ex = new java.util.concurrent.TimeoutException()
+            log.completed(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary", Some(ex))
 
           } else {
-            log.checkpoint(s"Scaling ${imageName}, Version: ${imageVersion}: image not ready. Will try again in $intervalSeconds seconds. $summary")
+            log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")
 
             Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
-              self ! BuildActor.Messages.MonitorScale(imageName, imageVersion)
+              self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, startTime)
             }
           }
         }

@@ -33,7 +33,7 @@ object Scale extends BuildSupervisorFunction {
 
         case (None, Some(_)) => {
           MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
-          SupervisorResult.Change(s"Requested CheckLastState as last state is not known")
+          SupervisorResult.Checkpoint(s"Requested CheckLastState as last state is not known")
         }
 
         case (Some(last), Some(desired)) => {
