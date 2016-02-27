@@ -80,7 +80,7 @@ object EventsDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     `type`: Option[EventType] = None,
-    summary: Option[String] = None,
+    summaryKeywords: Option[String] = None,
     numberMinutesSinceCreation: Option[Long] = None,
     hasError: Option[Boolean] = None,
     orderBy: OrderBy = OrderBy("-events.created_at, events.id"),
@@ -92,7 +92,9 @@ object EventsDao {
         optionalIn(s"events.id", ids).
         equals(s"events.project_id", projectId).
         equals(s"events.type", `type`.map(_.toString)).
-        equals(s"events.summary", summary).
+        and(summaryKeywords.map { keywords =>
+          "lower(events.summary) like '%' || lower({summary_keywords}) || '%'"
+        }).bind("summary_keywords", summaryKeywords).
         and(numberMinutesSinceCreation.map { minutes =>
           s"events.created_at >= now() - interval '$minutes minutes'"
         }).

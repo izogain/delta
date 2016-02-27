@@ -65,7 +65,7 @@ case class BuildDockerImage(build: Build) {
             EventsDao.findAll(
               projectId = Some(build.project.id),
               `type` = Some(EventType.Change),
-              summary = Some(msg),
+              summaryKeywords = Some(msg),
               limit = 1
             ).headOption match {
               case None => SupervisorResult.Change(msg)
