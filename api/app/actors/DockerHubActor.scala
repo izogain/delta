@@ -46,7 +46,7 @@ object DockerHubActor {
 class DockerHubActor @javax.inject.Inject() (
   imagesWriteDao: ImagesWriteDao,
   @com.google.inject.assistedinject.Assisted buildId: String
-) extends Actor with ErrorHandler with DataBuild with EventLog {
+) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
   implicit val dockerHubActorExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
