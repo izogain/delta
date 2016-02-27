@@ -53,10 +53,7 @@ class ProjectActor @javax.inject.Inject() (
     case msg @ ProjectActor.Messages.SyncBuilds => withVerboseErrorHandler(msg) {
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
-          println("--------------------------------------------------")
-          println(s"Project[${project.id}] actor startup - triggering BuildDesiredStateUpdated for build[${build.name}]")
-          println("--------------------------------------------------")
-            sender ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
+          sender ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
         }
       }
     }
