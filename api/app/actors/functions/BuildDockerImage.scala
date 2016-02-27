@@ -59,8 +59,8 @@ case class BuildDockerImage(build: Build) {
             SupervisorResult.Ready(s"All images exist for versions in desired state[%s]".format(state.versions.map(_.name).mkString(", ")))
           }
           case _ => {
-            val label = Text.pluralize(versions.size, "version", "versions") + versions.mkString(", ")
-            val msg = s"Started build of docker image for $label"
+            val label = Text.pluralize(versions.size, "docker image", "docker images") + ": " + versions.mkString(", ")
+            val msg = s"Started build of $label"
 
             EventsDao.findAll(
               projectId = Some(build.project.id),
@@ -69,7 +69,7 @@ case class BuildDockerImage(build: Build) {
               limit = 1
             ).headOption match {
               case None => SupervisorResult.Change(msg)
-              case Some(_) => SupervisorResult.Checkpoint(s"Waiting for build of docker image for $label")
+              case Some(_) => SupervisorResult.Checkpoint(s"Waiting for build of $label")
             }
           }
         }
