@@ -151,7 +151,7 @@ class BuildActor @javax.inject.Inject() (
     monitorScale(build, imageName, imageVersion, new DateTime())
   }
 
-  def monitorScale(build: Build, imageName: String, imageVersion: String, startTime: DateTime) {
+  def monitorScale(build: Build, imageName: String, imageVersion: String, start: DateTime) {
     captureLastState(build)
 
     for {
@@ -169,7 +169,7 @@ class BuildActor @javax.inject.Inject() (
           if (service.getRunningCount == service.getDesiredCount) {
             log.completed(s"${imageName}:${imageVersion} $summary")
 
-          } else if (startTime.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
+          } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
             val ex = new java.util.concurrent.TimeoutException()
             log.completed(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary", Some(ex))
 
@@ -177,7 +177,7 @@ class BuildActor @javax.inject.Inject() (
             log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")
 
             Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
-              self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, startTime)
+              self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
             }
           }
         }

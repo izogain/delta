@@ -8,6 +8,7 @@ import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.DefaultConfig
 import akka.actor.Actor
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Logger
 import scala.concurrent.ExecutionContext
@@ -31,7 +32,7 @@ object DockerHubActor {
       */
     case class Build(version: String) extends Message
 
-    case class Monitor(version: String) extends Message    
+    case class Monitor(version: String, start: DateTime) extends Message    
 
     case object Setup extends Message
   }
@@ -59,6 +60,7 @@ class DockerHubActor @javax.inject.Inject() (
   }
 
   private[this] val IntervalSeconds = 30
+  private[this] val TimeoutSeconds = 1500
 
   def receive = {
 
@@ -90,13 +92,13 @@ class DockerHubActor @javax.inject.Inject() (
               }
             }
 
-            self ! DockerHubActor.Messages.Monitor(version)
+            self ! DockerHubActor.Messages.Monitor(version, new DateTime())
           }
         }
       }
     }
 
-    case msg @ DockerHubActor.Messages.Monitor(version) => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubActor.Messages.Monitor(version, start) => withVerboseErrorHandler(msg) {
       withBuild { build =>
         withOrganization { org =>
           syncImages(org.docker, build)
@@ -105,15 +107,21 @@ class DockerHubActor @javax.inject.Inject() (
 
           ImagesDao.findByBuildIdAndVersion(build.id, version) match {
             case Some(image) => {
-              log.checkpoint(s"Docker hub image $imageFullName is ready - image id[${image.id}]")
+              log.completed(s"Docker hub image $imageFullName is ready - id[${image.id}]")
               // Don't fire an event; the ImagesDao will already have
               // raised ImageCreated
             }
 
             case None => {
-              log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
-              Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
-                self ! DockerHubActor.Messages.Monitor(version)
+              if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
+                val ex = new java.util.concurrent.TimeoutException()
+                log.completed(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built", Some(ex))
+
+              } else {
+                log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
+                Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
+                  self ! DockerHubActor.Messages.Monitor(version, start)
+                }
               }
             }
           }
