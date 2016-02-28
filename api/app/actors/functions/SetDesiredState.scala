@@ -37,7 +37,7 @@ case class SetDesiredState(build: Build) extends Github {
       limit = 1
     ).headOption match {
       case None => {
-        SupervisorResult.Error("Project does not have any tags")
+        SupervisorResult.Checkpoint("Project does not have any tags")
       }
 
       case Some(latestTag) => {

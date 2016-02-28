@@ -170,8 +170,7 @@ class BuildActor @javax.inject.Inject() (
             log.completed(s"${imageName}:${imageVersion} $summary")
 
           } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
-            val ex = new java.util.concurrent.TimeoutException()
-            log.completed(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary", Some(ex))
+            log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
 
           } else {
             log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")

@@ -61,6 +61,13 @@ case class EventLog(
   }
 
   /**
+    * Logs an error
+    */
+  def error(message: String, error: Option[Throwable] = None) = {
+    process(EventType.Info, s"error $message", error)
+  }
+
+  /**
     * Records a checkpoint - main purpose is to communicate that
     * info is being made. We intend to build functions that detect
     * failure based on no activity written to the log. So long running
