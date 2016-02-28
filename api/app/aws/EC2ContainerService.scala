@@ -82,10 +82,31 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
   def getClusterInfo(projectId: String): Future[Seq[Version]] = {
     Future {
       val cluster = getClusterName(projectId)
-      client.listServices(
-        new ListServicesRequest()
-        .withCluster(cluster)
-      ).getServiceArns().asScala.map{ serviceArn =>
+
+      // TODO: How to make more functional?
+      var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
+      var hasMore: Boolean = true
+      var nextToken: String = null // null nextToken gets the first page
+
+      while (hasMore) {
+        var result = client.listServices(
+          new ListServicesRequest()
+          .withCluster(cluster)
+          .withNextToken(nextToken)
+        )
+        serviceArns += result.getServiceArns.asScala.toList
+
+        Option(result.getNextToken) match {
+          case Some(token) => {
+            nextToken = token
+          }
+          case None => {
+            hasMore = false
+          }
+        }
+      }
+
+      serviceArns.flatten.distinct.map{ serviceArn =>
         val service = client.describeServices(
           new DescribeServicesRequest()
           .withCluster(cluster)
@@ -106,7 +127,7 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
             Version(image.version, service.getRunningCount.toInt)
           }
         }
-      }  
+      }
     }
   }
 
@@ -207,7 +228,7 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
       }
     }
   }
-  
+
   def summary(service: Service): String = {
     val status = service.getStatus
     val running = service.getRunningCount
@@ -216,6 +237,6 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
 
     s"status[$status] running[$running] desired[$desired] pending[$pending]"
   }
-  
-  
+
+
 }
