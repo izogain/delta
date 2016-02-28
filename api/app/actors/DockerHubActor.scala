@@ -115,7 +115,7 @@ class DockerHubActor @javax.inject.Inject() (
             case None => {
               if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
                 val ex = new java.util.concurrent.TimeoutException()
-                log.completed(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built", Some(ex))
+                log.error(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built")
 
               } else {
                 log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
@@ -134,19 +134,22 @@ class DockerHubActor @javax.inject.Inject() (
 
 
   def syncImages(docker: Docker, build: Build) {
-    for {
-      tags <- v2client.V2Tags.get(docker.organization, BuildNames.projectName(build))
-    } yield {
-
+    v2client.V2Tags.get(docker.organization, BuildNames.projectName(build)).map { tags =>
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
+
         Try(
           upsertImage(docker, build, tag.name)
         ) match {
           case Success(_) => // No-op
           case Failure(ex) => {
-            ex.printStackTrace(System.err)
+            log.error(s"Error in upsertImage for tag[${tag.name}]", Some(ex))
           }
         }
+      }
+    }.recover {
+      case ex: Throwable => {
+        ex.printStackTrace(System.err)
+        log.error(s"${BuildNames.projectName(build)} Error fetching docker tags for build id[${build.id}]", Some(ex))
       }
     }
   }
