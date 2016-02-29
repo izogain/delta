@@ -1,14 +1,13 @@
 package io.flow.delta.actors
 
-import db.BuildsDao
+import db.{BuildsDao, EventsDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.{GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
 import play.api.Logger
-import play.libs.Akka
-import akka.actor.Actor
+import akka.actor.{Actor, ActorSystem}
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
@@ -16,11 +15,14 @@ import scala.concurrent.Future
 
 object ProjectActor {
 
+  val SyncIfInactiveIntervalMinutes = 15
+
   trait Message
 
   object Messages {
     case object Setup extends Message
     case object SyncBuilds extends Message
+    case object SyncIfInactive extends Message
   }
 
   trait Factory {
@@ -31,10 +33,11 @@ object ProjectActor {
 
 class ProjectActor @javax.inject.Inject() (
   config: Config,
+  system: ActorSystem,
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with ErrorHandler with DataProject with EventLog {
 
-  implicit val projectActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("project-actor-context")
+  implicit val projectActorExecutionContext: ExecutionContext = system.dispatchers.lookup("project-actor-context")
 
   def receive = {
 
@@ -48,12 +51,32 @@ class ProjectActor @javax.inject.Inject() (
       }
 
       self ! ProjectActor.Messages.SyncBuilds
+
+      system.scheduler.schedule(
+        Duration(ProjectActor.SyncIfInactiveIntervalMinutes, "minutes"),
+        Duration(ProjectActor.SyncIfInactiveIntervalMinutes, "minutes")
+      ) {
+        sender ! ProjectActor.Messages.SyncIfInactive
+      }
     }
 
     case msg @ ProjectActor.Messages.SyncBuilds => withVerboseErrorHandler(msg) {
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
           sender ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
+        }
+      }
+    }
+
+    case msg @ ProjectActor.Messages.SyncIfInactive => withVerboseErrorHandler(msg) {
+      withProject { project =>
+        EventsDao.findAll(
+          projectId = Some(project.id),
+          numberMinutesSinceCreation = Some(5),
+          limit = 1
+        ).headOption match {
+          case Some(_) => // No-op as there is recent activity in the event log
+          case None => sender ! MainActor.Messages.ProjectSync(project.id)
         }
       }
     }
