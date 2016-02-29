@@ -12,8 +12,7 @@ import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
 import org.joda.time.DateTime
 import play.api.Logger
-import play.libs.Akka
-import akka.actor.Actor
+import akka.actor.{Actor, ActorSystem}
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
@@ -46,10 +45,11 @@ object BuildActor {
 class BuildActor @javax.inject.Inject() (
   registryClient: RegistryClient,
   config: Config,
+  system: ActorSystem,
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
-  implicit val buildActorExecutionContext: ExecutionContext = Akka.system.dispatchers.lookup("build-actor-context")
+  implicit val buildActorExecutionContext: ExecutionContext = system.dispatchers.lookup("build-actor-context")
 
   private[this] val TimeoutSeconds = 450
   private[this] lazy val ecs = EC2ContainerService(registryClient)
@@ -69,13 +69,11 @@ class BuildActor @javax.inject.Inject() (
       if (isScaleEnabled) {
         self ! BuildActor.Messages.ConfigureAWS
 
-        withBuild { build =>
-          Akka.system.scheduler.schedule(
-            Duration(1, "second"),
-            Duration(BuildActor.CheckLastStateIntervalSeconds, "seconds")
-          ) {
-            self ! BuildActor.Messages.CheckLastState
-          }
+        system.scheduler.schedule(
+          Duration(1, "second"),
+          Duration(BuildActor.CheckLastStateIntervalSeconds, "seconds")
+        ) {
+          self ! BuildActor.Messages.CheckLastState
         }
       }
     }
@@ -175,7 +173,7 @@ class BuildActor @javax.inject.Inject() (
           } else {
             log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")
 
-            Akka.system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
+            system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
               self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
             }
           }
@@ -185,15 +183,13 @@ class BuildActor @javax.inject.Inject() (
   }
 
   def captureLastState(build: Build): Future[String] = {
-    log.runAsync("captureLastState") {
-      ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
-        play.api.Play.current.injector.instanceOf[BuildLastStatesWriteDao].upsert(
-          UsersDao.systemUser,
-          build,
-          StateForm(versions = versions)
-        )
-        StateFormatter.label(versions)
-      }
+    ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
+      play.api.Play.current.injector.instanceOf[BuildLastStatesWriteDao].upsert(
+        UsersDao.systemUser,
+        build,
+        StateForm(versions = versions)
+      )
+      StateFormatter.label(versions)
     }
   }
 
