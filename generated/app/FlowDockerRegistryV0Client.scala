@@ -488,6 +488,10 @@ package io.flow.docker.registry.v0 {
       )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.docker.registry.v0.models.Build] = {
         val payload = play.api.libs.json.Json.toJson(buildForm)
 
+        // TODO: REMOVE THIS
+        println(s"postAutoBuild payload: [$payload]")
+        println(s"postAutoBuild urlpath: /v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/")
+
         _executeRequest("POST", s"/v2/repositories/${play.utils.UriEncoding.encodePathSegment(org, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/autobuild/", body = Some(payload)).map {
           case r if r.status == 201 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.Build", r, _.validate[io.flow.docker.registry.v0.models.Build])
           case r if r.status == 400 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
