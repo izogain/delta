@@ -496,7 +496,10 @@ package io.flow.docker.registry.v0 {
           case r if r.status == 201 => _root_.io.flow.docker.registry.v0.Client.parseJson("io.flow.docker.registry.v0.models.Build", r, _.validate[io.flow.docker.registry.v0.models.Build])
           case r if r.status == 400 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
           case r if r.status == 401 => throw new io.flow.docker.registry.v0.errors.UnitResponse(r.status)
-          case r => throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 400, 401")
+          case r => {
+            println(s"postAutoBuild response: $r")
+            throw new io.flow.docker.registry.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 400, 401")
+          }
         }
       }
     }
