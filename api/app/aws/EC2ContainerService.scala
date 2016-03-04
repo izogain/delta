@@ -209,6 +209,7 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
           client.createService(
             new CreateServiceRequest()
             .withServiceName(serviceName)
+            .withClientToken(serviceName) // protects against errors caused by multiple attempts to create service
             .withCluster(clusterName)
             .withDesiredCount(createServiceDesiredCount)
             .withRole(serviceRole)
