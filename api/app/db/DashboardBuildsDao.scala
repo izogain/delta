@@ -39,6 +39,7 @@ object DashboardBuildsDao {
         and(Filters(auth).organizations("projects.organization_id").sql).
         limit(limit).
         offset(offset).
+        orderBy("build_desired_states.timestamp desc").
         as(
           parser().*
         )

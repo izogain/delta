@@ -14,6 +14,7 @@
       @dashboardBuilds.items.map { build =>
         <tr>
           <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@io.flow.delta.lib.BuildNames.projectName(build)</a></td>
+          <td>@io.flow.delta.lib.Text.since(build.desired.timestamp)</td>
           <td>@io.flow.delta.lib.StateFormatter.label(build.last.versions)</td>
           <td>@io.flow.delta.lib.StateFormatter.label(build.desired.versions)</td>
         </tr>

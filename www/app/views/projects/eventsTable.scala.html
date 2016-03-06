@@ -4,7 +4,7 @@
   <table class="table">
     @events.map { e =>
       <tr>
-        <td>@io.flow.play.util.DateHelper.shortDateTime(e.createdAt)</td>
+        <td>@io.flow.delta.lib.Text.since(e.createdAt)</td>
         <td>@e.summary</td>
       </tr>
       <tr>
