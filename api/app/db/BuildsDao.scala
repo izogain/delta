@@ -17,18 +17,13 @@ object BuildsDao {
   private[this] val BaseQuery = Query(s"""
     select builds.id,
            builds.name,
+           builds.dockerfile_path,
            projects.id as project_id,
            projects.name as project_name,
            projects.uri as project_uri,
-           projects.organization_id as project_organization_id,
-           build_last_states.timestamp as last_timestamp,
-           build_last_states.versions as last_version,
-           build_desired_states.timestamp as desired_timestamp,
-           build_desired_states.versions as desired_version
+           projects.organization_id as project_organization_id
       from builds
       join projects on builds.project_id = projects.id
-      join build_last_states on build_last_states.build_id = builds.id
-      join build_desired_states on build_desired_states.build_id = builds.id
   """)
 
   def findAllByProjectId(auth: Authorization, projectId: String): Seq[Build] = {
