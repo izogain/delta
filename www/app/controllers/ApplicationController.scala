@@ -21,12 +21,20 @@ class ApplicationController @javax.inject.Inject() (
     Redirect(request.path + "/")
   }
 
-  def index(organization: Option[String], page: Int = 0) = Identified { implicit request =>
-    Ok(
-      views.html.index(
-        uiData(request).copy(organization = organization)
+  def index(organization: Option[String], buildsPage: Int = 0) = Identified.async { implicit request =>
+    for {
+      dashboardBuilds <- deltaClient(request).dashboardBuilds.get(
+        limit = Pagination.DefaultLimit+1,
+        offset = buildsPage * Pagination.DefaultLimit
       )
-    )
+    } yield {
+      Ok(
+        views.html.index(
+          uiData(request).copy(organization = organization),
+          PaginatedCollection(buildsPage, dashboardBuilds)
+        )
+      )
+    }
   }
 
 }

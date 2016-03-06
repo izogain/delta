@@ -1,10 +1,37 @@
 @(
-  data: io.flow.delta.www.lib.UiData
+  data: io.flow.delta.www.lib.UiData,
+  dashboardBuilds: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.DashboardBuild]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data) {
 
-  Welcome.
+  @if(dashboardBuilds.isEmpty) {
+    <p><em>Get started by creating a project and a successful first build.</em></p>
+  } else {
 
+  <div class="table-responsive">
+    <table class="table">
+      @dashboardBuilds.items.map { build =>
+        <tr>
+          <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@{build.project.id}</a></td>
+          <td>@build.last.versions</td>
+          <td>@build.desired.versions</td>
+        </tr>
+      }
+    </table>
+  </div>
+    
+    @if(dashboardBuilds.hasPrevious || dashboardBuilds.hasNext) {
+      <ul class="pager">
+        @if(dashboardBuilds.hasPrevious) {
+          <li><a href="@routes.ApplicationController.index(builds_page = dashboardBuilds.page - 1)">Previous</a></li>
+       }
+        @if(dashboardBuilds.hasNext) {
+         <li><a href="@routes.ApplicationController.index(builds_page = dashboardBuilds.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+
+  }
 
 }
