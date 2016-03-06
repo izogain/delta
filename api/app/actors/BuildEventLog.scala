@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import io.flow.delta.api.lib.BuildNames
+import io.flow.delta.lib.BuildNames
 import io.flow.delta.v0.models.Build
 
 trait BuildEventLog extends EventLog {

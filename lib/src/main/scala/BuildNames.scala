@@ -1,6 +1,6 @@
-package io.flow.delta.api.lib
+package io.flow.delta.lib
 
-import io.flow.delta.v0.models.{Build, BuildForm, Docker}
+import io.flow.delta.v0.models.{Build, BuildForm, DashboardBuild, Docker, Project}
 import io.flow.play.util.UrlKey
 
 object BuildNames {
@@ -50,10 +50,18 @@ object BuildNames {
     * (e.g. registry or delta-api)
     */
   def projectName(build: Build): String = {
-    build.name match {
-      case DefaultBuildName => build.project.name
-      case _ => build.project.name + "-" + build.name
-    }
+    projectName(build.project.id, build.name)
   }
 
+  def projectName(dashboardBuild: DashboardBuild): String = {
+    projectName(dashboardBuild.project.id, dashboardBuild.name)
+  }
+  
+  private[this] def projectName(projectId: String, buildName: String): String = {
+    buildName match {
+      case DefaultBuildName => projectId
+      case _ => projectId + "-" + buildName
+    }
+  }
+  
 }

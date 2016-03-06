@@ -1,10 +1,45 @@
 @(
-  data: io.flow.delta.www.lib.UiData
+  data: io.flow.delta.www.lib.UiData,
+  dashboardBuilds: io.flow.play.util.PaginatedCollection[controllers.BuildView]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data) {
 
-  Welcome.
+  @if(dashboardBuilds.isEmpty) {
+    <p><em>Get started by creating a project and a successful first build.</em></p>
+  } else {
 
+  <div class="table-responsive">
+    <table class="table">
+      <tr>
+        <thead>
+          <th>Build</th>
+          <th>Desired state last set</th>
+          <th>State</th>
+        </thead>
+      </tr>
+
+      @dashboardBuilds.items.map { buildView =>
+        <tr@buildView.status.map { v =>  class='@v' }.getOrElse("")>
+          <td><a href="@routes.ProjectsController.show(buildView.dashboardBuild.project.id)">@{buildView.dashboardBuild.project.organization.id}/@io.flow.delta.lib.BuildNames.projectName(buildView.dashboardBuild)</a></td>
+          <td>@io.flow.delta.lib.Text.since(buildView.dashboardBuild.desired.timestamp)</td>
+          <td>@buildView.label</td>
+        </tr>
+      }
+    </table>
+  </div>
+    
+    @if(dashboardBuilds.hasPrevious || dashboardBuilds.hasNext) {
+      <ul class="pager">
+        @if(dashboardBuilds.hasPrevious) {
+          <li><a href="@routes.ApplicationController.index(builds_page = dashboardBuilds.page - 1)">Previous</a></li>
+       }
+        @if(dashboardBuilds.hasNext) {
+         <li><a href="@routes.ApplicationController.index(builds_page = dashboardBuilds.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+
+  }
 
 }

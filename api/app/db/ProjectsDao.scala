@@ -1,15 +1,16 @@
 package db
 
 import anorm._
+import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
+import io.flow.delta.api.lib.GithubUtil
+import io.flow.delta.lib.BuildNames
 import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
-import io.flow.delta.api.lib.{BuildNames, GithubUtil}
 import io.flow.play.util.UrlKey
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
-import io.flow.common.v0.models.User
 import play.api.db._
-import play.api.Play.current
 import play.api.libs.json._
+import play.api.Play.current
 
 object ProjectsDao {
 

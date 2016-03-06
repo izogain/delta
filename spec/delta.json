@@ -377,6 +377,16 @@
         { "name": "name", "type": "string" },
         { "name": "hash", "type": "string" }
       ]
+    },
+
+    "dashboard_build": {
+      "description": "Summary of each build for the purposes of displaying on a dashboard",
+      "fields": [
+        { "name": "project", "type": "project_summary" },
+        { "name": "name", "type": "string", "description": "The build name" },
+        { "name": "desired", "type": "state" },
+        { "name": "last", "type": "state" }
+      ]
     }
 
   },
@@ -1044,6 +1054,23 @@
           }
         }
 
+      ]
+
+    },
+
+    "dashboard_build": {
+
+      "operations": [
+        {
+          "method": "GET",
+          "parameters": [
+            { "name": "limit", "type": "long", "default": 25, "description": "The number of records to return", "minimum": 1, "maximum": 100 },
+            { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
+	  ],
+          "responses": {
+            "200": { "type": "[dashboard_build]" }
+          }
+	}
       ]
     }
 
