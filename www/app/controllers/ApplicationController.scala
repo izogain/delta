@@ -1,5 +1,6 @@
 package controllers
 
+import io.flow.delta.v0.models.Version
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.{Pagination, PaginatedCollection}
@@ -15,8 +16,8 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
 
   private[this] val MinutesUntilError = 30
 
-  private[this] val last = dashboardBuild.last.versions.map(_.name).mkString(", ")
-  private[this] val desired = dashboardBuild.desired.versions.map(_.name).mkString(", ")
+  private[this] val last = format(dashboardBuild.last.versions)
+  private[this] val desired = format(dashboardBuild.desired.versions)
 
   val status: Option[String] = {
     last == desired match {
@@ -43,6 +44,13 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
       }
     }
 
+  }
+
+  def format(versions: Seq[Version]): String = {
+    versions.map(_.name) match {
+      case Nil => "Nothing" 
+      case names => names.mkString(", ")
+    }
   }
 
 }
