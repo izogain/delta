@@ -19,6 +19,16 @@ case class ElasticLoadBalancer(registryClient: RegistryClient) extends Settings 
 
   def getLoadBalancerName(projectId: String): String = s"$projectId-ecs-lb"
 
+  def getHealthyInstances(projectId: String): Future[Seq[String]] = {
+    val loadBalancerName = getLoadBalancerName(projectId)
+    Future {
+      client.describeInstanceHealth(
+        new DescribeInstanceHealthRequest()
+        .withLoadBalancerName(loadBalancerName)
+      ).getInstanceStates.asScala.filter(_.getState == "InService").map(_.getInstanceId)
+    }
+  }
+
   def createLoadBalancerAndHealthCheck(projectId: String): Future[String] = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call

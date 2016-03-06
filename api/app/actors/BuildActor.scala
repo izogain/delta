@@ -32,7 +32,7 @@ object BuildActor {
 
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
-    case object Setup extends Message    
+    case object Setup extends Message
   }
 
   trait Factory {
@@ -153,6 +153,7 @@ class BuildActor @javax.inject.Inject() (
 
     for {
       ecsServiceOpt <- getServiceInfo(imageName, imageVersion, build)
+      isHealthy <- isServiceHealthy(imageName, imageVersion, build)
     } yield {
       ecsServiceOpt match {
         case None => {
@@ -164,7 +165,11 @@ class BuildActor @javax.inject.Inject() (
           val intervalSeconds = 5
 
           if (service.getRunningCount == service.getDesiredCount) {
-            log.completed(s"${imageName}:${imageVersion} $summary")
+            if (isHealthy) {
+              log.completed(s"${imageName}:${imageVersion} $summary")
+            } else {
+              log.checkpoint(s"${imageName}:${imageVersion} running, but waiting for ELB instances to become healthy. Will recheck in $intervalSeconds seconds. $summary")
+            }
 
           } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
             log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
@@ -178,6 +183,15 @@ class BuildActor @javax.inject.Inject() (
           }
         }
       }
+    }
+  }
+
+  def isServiceHealthy(imageName: String, imageVersion: String, build: Build): Future[Boolean] = {
+    for {
+      serviceInstances <- ecs.getServiceInstances(imageName, imageVersion, BuildNames.projectName(build))
+      healthyInstances <- elb.getHealthyInstances(BuildNames.projectName(build))
+    } yield {
+      serviceInstances.filter{healthyInstances.contains(_)} == serviceInstances
     }
   }
 
