@@ -182,6 +182,29 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
     }
   }
 
+  def getServiceInstances(imageName: String, imageVersion: String, projectId: String): Future[Seq[String]] = {
+    val clusterName = getClusterName(projectId)
+    val serviceName = getServiceName(imageName, imageVersion)
+
+    Future {
+      val containerInstances = client.describeTasks(
+        new DescribeTasksRequest()
+        .withCluster(clusterName)
+        .withTasks(client.listTasks(
+          new ListTasksRequest()
+          .withCluster(clusterName)
+          .withServiceName(serviceName)
+        ).getTaskArns)
+      ).getTasks.asScala.map(_.getContainerInstanceArn).asJava
+
+      client.describeContainerInstances(
+        new DescribeContainerInstancesRequest()
+        .withCluster(clusterName)
+        .withContainerInstances(containerInstances)
+      ).getContainerInstances().asScala.map{containerInstance => containerInstance.getEc2InstanceId }
+    }
+  }
+
   def createService(imageName: String, imageVersion: String, projectId: String, taskDefinition: String): Future[String] = {
     val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
