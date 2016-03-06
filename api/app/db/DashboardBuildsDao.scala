@@ -19,9 +19,9 @@ object DashboardBuildsDao {
            projects.uri as project_uri,
            projects.organization_id as project_organization_id,
            build_last_states.timestamp as last_timestamp,
-           build_last_states.versions as last_version,
+           build_last_states.versions as last_versions,
            build_desired_states.timestamp as desired_timestamp,
-           build_desired_states.versions as desired_version
+           build_desired_states.versions as desired_versions
       from builds
       join projects on builds.project_id = projects.id
       join build_last_states on build_last_states.build_id = builds.id
