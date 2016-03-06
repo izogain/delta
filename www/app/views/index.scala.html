@@ -1,6 +1,6 @@
 @(
   data: io.flow.delta.www.lib.UiData,
-  dashboardBuilds: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.DashboardBuild]
+  dashboardBuilds: io.flow.play.util.PaginatedCollection[controllers.BuildView]
 )(implicit flash: Flash, messages: Messages)
 
 @main(data) {
@@ -11,12 +11,19 @@
 
   <div class="table-responsive">
     <table class="table">
-      @dashboardBuilds.items.map { build =>
-        <tr>
-          <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@io.flow.delta.lib.BuildNames.projectName(build)</a></td>
-          <td>@io.flow.delta.lib.Text.since(build.desired.timestamp)</td>
-          <td>@io.flow.delta.lib.StateFormatter.label(build.last.versions)</td>
-          <td>@io.flow.delta.lib.StateFormatter.label(build.desired.versions)</td>
+      <tr>
+        <thead>
+          <th>Build</th>
+          <th>Desired state last set</th>
+          <th>State</th>
+        </thead>
+      </tr>
+
+      @dashboardBuilds.items.map { buildView =>
+        <tr@buildView.status.map { v =>  class='@v' }.getOrElse("")>
+          <td><a href="@routes.ProjectsController.show(buildView.dashboardBuild.project.id)">@{buildView.dashboardBuild.project.organization.id}/@io.flow.delta.lib.BuildNames.projectName(buildView.dashboardBuild)</a></td>
+          <td>@io.flow.delta.lib.Text.since(buildView.dashboardBuild.desired.timestamp)</td>
+          <td>@buildView.label</td>
         </tr>
       }
     </table>
