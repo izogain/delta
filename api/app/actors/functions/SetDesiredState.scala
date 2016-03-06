@@ -2,7 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{BuildDesiredStatesDao, BuildDesiredStatesWriteDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{BuildSupervisorFunction, SupervisorResult}
-import io.flow.delta.api.lib.StateFormatter
+import io.flow.delta.lib.StateFormatter
 import io.flow.delta.v0.models.{Build, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future

@@ -1,4 +1,4 @@
-package io.flow.delta.api.lib
+package io.flow.delta.lib
 
 import org.specs2.mutable._
 

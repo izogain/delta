@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.api.lib.Semver
+import io.flow.delta.lib.Semver
 
 object Util {
 

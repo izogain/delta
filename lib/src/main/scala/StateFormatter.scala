@@ -1,6 +1,5 @@
-package io.flow.delta.api.lib
+package io.flow.delta.lib
 
-import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.Version
 
 object StateFormatter {

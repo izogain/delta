@@ -1,8 +1,8 @@
 package io.flow.delta.actors.functions
 
 import io.flow.delta.actors.{MainActor, MainActorProvider, SupervisorResult}
-import io.flow.delta.api.lib.{StateDiff, StateFormatter}
-import io.flow.delta.lib.Text
+import io.flow.delta.lib.{StateFormatter, Text}
+import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.v0.models.{Build, State}
 import org.joda.time.DateTime
 

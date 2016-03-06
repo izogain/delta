@@ -1,4 +1,4 @@
-package io.flow.delta.api.lib
+package io.flow.delta.lib
 
 case class Semver(major: Int, minor: Int, micro: Int) extends Ordered[Semver] {
 

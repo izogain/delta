@@ -1,16 +1,17 @@
 package db
 
 import akka.actor.ActorRef
+import anorm._
 import io.flow.common.v0.models.User
 import io.flow.delta.actors.MainActor
-import io.flow.delta.api.lib.{Semver, StateDiff}
+import io.flow.delta.api.lib.StateDiff
+import io.flow.delta.lib.Semver
 import io.flow.delta.v0.models.{Build, Project, State, StateForm, Version}
 import io.flow.delta.v0.models.json._
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import anorm._
 import play.api.db._
-import play.api.Play.current
 import play.api.libs.json._
+import play.api.Play.current
 
 object BuildDesiredStatesDao extends BuildStatesDao("build_desired_states")
 

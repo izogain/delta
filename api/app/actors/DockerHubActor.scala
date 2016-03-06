@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import db.{ImagesDao, ImagesWriteDao, UsersDao}
-import io.flow.delta.api.lib.{BuildNames, Semver}
+import io.flow.delta.lib.{BuildNames, Semver}
 import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.models.{BuildTag => DockerBuildTag, BuildForm => DockerBuildForm}
 import io.flow.docker.registry.v0.Client

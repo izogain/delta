@@ -2,11 +2,11 @@ package io.flow.delta.actors.functions
 
 import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
-import io.flow.delta.api.lib.{Email, Semver}
+import io.flow.delta.api.lib.{Email, GithubUtil}
+import io.flow.delta.lib.Semver
+import io.flow.delta.v0.models.Project
 import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
 import io.flow.postgresql.Authorization
-import io.flow.delta.api.lib.GithubUtil
-import io.flow.delta.v0.models.Project
 import org.joda.time.DateTime
 import play.api.Logger
 import scala.concurrent.Future
