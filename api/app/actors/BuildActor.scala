@@ -169,6 +169,10 @@ class BuildActor @javax.inject.Inject() (
               log.completed(s"${imageName}:${imageVersion} $summary")
             } else {
               log.checkpoint(s"${imageName}:${imageVersion} running, but waiting for ELB instances to become healthy. Will recheck in $intervalSeconds seconds. $summary")
+
+              system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
+                self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
+              }
             }
 
           } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
