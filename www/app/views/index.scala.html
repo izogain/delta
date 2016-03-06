@@ -13,10 +13,9 @@
     <table class="table">
       @dashboardBuilds.items.map { build =>
         <tr>
-          <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@{build.project.id}</a></td>
-          <td>@io.flow.delta.lib.BuildNames.projectName(build)</td>
-          <td>@build.last.versions</td>
-          <td>@build.desired.versions</td>
+          <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@io.flow.delta.lib.BuildNames.projectName(build)</a></td>
+          <td>@io.flow.delta.lib.StateFormatter.label(build.last.versions)</td>
+          <td>@io.flow.delta.lib.StateFormatter.label(build.desired.versions)</td>
         </tr>
       }
     </table>

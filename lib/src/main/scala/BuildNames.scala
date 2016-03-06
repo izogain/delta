@@ -50,17 +50,17 @@ object BuildNames {
     * (e.g. registry or delta-api)
     */
   def projectName(build: Build): String = {
-    projectName(build.project.name, build.name)
+    projectName(build.project.id, build.name)
   }
 
   def projectName(dashboardBuild: DashboardBuild): String = {
-    projectName(dashboardBuild.project.name, dashboardBuild.name)
+    projectName(dashboardBuild.project.id, dashboardBuild.name)
   }
   
-  private[this] def projectName(projectName: String, buildName: String): String = {
+  private[this] def projectName(projectId: String, buildName: String): String = {
     buildName match {
-      case DefaultBuildName => projectName
-      case _ => projectName + "-" + buildName
+      case DefaultBuildName => projectId
+      case _ => projectId + "-" + buildName
     }
   }
   
