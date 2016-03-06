@@ -51,7 +51,7 @@ object DashboardBuildsDao {
     SqlParser.str("name") ~
     io.flow.delta.v0.anorm.parsers.State.parserWithPrefix("last") ~
     io.flow.delta.v0.anorm.parsers.State.parserWithPrefix("desired") map {
-      case projectSummary ~ name ~ desiredState ~ lastState => {
+      case projectSummary ~ name ~ lastState ~ desiredState => {
         DashboardBuild(
           project = projectSummary,
           name = name,
