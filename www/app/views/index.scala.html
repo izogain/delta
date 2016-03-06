@@ -14,6 +14,7 @@
       @dashboardBuilds.items.map { build =>
         <tr>
           <td><a href="@routes.ProjectsController.show(build.project.id)">@{build.project.organization.id}/@{build.project.id}</a></td>
+          <td>@build.name</td>
           <td>@build.last.versions</td>
           <td>@build.desired.versions</td>
         </tr>
