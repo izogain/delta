@@ -4,7 +4,7 @@ name := "delta"
 
 organization := "io.flow"
 
-scalaVersion in ThisBuild := "2.11.7"
+scalaVersion in ThisBuild := "2.11.8"
 
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
@@ -37,10 +37,10 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.25",
+      "io.flow" %% "lib-postgresql" % "0.0.26",
       "com.typesafe.play" %% "anorm" % "2.5.0",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
-      "com.amazonaws" % "aws-java-sdk" % "1.10.58",
+      "com.amazonaws" % "aws-java-sdk" % "1.10.59",
       "org.postgresql" % "postgresql" % "9.4.1208",
       "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
@@ -74,7 +74,7 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name <<= name("delta-" + _),
   libraryDependencies ++= Seq(
-    "io.flow" %% "lib-play" % "0.0.52",
+    "io.flow" %% "lib-play" % "0.0.53",
     specs2 % Test,
     "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   ),
