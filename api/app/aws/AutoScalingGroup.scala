@@ -49,7 +49,7 @@ case class AutoScalingGroup(
       client.createLaunchConfiguration(
         new CreateLaunchConfigurationRequest()
           .withLaunchConfigurationName(name)
-          .withAssociatePublicIpAddress(true)
+          .withAssociatePublicIpAddress(false)
           .withIamInstanceProfile(launchConfigIamInstanceProfile)
           .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
           .withSecurityGroups(lcSecurityGroups.asJava)
