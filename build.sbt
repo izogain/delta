@@ -40,7 +40,7 @@ lazy val api = project
       "io.flow" %% "lib-postgresql" % "0.0.26",
       "com.typesafe.play" %% "anorm" % "2.5.0",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
-      "com.amazonaws" % "aws-java-sdk" % "1.10.59",
+      "com.amazonaws" % "aws-java-sdk" % "1.10.60",
       "org.postgresql" % "postgresql" % "9.4.1208",
       "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
@@ -57,7 +57,7 @@ lazy val www = project
     routesImport += "io.flow.delta.v0.Bindables._",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Seq(
-      "org.webjars" %% "webjars-play" % "2.4.0-2",
+      "org.webjars" %% "webjars-play" % "2.5.0",
       "org.webjars" % "bootstrap" % "3.3.6",
       "org.webjars.bower" % "bootstrap-social" % "4.10.1",
       "org.webjars" % "font-awesome" % "4.5.0",
