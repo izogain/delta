@@ -236,6 +236,11 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
             .withDesiredCount(createServiceDesiredCount)
             .withRole(serviceRole)
             .withTaskDefinition(taskDefinition)
+            .withDeploymentConfiguration(
+              new DeploymentConfiguration()
+              .withMinimumHealthyPercent(99)
+              .withMaximumPercent(100)
+            )
             .withLoadBalancers(
               Seq(
                 new LoadBalancer()
