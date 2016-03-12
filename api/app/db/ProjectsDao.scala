@@ -1,7 +1,7 @@
 package db
 
 import anorm._
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.lib.BuildNames
@@ -111,7 +111,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
   }
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     form: ProjectForm,
     existing: Option[Project] = None
   ): Seq[String] = {
@@ -157,7 +157,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     nameErrors ++ visibilityErrors ++ uriErrors ++ organizationErrors
   }
 
-  def create(createdBy: User, form: ProjectForm, dockerfilePaths: Seq[String] = Nil): Either[Seq[String], Project] = {
+  def create(createdBy: UserReference, form: ProjectForm, dockerfilePaths: Seq[String] = Nil): Either[Seq[String], Project] = {
     validate(createdBy, form) match {
       case Nil => {
 
@@ -202,7 +202,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def update(createdBy: User, project: Project, form: ProjectForm): Either[Seq[String], Project] = {
+  def update(createdBy: UserReference, project: Project, form: ProjectForm): Either[Seq[String], Project] = {
     validate(createdBy, form, Some(project)) match {
       case Nil => {
         // To support org change - need to record the change as its
@@ -237,7 +237,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: User, project: Project) {
+  def delete(deletedBy: UserReference, project: Project) {
     Pager.create { offset =>
       ShasDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { sha =>

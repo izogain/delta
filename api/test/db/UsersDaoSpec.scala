@@ -16,13 +16,13 @@ class UsersDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   "Special users" must {
     "anonymous user exists" in {
-      UsersDao.anonymousUser.email must be(
+      UsersDao.findById(UsersDao.anonymousUser.id).get.email must be(
         Some(UsersDao.AnonymousEmailAddress)
       )
     }
 
     "system user exists" in {
-      UsersDao.systemUser.email must be(
+      UsersDao.findById(UsersDao.systemUser.id).get.email must be(
         Some(UsersDao.SystemEmailAddress)
       )
     }

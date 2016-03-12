@@ -2,7 +2,7 @@ package db
 
 import akka.actor.ActorRef
 import anorm._
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
 import io.flow.delta.api.lib.StateDiff
 import io.flow.delta.lib.Semver
@@ -129,7 +129,7 @@ private[db] class BuildStatesWriteDao(
   private[this] val idGenerator = io.flow.play.util.IdGenerator(idPrefix)
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     build: Build,
     form: StateForm
   ): Seq[String] = {
@@ -139,7 +139,7 @@ private[db] class BuildStatesWriteDao(
     }
   }
 
-  def create(createdBy: User, build: Build, form: StateForm): Either[Seq[String], State] = {
+  def create(createdBy: UserReference, build: Build, form: StateForm): Either[Seq[String], State] = {
     validate(createdBy, build, form) match {
       case Nil => {
 
@@ -166,14 +166,14 @@ private[db] class BuildStatesWriteDao(
     }
   }
 
-  def upsert(createdBy: User, build: Build, form: StateForm): Either[Seq[String], State] = {
+  def upsert(createdBy: UserReference, build: Build, form: StateForm): Either[Seq[String], State] = {
     reader.findByBuildId(Authorization.All, build.id) match {
       case None => create(createdBy, build, form)
       case Some(existing) => update(createdBy, build, existing, form)
     }
   }
 
-  private[this] def update(createdBy: User, build: Build, existing: State, form: StateForm): Either[Seq[String], State] = {
+  private[this] def update(createdBy: UserReference, build: Build, existing: State, form: StateForm): Either[Seq[String], State] = {
 
     validate(createdBy, build, form) match {
       case Nil => {
@@ -215,7 +215,7 @@ private[db] class BuildStatesWriteDao(
       }
   }
   
-  def delete(deletedBy: User, build: Build) {
+  def delete(deletedBy: UserReference, build: Build) {
     lookupId(build.id).map { id =>
       Delete.delete(table, deletedBy.id, id)
     }

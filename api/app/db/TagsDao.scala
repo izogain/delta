@@ -4,7 +4,7 @@ import io.flow.delta.actors.MainActor
 import io.flow.delta.lib.Semver
 import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Tag}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -100,7 +100,7 @@ case class TagsWriteDao @javax.inject.Inject() (
   """
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     form: TagForm,
     existing: Option[Tag] = None
   ): Seq[String] = {
@@ -141,7 +141,7 @@ case class TagsWriteDao @javax.inject.Inject() (
     * If the tag exists, updates the hash to match (if
     * necessary). Otherwise creates the tag.
     */
-  def upsert(createdBy: User, projectId: String, tag: String, hash: String): Tag = {
+  def upsert(createdBy: UserReference, projectId: String, tag: String, hash: String): Tag = {
     val form = TagForm(
       projectId = projectId,
       name = tag,
@@ -166,7 +166,7 @@ case class TagsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def create(createdBy: User, form: TagForm): Either[Seq[String], Tag] = {
+  def create(createdBy: UserReference, form: TagForm): Either[Seq[String], Tag] = {
     validate(createdBy, form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("tag").randomId()
@@ -196,7 +196,7 @@ case class TagsWriteDao @javax.inject.Inject() (
     }
   }
 
-  private[this] def update(createdBy: User, tag: Tag, form: TagForm): Either[Seq[String], Tag] = {
+  private[this] def update(createdBy: UserReference, tag: Tag, form: TagForm): Either[Seq[String], Tag] = {
     validate(createdBy, form, Some(tag)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -224,7 +224,7 @@ case class TagsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: User, tag: Tag) {
+  def delete(deletedBy: UserReference, tag: Tag) {
     Delete.delete("tags", deletedBy.id, tag.id)
   }
 

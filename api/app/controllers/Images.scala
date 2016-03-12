@@ -1,7 +1,7 @@
 package controllers
 
 import db.{ImagesDao, ImagesWriteDao}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.Image
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
@@ -54,7 +54,7 @@ class Images @javax.inject.Inject() (
     }
   }
 
-  def withImage(user: User, id: String)(
+  def withImage(user: UserReference, id: String)(
     f: Image => Result
   ): Result = {
     ImagesDao.findById(id) match {

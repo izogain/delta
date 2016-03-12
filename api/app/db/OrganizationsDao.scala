@@ -1,6 +1,6 @@
 package db
 
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.{DockerProvider, MembershipForm, Organization, OrganizationForm, Role}
 import io.flow.postgresql.{Authorization, Query, Pager, OrderBy}
 import io.flow.play.util.UrlKey
@@ -67,8 +67,6 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
   projectsWriteDao: ProjectsWriteDao  
 ) {
 
-  val DefaultUserNameLength = 8
-
   private[this] val InsertQuery = """
     insert into organizations
     (id, user_id, docker_provider, docker_organization, updated_by_user_id)
@@ -123,7 +121,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
     idErrors ++ dockerProviderErrors ++ dockerOrganizationErrors
   }
 
-  def create(createdBy: User, form: OrganizationForm): Either[Seq[String], Organization] = {
+  def create(createdBy: UserReference, form: OrganizationForm): Either[Seq[String], Organization] = {
     validate(form) match {
       case Nil => {
         val id = DB.withTransaction { implicit c =>
@@ -140,7 +138,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
     }
   }
 
-  private[this] def create(implicit c: java.sql.Connection, createdBy: User, form: OrganizationForm): String = {
+  private[this] def create(implicit c: java.sql.Connection, createdBy: UserReference, form: OrganizationForm): String = {
     SQL(InsertQuery).on(
       'id -> form.id.trim,
       'user_id -> createdBy.id,
@@ -160,7 +158,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
     form.id.trim
   }
 
-  def update(createdBy: User, organization: Organization, form: OrganizationForm): Either[Seq[String], Organization] = {
+  def update(createdBy: UserReference, organization: Organization, form: OrganizationForm): Either[Seq[String], Organization] = {
     validate(form, Some(organization)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -182,7 +180,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: User, organization: Organization) {
+  def delete(deletedBy: UserReference, organization: Organization) {
     Pager.create { offset =>
       ProjectsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
     }.foreach { project =>
