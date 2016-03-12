@@ -2,7 +2,7 @@ package io.flow.delta.api.lib
 
 import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao, UsersWriteDao}
 import io.flow.delta.v0.models.{GithubUserForm, UserForm, Visibility}
-import io.flow.common.v0.models.{Name, UserReference}
+import io.flow.common.v0.models.{Name, User, UserReference}
 import io.flow.play.util.{Config, IdGenerator}
 import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
@@ -74,34 +74,29 @@ trait Github {
     * 
     * @param code The oauth authorization code from github
     */
-  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], UserReference]] = {
+  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], User]] = {
     getGithubUserFromCode(code).map {
       case Left(errors) => Left(errors)
       case Right(githubUserWithToken) => {
-        val userResult: Either[Seq[String], UserReference] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
+        val userResult: Either[Seq[String], User] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
           case Some(user) => {
-            Right(UserReference(id = user.id))
+            Right(user)
           }
           case None => {
             githubUserWithToken.emails.headOption flatMap { email =>
               UsersDao.findByEmail(email)
             } match {
               case Some(user) => {
-                Right(UserReference(id = user.id))
+                Right(user)
               }
               case None => {
-                val result = play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
+                play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
                   createdBy = None,
                   form = UserForm(
                     email = githubUserWithToken.emails.headOption,
                     name = githubUserWithToken.name.map(GithubHelper.parseName(_))
                   )
                 )
-
-                result match {
-                  case Left(errors) => Left(errors)
-                  case Right(user) => Right(UserReference(id = user.id))
-                }
               }
             }
           }
@@ -122,7 +117,7 @@ trait Github {
             )
 
             TokensDao.setLatestByTag(
-              createdBy = user,
+              createdBy = UserReference(id = user.id),
               form = InternalTokenForm.GithubOauth(
                 userId = user.id,
                 token = githubUserWithToken.token
