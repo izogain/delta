@@ -3,7 +3,7 @@ package controllers
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.v0.models.json._
 import db.{UserIdentifiersDao, UsersDao, UsersWriteDao}
-import io.flow.common.v0.models.{Error, User}
+import io.flow.common.v0.models.{Error, User, UserReference}
 import io.flow.common.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
@@ -49,7 +49,7 @@ class Users @javax.inject.Inject() (
 
   def getIdentifierById(id: String) = Identified { request =>
     withUser(id) { user =>
-      Ok(Json.toJson(UserIdentifiersDao.latestForUser(request.user, user)))
+      Ok(Json.toJson(UserIdentifiersDao.latestForUser(request.user, UserReference(id = user.id))))
     }
   }
 

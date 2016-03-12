@@ -1,7 +1,7 @@
 package io.flow.delta.api.lib
 
 import db.{UserIdentifiersDao, UsersDao}
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, User, UserReference}
 
 /**
   * Information we use to render email messages, including the links
@@ -22,7 +22,7 @@ object Recipient {
         email = email,
         name = user.name,
         userId = user.id,
-        identifier = UserIdentifiersDao.latestForUser(UsersDao.systemUser, user).value
+        identifier = UserIdentifiersDao.latestForUser(UsersDao.systemUser, UserReference(id = user.id)).value
       )
     }
   }

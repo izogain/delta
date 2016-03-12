@@ -4,11 +4,14 @@ import io.flow.postgresql.Authorization
 import io.flow.play.clients.MockUserTokensClient
 import io.flow.play.util.Random
 import io.flow.delta.v0.models._
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, User, UserReference}
 import java.util.UUID
 import play.api.Application
 
 trait Helpers {
+
+  import scala.language.implicitConversions
+  implicit def toUserReference(user: User) = UserReference(id = user.id)
 
   lazy val systemUser = createUser()
 

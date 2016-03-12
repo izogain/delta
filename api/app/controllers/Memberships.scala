@@ -1,7 +1,7 @@
 package controllers
 
 import db.MembershipsDao
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.{Membership, MembershipForm, Role}
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
@@ -71,7 +71,7 @@ class Memberships @javax.inject.Inject() (
     }
   }
 
-  def withMembership(user: User, id: String)(
+  def withMembership(user: UserReference, id: String)(
     f: Membership => Result
   ): Result = {
     MembershipsDao.findById(Authorization.User(user.id), id) match {

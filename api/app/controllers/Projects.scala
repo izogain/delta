@@ -2,7 +2,7 @@ package controllers
 
 import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
 import io.flow.postgresql.Authorization
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Build, Project, ProjectForm, BuildState, SettingsForm}
 import io.flow.delta.v0.models.json._
@@ -158,7 +158,7 @@ class Projects @javax.inject.Inject() (
 
   def getBuildsAndStatesAndLastByIdAndBuildName(id: String, buildName: String) = TODO
 
-  def withBuild(user: User, projectId: String, name: String)(
+  def withBuild(user: UserReference, projectId: String, name: String)(
     f: Build => Result
   ): Result = {
     BuildsDao.findByProjectIdAndName(Authorization.User(user.id), projectId, name) match {

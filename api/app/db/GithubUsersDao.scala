@@ -2,7 +2,7 @@ package db
 
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.delta.v0.models.{GithubUser, GithubUserForm}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -24,25 +24,25 @@ object GithubUsersDao {
     ({id}, {user_id}, {github_user_id}, {login}, {updated_by_user_id})
   """
 
-  def upsertById(createdBy: Option[User], form: GithubUserForm): GithubUser = {
+  def upsertById(createdBy: Option[UserReference], form: GithubUserForm): GithubUser = {
     DB.withConnection { implicit c =>
       upsertByIdWithConnection(createdBy, form)
     }
   }
 
-  def upsertByIdWithConnection(createdBy: Option[User], form: GithubUserForm)(implicit c: java.sql.Connection): GithubUser = {
+  def upsertByIdWithConnection(createdBy: Option[UserReference], form: GithubUserForm)(implicit c: java.sql.Connection): GithubUser = {
     findByGithubUserId(form.githubUserId).getOrElse {
       createWithConnection(createdBy, form)
     }
   }
 
-  def create(createdBy: Option[User], form: GithubUserForm): GithubUser = {
+  def create(createdBy: Option[UserReference], form: GithubUserForm): GithubUser = {
     DB.withConnection { implicit c =>
       createWithConnection(createdBy, form)
     }
   }
 
-  private[db] def createWithConnection(createdBy: Option[User], form: GithubUserForm)(implicit c: java.sql.Connection): GithubUser = {
+  private[db] def createWithConnection(createdBy: Option[UserReference], form: GithubUserForm)(implicit c: java.sql.Connection): GithubUser = {
     val id = io.flow.play.util.IdGenerator("ghu").randomId()
     SQL(InsertQuery).on(
       'id -> id,

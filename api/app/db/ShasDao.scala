@@ -3,7 +3,7 @@ package db
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{OrganizationSummary, ProjectSummary, Sha}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -109,7 +109,7 @@ case class ShasWriteDao @javax.inject.Inject() (
   """
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     form: ShaForm,
     existing: Option[Sha] = None
   ): Seq[String] = {
@@ -143,7 +143,7 @@ case class ShasWriteDao @javax.inject.Inject() (
     hashErrors ++ branchErrors ++ projectErrors ++ existingErrors
   }
 
-  def create(createdBy: User, form: ShaForm): Either[Seq[String], Sha] = {
+  def create(createdBy: UserReference, form: ShaForm): Either[Seq[String], Sha] = {
     validate(createdBy, form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("sha").randomId()
@@ -177,11 +177,11 @@ case class ShasWriteDao @javax.inject.Inject() (
     * updated the sha record as needed. Returns the created or updated
     * sha.
     */
-  def upsertMaster(createdBy: User, projectId: String, hash: String): Sha = {
+  def upsertMaster(createdBy: UserReference, projectId: String, hash: String): Sha = {
     upsertBranch(createdBy, projectId, ShasDao.Master, hash)
   }
 
-  private[this] def upsertBranch(createdBy: User, projectId: String, branch: String, hash: String): Sha = {
+  private[this] def upsertBranch(createdBy: UserReference, projectId: String, branch: String, hash: String): Sha = {
     val form = ShaForm(
       projectId = projectId,
       branch = branch,
@@ -211,7 +211,7 @@ case class ShasWriteDao @javax.inject.Inject() (
     }
   }
 
-  private[this] def update(createdBy: User, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
+  private[this] def update(createdBy: UserReference, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
     validate(createdBy, form, Some(sha)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -236,7 +236,7 @@ case class ShasWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: User, sha: Sha) {
+  def delete(deletedBy: UserReference, sha: Sha) {
     Delete.delete("shas", deletedBy.id, sha.id)
   }
 

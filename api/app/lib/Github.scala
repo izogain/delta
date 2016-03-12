@@ -2,7 +2,7 @@ package io.flow.delta.api.lib
 
 import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao, UsersWriteDao}
 import io.flow.delta.v0.models.{GithubUserForm, UserForm, Visibility}
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, UserReference}
 import io.flow.play.util.{Config, IdGenerator}
 import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
@@ -74,29 +74,34 @@ trait Github {
     * 
     * @param code The oauth authorization code from github
     */
-  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], User]] = {
+  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], UserReference]] = {
     getGithubUserFromCode(code).map {
       case Left(errors) => Left(errors)
       case Right(githubUserWithToken) => {
-        val userResult: Either[Seq[String], User] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
+        val userResult: Either[Seq[String], UserReference] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
           case Some(user) => {
-            Right(user)
+            Right(UserReference(id = user.id))
           }
           case None => {
             githubUserWithToken.emails.headOption flatMap { email =>
               UsersDao.findByEmail(email)
             } match {
               case Some(user) => {
-                Right(user)
+                Right(UserReference(id = user.id))
               }
               case None => {
-                play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
+                val result = play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
                   createdBy = None,
                   form = UserForm(
                     email = githubUserWithToken.emails.headOption,
                     name = githubUserWithToken.name.map(GithubHelper.parseName(_))
                   )
                 )
+
+                result match {
+                  case Left(errors) => Left(errors)
+                  case Right(user) => Right(UserReference(id = user.id))
+                }
               }
             }
           }
@@ -139,7 +144,7 @@ trait Github {
   /**
     * Fetches one page of repositories from the Github API
     */
-  def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
+  def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
 
   /**
     * Recursively calls the github API until we either:
@@ -147,7 +152,7 @@ trait Github {
     *  - meet the specified limit/offset
     */
   def repositories(
-    user: User,
+    user: UserReference,
     offset: Long,
     limit: Long,
     resultsSoFar: Seq[GithubRepository] = Nil,
@@ -178,7 +183,7 @@ trait Github {
   /**
     * For this user, returns the oauth token if available
     */
-  def oauthToken(user: User): Option[String]
+  def oauthToken(user: UserReference): Option[String]
 
 }
 
@@ -227,7 +232,7 @@ class DefaultGithub @javax.inject.Inject() (
     }
   }
 
-  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
+  override def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     oauthToken(user) match {
       case None => Future { Nil }
       case Some(token) => {
@@ -236,7 +241,7 @@ class DefaultGithub @javax.inject.Inject() (
     }
   }
 
-  override def oauthToken(user: User): Option[String] = {
+  override def oauthToken(user: UserReference): Option[String] = {
     TokensDao.getCleartextGithubOauthTokenByUserId(user.id)
   }
 
@@ -253,13 +258,13 @@ class MockGithub() extends Github {
     }
   }
 
-  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
+  override def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     Future {
       MockGithubData.repositories(user)
     }
   }
 
-  override def oauthToken(user: User): Option[String] = {
+  override def oauthToken(user: UserReference): Option[String] = {
     MockGithubData.getToken(user)
   }
 
@@ -288,19 +293,19 @@ object MockGithubData {
     githubUserByCodes.lift(code)
   }
 
-  def addUserOauthToken(token: String, user: User) {
+  def addUserOauthToken(token: String, user: UserReference) {
     userTokens +== (user.id -> token)
   }
 
-  def getToken(user: User): Option[String] = {
+  def getToken(user: UserReference): Option[String] = {
     userTokens.lift(user.id)
   }
 
-  def addRepository(user: User, repository: GithubRepository) = {
+  def addRepository(user: UserReference, repository: GithubRepository) = {
     repositories +== (user.id -> repository)
   }
 
-  def repositories(user: User): Seq[GithubRepository] = {
+  def repositories(user: UserReference): Seq[GithubRepository] = {
     repositories.lift(user.id) match {
       case None => Nil
       case Some(repo) => Seq(repo)

@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.{User, UserReference}
 import io.flow.play.actors.ErrorHandler
 import db.{OrganizationsDao, SubscriptionsDao, UserIdentifiersDao, UsersDao}
 import akka.actor.Actor
@@ -31,7 +31,7 @@ class UserActor extends Actor with ErrorHandler {
     case msg @ UserActor.Messages.Created => withVerboseErrorHandler(msg) {
       dataUser.foreach { user =>
         // This method will force create an identifier
-        UserIdentifiersDao.latestForUser(MainActor.SystemUser, user)
+        UserIdentifiersDao.latestForUser(MainActor.SystemUser, UserReference(id = user.id))
 
         // Subscribe the user automatically to key personalized emails.
         Seq(Publication.Deployments).foreach { publication =>

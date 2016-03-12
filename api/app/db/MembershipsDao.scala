@@ -2,7 +2,7 @@ package db
 
 import io.flow.delta.v0.models.{Membership, MembershipForm, Organization, OrganizationSummary, Role}
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -32,7 +32,7 @@ object MembershipsDao {
     ({id}, {role}, {user_id}, {organization_id}, {updated_by_user_id})
   """
 
-  def isMember(orgId: String, user: User): Boolean = {
+  def isMember(orgId: String, user: UserReference): Boolean = {
     MembershipsDao.findByOrganizationIdAndUserId(Authorization.All, orgId, user.id) match {
       case None => false
       case Some(_) => true
@@ -40,7 +40,7 @@ object MembershipsDao {
   }
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     form: MembershipForm
   ): Seq[String] = {
     val roleErrors = form.role match {
@@ -63,7 +63,7 @@ object MembershipsDao {
     roleErrors ++ organizationErrors
   }
 
-  def create(createdBy: User, form: MembershipForm): Either[Seq[String], Membership] = {
+  def create(createdBy: UserReference, form: MembershipForm): Either[Seq[String], Membership] = {
     validate(createdBy, form) match {
       case Nil => {
         val id = DB.withConnection { implicit c =>
@@ -79,7 +79,7 @@ object MembershipsDao {
     }
   }
 
-  private[db] def create(implicit c: java.sql.Connection, createdBy: User, form: MembershipForm): String = {
+  private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, form: MembershipForm): String = {
     val org = OrganizationsDao.findById(Authorization.All, form.organization).getOrElse {
       sys.error("Could not find organization with id[${form.organization}]")
     }
@@ -87,7 +87,7 @@ object MembershipsDao {
     create(c, createdBy, org.id, form.userId, form.role)
   }
 
-  private[db] def create(implicit c: java.sql.Connection, createdBy: User, orgId: String, userId: String, role: Role): String = {
+  private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, orgId: String, userId: String, role: Role): String = {
     val id = io.flow.play.util.IdGenerator("mem").randomId()
 
     SQL(InsertQuery).on(
@@ -100,7 +100,7 @@ object MembershipsDao {
     id
   }
 
-  def delete(deletedBy: User, membership: Membership) {
+  def delete(deletedBy: UserReference, membership: Membership) {
     Delete.delete("memberships", deletedBy.id, membership.id)
   }
 

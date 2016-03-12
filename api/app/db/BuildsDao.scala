@@ -3,7 +3,7 @@ package db
 import io.flow.delta.actors.MainActor
 import io.flow.delta.v0.models.{Build, BuildForm}
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.play.util.UrlKey
 import anorm._
 import play.api.db._
@@ -103,7 +103,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
   private[this] val urlKey = UrlKey(minKeyLength = 3)
 
   private[db] def validate(
-    user: User,
+    user: UserReference,
     form: BuildForm,
     existing: Option[Build] = None
   ): Seq[String] = {
@@ -137,7 +137,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     dockerfilePathErrors ++ nameErrors ++ projectErrors
   }
 
-  def create(createdBy: User, form: BuildForm): Either[Seq[String], Build] = {
+  def create(createdBy: UserReference, form: BuildForm): Either[Seq[String], Build] = {
     validate(createdBy, form) match {
       case Nil => {
         val id = DB.withConnection { implicit c =>
@@ -158,7 +158,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
   }
 
-  private[db] def create(implicit c: java.sql.Connection, createdBy: User, form: BuildForm): String = {
+  private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, form: BuildForm): String = {
     val id = io.flow.play.util.IdGenerator("bld").randomId()
 
     SQL(InsertQuery).on(
@@ -184,7 +184,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def update(createdBy: User, build: Build, form: BuildForm): Either[Seq[String], Build] = {
+  def update(createdBy: UserReference, build: Build, form: BuildForm): Either[Seq[String], Build] = {
     validate(createdBy, form, Some(build)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -209,7 +209,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: User, build: Build) {
+  def delete(deletedBy: UserReference, build: Build) {
     Pager.create { offset =>
       ImagesDao.findAll(buildId = Some(build.id), offset = offset)
     }.foreach { image =>

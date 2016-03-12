@@ -2,7 +2,6 @@ package db
 
 import io.flow.delta.v0.models.DashboardBuild
 import io.flow.postgresql.{Authorization, Query}
-import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -39,7 +38,7 @@ object DashboardBuildsDao {
         and(Filters(auth).organizations("projects.organization_id").sql).
         limit(limit).
         offset(offset).
-        orderBy("build_desired_states.timestamp desc").
+        orderBy("case when build_desired_states.versions = build_last_states.versions then 1 else 0 end, build_desired_states.timestamp desc").
         as(
           parser().*
         )

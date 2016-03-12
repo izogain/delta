@@ -1,7 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.{Token, TokenForm}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.play.util.Random
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
@@ -68,7 +68,7 @@ object TokensDao {
     update tokens set number_views = number_views + 1, updated_by_user_id = {updated_by_user_id} where id = {id}
   """
 
-  def setLatestByTag(createdBy: User, form: InternalTokenForm): Token = {
+  def setLatestByTag(createdBy: UserReference, form: InternalTokenForm): Token = {
     findAll(Authorization.All, userId = Some(form.userId), tag = Some(form.tag), limit = 1).headOption match {
       case None => {
         create(createdBy, form) match {
@@ -88,7 +88,7 @@ object TokensDao {
     }
   }
 
-  def create(createdBy: User, form: InternalTokenForm): Either[Seq[String], Token] = {
+  def create(createdBy: UserReference, form: InternalTokenForm): Either[Seq[String], Token] = {
     DB.withConnection { implicit c =>
       createWithConnection(createdBy, form)
     }
@@ -108,7 +108,7 @@ object TokensDao {
     }
   }
 
-  private[this] def createWithConnection(createdBy: User, form: InternalTokenForm)(implicit c: java.sql.Connection): Either[Seq[String], Token] = {
+  private[this] def createWithConnection(createdBy: UserReference, form: InternalTokenForm)(implicit c: java.sql.Connection): Either[Seq[String], Token] = {
     validate(form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("tok").randomId()
@@ -132,7 +132,7 @@ object TokensDao {
     }
   }
 
-  def addCleartextIfAvailable(user: User, token: Token): Token = {
+  def addCleartextIfAvailable(user: UserReference, token: Token): Token = {
     DB.withConnection { implicit c =>
       SelectCleartextTokenQuery.equals("tokens.id", Some(token.id)).as(
         cleartextTokenParser().*
@@ -153,7 +153,7 @@ object TokensDao {
     }
   }
 
-  private[this] def incrementNumberViews(createdBy: User, tokenId: String)(
+  private[this] def incrementNumberViews(createdBy: UserReference, tokenId: String)(
     implicit c: java.sql.Connection
   ) {
     SQL(IncrementNumberViewsQuery).on(
@@ -162,7 +162,7 @@ object TokensDao {
     ).execute()
   }
 
-  def delete(deletedBy: User, token: Token) {
+  def delete(deletedBy: UserReference, token: Token) {
     Delete.delete("tokens", deletedBy.id, token.id)
   }
 

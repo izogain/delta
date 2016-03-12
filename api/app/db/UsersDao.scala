@@ -3,7 +3,7 @@ package db
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.actors.MainActor
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, User, UserReference}
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -13,17 +13,17 @@ object UsersDao {
   private[db] val SystemEmailAddress = "otto@flow.io"
   private[db] val AnonymousEmailAddress = "anonymous@flow.io"
 
-  lazy val systemUser: User = {
-    findAll(email = Some(SystemEmailAddress), limit = 1).headOption.getOrElse {
+  lazy val systemUser = UserReference(
+    id = findAll(email = Some(SystemEmailAddress), limit = 1).headOption.map(_.id).getOrElse {
       sys.error(s"Could not find system user[$SystemEmailAddress]")
     }
-  }
+  )
 
-  lazy val anonymousUser: User = {
-    findAll(email = Some(AnonymousEmailAddress), limit = 1).headOption.getOrElse {
+  lazy val anonymousUser = UserReference(
+    id = findAll(email = Some(AnonymousEmailAddress), limit = 1).headOption.map(_.id).getOrElse {
       sys.error(s"Could not find anonymous user[$AnonymousEmailAddress]")
     }
-  }
+  )
 
   private[this] val BaseQuery = Query(s"""
     select users.id,
@@ -137,7 +137,7 @@ case class UsersWriteDao @javax.inject.Inject() (
     email.indexOf("@") >= 0
   }
 
-  def create(createdBy: Option[User], form: UserForm): Either[Seq[String], User] = {
+  def create(createdBy: Option[UserReference], form: UserForm): Either[Seq[String], User] = {
     validate(form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("usr").randomId()
