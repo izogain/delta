@@ -1,7 +1,7 @@
 package io.flow.delta.api.lib
 
 import db.{UserIdentifiersDao, UsersDao}
-import io.flow.common.v0.models.{Name, UserReference}
+import io.flow.common.v0.models.{Name, User}
 
 /**
   * Information we use to render email messages, including the links
@@ -16,7 +16,7 @@ case class Recipient(
 
 object Recipient {
 
-  def fromUser(user: UserReference): Option[Recipient] = {
+  def fromUser(user: User): Option[Recipient] = {
     user.email.map { email =>
       Recipient(
         email = email,

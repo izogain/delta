@@ -1,6 +1,6 @@
 package io.flow.delta.www.lib
 
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.delta.lib.Urls
 import io.flow.play.util.DefaultConfig
 
@@ -19,13 +19,13 @@ case class UiData(
   section: Option[Section] = None,
   title: Option[String] = None,
   headTitle: Option[String] = None,
-  user: Option[UserReference] = None,
+  user: Option[User] = None,
   query: Option[String] = None
 ) {
 
   lazy val urls = {
     Urls(play.api.Play.current.injector.instanceOf[DefaultConfig])
   }
-
+    
 
 }

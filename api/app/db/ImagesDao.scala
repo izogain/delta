@@ -4,7 +4,7 @@ import io.flow.delta.actors.MainActor
 import io.flow.delta.lib.Semver
 import io.flow.delta.v0.models._
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -88,7 +88,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
   """
 
   private[db] def validate(
-    user: UserReference,
+    user: User,
     form: ImageForm,
     existing: Option[Image] = None
     ): Seq[String] = {
@@ -119,7 +119,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
     * If the tag exists, updates the hash to match (if
     * necessary). Otherwise creates the tag.
     */
-  def upsert(createdBy: UserReference, buildId: String, name: String, version: String): Image = {
+  def upsert(createdBy: User, buildId: String, name: String, version: String): Image = {
     val form = ImageForm(
       buildId = buildId,
       name = name,
@@ -144,7 +144,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
     }
   }
 
-  def create(createdBy: UserReference, form: ImageForm): Either[Seq[String], Image] = {
+  def create(createdBy: User, form: ImageForm): Either[Seq[String], Image] = {
     validate(createdBy, form) match {
       case Nil => {
        val id = io.flow.play.util.IdGenerator("img").randomId()
@@ -172,7 +172,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
     }
   }
 
-  private[this] def update(createdBy: UserReference, image: Image, form: ImageForm): Either[Seq[String], Image] = {
+  private[this] def update(createdBy: User, image: Image, form: ImageForm): Either[Seq[String], Image] = {
     validate(createdBy, form, Some(image)) match {
       case Nil => {
         DB.withConnection { implicit c =>
@@ -200,7 +200,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, image: Image) {
+  def delete(deletedBy: User, image: Image) {
     Delete.delete("images", deletedBy.id, image.id)
   }
 

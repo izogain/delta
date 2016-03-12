@@ -2,7 +2,7 @@ package io.flow.delta.api.lib
 
 import db.{GithubUsersDao, InternalTokenForm, TokensDao, UsersDao, UsersWriteDao}
 import io.flow.delta.v0.models.{GithubUserForm, UserForm, Visibility}
-import io.flow.common.v0.models.{Name, UserReference}
+import io.flow.common.v0.models.{Name, User}
 import io.flow.play.util.{Config, IdGenerator}
 import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
@@ -71,14 +71,14 @@ trait Github {
     * Given an auth validation code, pings the github UI to access the
     * user data, upserts that user with the delta database, and
     * returns the user (or a list of errors).
-    *
+    * 
     * @param code The oauth authorization code from github
     */
-  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], UserReference]] = {
+  def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], User]] = {
     getGithubUserFromCode(code).map {
       case Left(errors) => Left(errors)
       case Right(githubUserWithToken) => {
-        val userResult: Either[Seq[String], UserReference] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
+        val userResult: Either[Seq[String], User] = UsersDao.findByGithubUserId(githubUserWithToken.githubId) match {
           case Some(user) => {
             Right(user)
           }
@@ -139,7 +139,7 @@ trait Github {
   /**
     * Fetches one page of repositories from the Github API
     */
-  def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
+  def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
 
   /**
     * Recursively calls the github API until we either:
@@ -147,7 +147,7 @@ trait Github {
     *  - meet the specified limit/offset
     */
   def repositories(
-    user: UserReference,
+    user: User,
     offset: Long,
     limit: Long,
     resultsSoFar: Seq[GithubRepository] = Nil,
@@ -174,11 +174,11 @@ trait Github {
       }
     }
   }
-
+  
   /**
     * For this user, returns the oauth token if available
     */
-  def oauthToken(user: UserReference): Option[String]
+  def oauthToken(user: User): Option[String]
 
 }
 
@@ -227,7 +227,7 @@ class DefaultGithub @javax.inject.Inject() (
     }
   }
 
-  override def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     oauthToken(user) match {
       case None => Future { Nil }
       case Some(token) => {
@@ -236,7 +236,7 @@ class DefaultGithub @javax.inject.Inject() (
     }
   }
 
-  override def oauthToken(user: UserReference): Option[String] = {
+  override def oauthToken(user: User): Option[String] = {
     TokensDao.getCleartextGithubOauthTokenByUserId(user.id)
   }
 
@@ -253,13 +253,13 @@ class MockGithub() extends Github {
     }
   }
 
-  override def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
+  override def githubRepos(user: User, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]] = {
     Future {
       MockGithubData.repositories(user)
     }
   }
 
-  override def oauthToken(user: UserReference): Option[String] = {
+  override def oauthToken(user: User): Option[String] = {
     MockGithubData.getToken(user)
   }
 
@@ -288,19 +288,19 @@ object MockGithubData {
     githubUserByCodes.lift(code)
   }
 
-  def addUserOauthToken(token: String, user: UserReference) {
+  def addUserOauthToken(token: String, user: User) {
     userTokens +== (user.id -> token)
   }
 
-  def getToken(user: UserReference): Option[String] = {
+  def getToken(user: User): Option[String] = {
     userTokens.lift(user.id)
   }
 
-  def addRepository(user: UserReference, repository: GithubRepository) = {
+  def addRepository(user: User, repository: GithubRepository) = {
     repositories +== (user.id -> repository)
   }
 
-  def repositories(user: UserReference): Seq[GithubRepository] = {
+  def repositories(user: User): Seq[GithubRepository] = {
     repositories.lift(user.id) match {
       case None => Nil
       case Some(repo) => Seq(repo)

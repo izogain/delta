@@ -1,7 +1,7 @@
 package controllers
 
 import db.{ShasDao, ShasWriteDao}
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.Sha
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
@@ -57,7 +57,7 @@ class Shas @javax.inject.Inject() (
     }
   }
 
-  def withSha(user: UserReference, id: String)(
+  def withSha(user: User, id: String)(
     f: Sha => Result
   ): Result = {
     ShasDao.findById(Authorization.User(user.id), id) match {

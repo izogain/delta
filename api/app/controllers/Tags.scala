@@ -1,7 +1,7 @@
 package controllers
 
 import db.{TagsDao, TagsWriteDao}
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.Tag
 import io.flow.delta.v0.models.json._
 import io.flow.play.clients.UserTokensClient
@@ -55,7 +55,7 @@ class Tags @javax.inject.Inject() (
     }
   }
 
-  def withTag(user: UserReference, id: String)(
+  def withTag(user: User, id: String)(
     f: Tag => Result
   ): Result = {
     TagsDao.findById(Authorization.User(user.id), id) match {

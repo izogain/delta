@@ -3,7 +3,7 @@ package db
 import io.flow.delta.v0.models.{Settings, SettingsForm}
 import io.flow.play.util.IdGenerator
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -47,7 +47,7 @@ object SettingsDao {
     * Each project has 0 or 1 settings records. Upsert will update or
     * create settings to match the specified form for this project.
     */
-  def upsert(createdBy: UserReference, projectId: String, form: SettingsForm): Settings = {
+  def upsert(createdBy: User, projectId: String, form: SettingsForm): Settings = {
     DB.withConnection { implicit c =>
       upsert(c, createdBy, projectId, form)
     }
@@ -57,14 +57,14 @@ object SettingsDao {
     }
   }
 
-  private[db] def upsert(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, form: SettingsForm) {
+  private[db] def upsert(implicit c: java.sql.Connection, createdBy: User, projectId: String, form: SettingsForm) {
     findByProjectId(Authorization.All, projectId) match {
       case None => create(c, createdBy, projectId, form)
       case Some(settings) => update(c, createdBy, projectId, settings, form)
     }
   }
   
-  private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, form: SettingsForm) {  
+  private[db] def create(implicit c: java.sql.Connection, createdBy: User, projectId: String, form: SettingsForm) {  
     val defaults = Settings()
 
     SQL(InsertQuery).on(
@@ -79,7 +79,7 @@ object SettingsDao {
     ).execute()
   }
 
-  private[this] def update(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, settings: Settings, form: SettingsForm) {  
+  private[this] def update(implicit c: java.sql.Connection, createdBy: User, projectId: String, settings: Settings, form: SettingsForm) {  
     SQL(UpdateQuery).on(
       'project_id -> projectId,
       'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
@@ -91,7 +91,7 @@ object SettingsDao {
     ).execute()
   }
 
-  def deleteByProjectId(deletedBy: UserReference, projectId: String) {
+  def deleteByProjectId(deletedBy: User, projectId: String) {
     lookupId(projectId).map { id =>
       Delete.delete("settings", deletedBy.id, id)
     }

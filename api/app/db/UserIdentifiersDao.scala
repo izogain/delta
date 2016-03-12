@@ -1,7 +1,7 @@
 package db
 
 import io.flow.delta.v0.models.UserIdentifier
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import io.flow.play.util.UrlKey
 import anorm._
@@ -30,7 +30,7 @@ object UserIdentifiersDao {
   /**
     * Returns the latest identifier, creating if necessary
     */
-  def latestForUser(createdBy: UserReference, user: UserReference): UserIdentifier = {
+  def latestForUser(createdBy: User, user: User): UserIdentifier = {
     findAll(Authorization.All, userId = Some(user.id)).headOption match {
       case None => {
         createForUser(createdBy, user)
@@ -41,7 +41,7 @@ object UserIdentifiersDao {
     }
   }
 
-  def createForUser(createdBy: UserReference, user: UserReference): UserIdentifier = {
+  def createForUser(createdBy: User, user: User): UserIdentifier = {
     DB.withConnection { implicit c =>
       createWithConnection(createdBy, user)
     }
@@ -66,7 +66,7 @@ object UserIdentifiersDao {
     randomString(Characters)(1) +randomString(CharactersAndNumbers)(IdentifierLength - 1)
   }
 
-  private[this] def createWithConnection(createdBy: UserReference, user: UserReference)(implicit c: java.sql.Connection): UserIdentifier = {
+  private[this] def createWithConnection(createdBy: User, user: User)(implicit c: java.sql.Connection): UserIdentifier = {
     val id = io.flow.play.util.IdGenerator("usi").randomId()
 
     SQL(InsertQuery).on(
@@ -81,7 +81,7 @@ object UserIdentifiersDao {
     }
   }
 
-  def delete(deletedBy: UserReference, identifier: UserIdentifier) {
+  def delete(deletedBy: User, identifier: UserIdentifier) {
     Delete.delete("user_identifiers", deletedBy.id, identifier.id)
   }
 

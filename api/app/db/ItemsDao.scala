@@ -3,7 +3,7 @@ package db
 import io.flow.delta.v0.models.{Item, ItemSummary, ItemSummaryUndefinedType}
 import io.flow.delta.v0.models.{OrganizationSummary, Project, ProjectSummary, Visibility}
 import io.flow.delta.v0.models.json._
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
 import play.api.db._
@@ -67,7 +67,7 @@ object ItemsDao {
     }
   }
 
-  def replaceProject(user: UserReference, project: Project): Item = {
+  def replaceProject(user: User, project: Project): Item = {
     val label = project.name
     val description = project.uri
 
@@ -87,7 +87,7 @@ object ItemsDao {
     )
   }
 
-  private[db] def replace(user: UserReference, form: ItemForm): Item = {
+  private[db] def replace(user: User, form: ItemForm): Item = {
     DB.withConnection { implicit c =>
       findByObjectId(Authorization.All, objectId(form.summary)).map { item =>
         deleteWithConnection(user, item)(c)
@@ -104,7 +104,7 @@ object ItemsDao {
     }
   }
 
-  private[this] def create(createdBy: UserReference, form: ItemForm)(implicit c: java.sql.Connection): Item = {
+  private[this] def create(createdBy: User, form: ItemForm)(implicit c: java.sql.Connection): Item = {
     val id = io.flow.play.util.IdGenerator("itm").randomId()
 
     SQL(InsertQuery).on(
@@ -124,19 +124,19 @@ object ItemsDao {
     }
   }
 
-  def delete(deletedBy: UserReference, item: Item) {
+  def delete(deletedBy: User, item: Item) {
     DB.withConnection { implicit c =>
       deleteWithConnection(deletedBy, item)(c)
     }
   }
 
-  private[this] def deleteWithConnection(deletedBy: UserReference, item: Item)(
+  private[this] def deleteWithConnection(deletedBy: User, item: Item)(
     implicit c: java.sql.Connection
   ) {
     Delete.delete("items", deletedBy.id, item.id)
   }
 
-  def deleteByObjectId(auth: Authorization, deletedBy: UserReference, objectId: String) {
+  def deleteByObjectId(auth: Authorization, deletedBy: User, objectId: String) {
     findByObjectId(auth, objectId).map { item =>
       delete(deletedBy, item)
     }

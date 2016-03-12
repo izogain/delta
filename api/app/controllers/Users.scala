@@ -3,7 +3,7 @@ package controllers
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.v0.models.json._
 import db.{UserIdentifiersDao, UsersDao, UsersWriteDao}
-import io.flow.common.v0.models.{Error, UserReference}
+import io.flow.common.v0.models.{Error, User}
 import io.flow.common.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.controllers.IdentifiedRestController
@@ -70,7 +70,7 @@ class Users @javax.inject.Inject() (
   }
 
   def withUser(id: String)(
-    f: UserReference => Result
+    f: User => Result
   ) = {
     UsersDao.findById(id) match {
       case None => {

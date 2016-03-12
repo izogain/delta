@@ -3,7 +3,7 @@ package controllers
 import db.{SubscriptionsDao, UsersDao}
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.{Publication, Subscription, SubscriptionForm}
 import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.json._
@@ -28,7 +28,7 @@ class Subscriptions @javax.inject.Inject() (
     queryString: Map[String, Seq[String]]
   ) (
     implicit ec: ExecutionContext
-  ): Future[Option[UserReference]] = {
+  ): Future[Option[User]] = {
     queryString.get("identifier").getOrElse(Nil).toList match {
       case Nil => {
         super.user(session, headers, path, queryString)

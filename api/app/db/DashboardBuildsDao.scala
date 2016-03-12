@@ -2,7 +2,7 @@ package db
 
 import io.flow.delta.v0.models.DashboardBuild
 import io.flow.postgresql.{Authorization, Query}
-import io.flow.common.v0.models.UserReference
+import io.flow.common.v0.models.User
 import anorm._
 import play.api.db._
 import play.api.Play.current
