@@ -38,7 +38,7 @@ object DashboardBuildsDao {
         and(Filters(auth).organizations("projects.organization_id").sql).
         limit(limit).
         offset(offset).
-        orderBy("case when build_desired_states.versions = build_last_states.versions then 1 else 0 end, build_desired_states.timestamp desc").
+        orderBy("case when build_desired_states.versions::varchar = build_last_states.versions::varchar then 1 else 0 end, build_desired_states.timestamp desc").
         as(
           parser().*
         )

@@ -4,12 +4,15 @@ import io.flow.delta.v0.Client
 import io.flow.delta.v0.models.Organization
 import io.flow.delta.www.lib.{DeltaClientProvider, Section, UiData}
 import io.flow.play.clients.UserTokensClient
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.play.controllers.IdentifiedController
 import scala.concurrent.{ExecutionContext, Future}
 import play.api._
 import play.api.i18n._
 import play.api.mvc._
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 
 object Helpers {
 
@@ -18,13 +21,13 @@ object Helpers {
     session: play.api.mvc.Session
   ) (
     implicit ec: scala.concurrent.ExecutionContext
-  ): scala.concurrent.Future[Option[io.flow.common.v0.models.User]] = {
+  ): scala.concurrent.Future[Option[UserReference]] = {
     session.get("user_id") match {
       case None => {
         scala.concurrent.Future { None }
       }
       case Some(userId) => {
-        userTokensClient.getUserByToken(userId)
+        Future { Some(UserReference(id = userId)) }
       }
     }
   }
@@ -38,6 +41,8 @@ abstract class BaseController(
     with IdentifiedController
     with I18nSupport
 {
+
+  private[this] lazy val client = deltaClientProvider.newClient(user = None)
 
   def section: Option[Section]
 
@@ -83,19 +88,46 @@ abstract class BaseController(
     queryString: Map[String, Seq[String]]
   ) (
     implicit ec: scala.concurrent.ExecutionContext
-  ): scala.concurrent.Future[Option[io.flow.common.v0.models.User]] = {
+  ): scala.concurrent.Future[Option[UserReference]] = {
     Helpers.userFromSession(userTokensClient, session)
   }
 
-  def uiData[T](request: IdentifiedRequest[T]): UiData = {
+  def uiData[T](
+    request: IdentifiedRequest[T]
+  ) (
+    implicit ec: ExecutionContext
+  ): UiData = {
+    val user = Await.result(
+      client.users.get(id = Some(request.user.id)),
+      Duration(1, "seconds")
+    ).headOption.getOrElse {
+      sys.error(s"Could not find user[${request.user.id}")
+    }
+
     UiData(
       requestPath = request.path,
-      user = Some(request.user),
+      user = Some(user),
       section = section
     )
   }
 
-  def uiData[T](request: AnonymousRequest[T], user: Option[User]): UiData = {
+  def uiData[T](
+    request: AnonymousRequest[T], user: Option[UserReference]
+  ) (
+    implicit ec: ExecutionContext
+  ): UiData = {
+    val userReferenceOption = Await.result(
+      request.user,
+      Duration(1, "seconds")
+    )
+
+    val user = userReferenceOption.flatMap { ref =>
+      Await.result(
+        client.users.get(id = Some(ref.id)),
+        Duration(1, "seconds")
+      ).headOption
+    }
+
     UiData(
       requestPath = request.path,
       user = user,
