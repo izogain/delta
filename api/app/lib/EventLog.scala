@@ -2,7 +2,7 @@ package io.flow.delta.api.lib
 
 import db.{EventsDao, UsersDao}
 import io.flow.delta.v0.models.{EventType, Project}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import java.io.{PrintWriter, StringWriter}
 import org.joda.time.DateTime
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,7 +20,7 @@ object EventLog {
 }
 
 case class EventLog(
-  user: User,
+  user: UserReference,
   project: Project,
   prefix: String
 ) {

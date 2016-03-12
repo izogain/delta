@@ -3,7 +3,7 @@ package controllers
 import db.{InternalTokenForm, TokensDao}
 import io.flow.delta.v0.models.{Token, TokenForm}
 import io.flow.delta.v0.models.json._
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.common.v0.models.json._
 import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
@@ -67,7 +67,7 @@ class Tokens @javax.inject.Inject() (
     }
   }
 
-  def withToken(user: User, id: String)(
+  def withToken(user: UserReference, id: String)(
     f: Token => Result
   ) = {
     TokensDao.findById(Authorization.User(user.id), id) match {

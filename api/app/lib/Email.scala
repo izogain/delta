@@ -1,6 +1,6 @@
 package io.flow.delta.api.lib
 
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, UserReference}
 import io.flow.play.util.{DefaultConfig, IdGenerator}
 import java.nio.file.{Path, Paths, Files}
 import java.nio.charset.StandardCharsets

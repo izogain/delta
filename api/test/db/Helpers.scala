@@ -4,7 +4,7 @@ import io.flow.postgresql.Authorization
 import io.flow.play.clients.MockUserTokensClient
 import io.flow.play.util.Random
 import io.flow.delta.v0.models._
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, UserReference}
 import java.util.UUID
 import play.api.Application
 
@@ -63,7 +63,7 @@ trait Helpers {
 
   def createOrganization(
     form: OrganizationForm = createOrganizationForm(),
-    user: User = systemUser
+    user: UserReference = systemUser
   ): Organization = {
     injector.instanceOf[OrganizationsWriteDao].create(user, form).right.getOrElse {
       sys.error("Failed to create organization")
@@ -112,7 +112,7 @@ trait Helpers {
 
   def makeUser(
     form: UserForm = makeUserForm()
-  ): User = {
+  ): UserReference = {
     User(
       id = io.flow.play.util.IdGenerator("tst").randomId(),
       email = form.email,
@@ -127,7 +127,7 @@ trait Helpers {
 
   def createUser(
     form: UserForm = createUserForm()
-  ): User = {
+  ): UserReference = {
     rightOrErrors(injector.instanceOf[UsersWriteDao].create(None, form))
   }
 
@@ -146,7 +146,7 @@ trait Helpers {
   }
 
   def createGithubUserForm(
-    user: User = createUser(),
+    user: UserReference = createUser(),
     githubUserId: Long = random.positiveLong(),
     login: String = createTestKey()
   ) = {
@@ -164,7 +164,7 @@ trait Helpers {
   }
 
   def createTokenForm(
-    user: User = createUser()
+    user: UserReference = createUser()
   ):TokenForm = {
     TokenForm(
       userId = user.id,
@@ -180,7 +180,7 @@ trait Helpers {
 
   def createMembershipForm(
     org: Organization = createOrganization(),
-    user: User = createUser(),
+    user: UserReference = createUser(),
     role: Role = Role.Member
   ) = {
     MembershipForm(
@@ -235,7 +235,7 @@ trait Helpers {
   }
 
   def createSubscriptionForm(
-    user: User = createUser(),
+    user: UserReference = createUser(),
     publication: Publication = Publication.Deployments
   ) = {
     SubscriptionForm(
@@ -246,7 +246,7 @@ trait Helpers {
 
   def createBuild(
     form: BuildForm = createBuildForm(),
-    user: User = systemUser
+    user: UserReference = systemUser
   ): Build = {
     rightOrErrors(injector.instanceOf[BuildsWriteDao].create(user, form))
   }
@@ -263,7 +263,7 @@ trait Helpers {
   
   def createSha(
     form: ShaForm = createShaForm(),
-    user: User = systemUser
+    user: UserReference = systemUser
   ): Sha = {
     rightOrErrors(injector.instanceOf[ShasWriteDao].create(user, form))
   }
@@ -280,7 +280,7 @@ trait Helpers {
 
   def createTag(
     form: TagForm = createTagForm(),
-    user: User = systemUser
+    user: UserReference = systemUser
   ): Tag = {
     rightOrErrors(injector.instanceOf[TagsWriteDao].create(user, form))
   }
@@ -309,7 +309,7 @@ trait Helpers {
 
   def createImage(
    form: ImageForm = createImageForm(),
-   user: User = systemUser
+   user: UserReference = systemUser
   ): Image = {
     rightOrErrors(injector.instanceOf[ImagesWriteDao].create(user, form))
   }

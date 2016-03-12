@@ -1,7 +1,7 @@
 package controllers
 
 import db.{OrganizationsDao, ProjectsDao, UsersDao}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.common.v0.models.json._
 import io.flow.delta.v0.models.{Organization, Project}
 import io.flow.play.util.Validation
@@ -24,7 +24,7 @@ trait Helpers {
     }
   }
   
-  def withOrganization(user: User, id: String)(
+  def withOrganization(user: UserReference, id: String)(
     f: Organization => Result
   ) = {
     OrganizationsDao.findById(Authorization.User(user.id), id) match {
@@ -37,7 +37,7 @@ trait Helpers {
     }
   }
 
-  def withProject(user: User, id: String)(
+  def withProject(user: UserReference, id: String)(
     f: Project => Result
   ): Result = {
     ProjectsDao.findById(Authorization.User(user.id), id) match {
@@ -51,7 +51,7 @@ trait Helpers {
   }
 
   def withUser(id: String)(
-    f: User => Result
+    f: UserReference => Result
   ) = {
     UsersDao.findById(id) match {
       case None => {

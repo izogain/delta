@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import io.flow.play.actors.ErrorHandler
 import db.{OrganizationsDao, SubscriptionsDao, UserIdentifiersDao, UsersDao}
 import akka.actor.Actor
@@ -20,7 +20,7 @@ object UserActor {
 
 class UserActor extends Actor with ErrorHandler {
 
-  var dataUser: Option[User] = None
+  var dataUser: Option[UserReference] = None
 
   def receive = {
 

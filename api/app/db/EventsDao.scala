@@ -4,7 +4,7 @@ import anorm._
 import io.flow.delta.v0.models.{Event, EventType}
 import io.flow.delta.actors.MainActor
 import io.flow.postgresql.{Query, OrderBy}
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import java.io.{PrintWriter, StringWriter}
 import play.api.db._
 import play.api.libs.json._
@@ -36,7 +36,7 @@ object EventsDao {
   /**
     * Create an event, returning its id
     */
-  def create(createdBy: User, projectId: String, `type`: EventType, summary: String, ex: Option[Throwable]): String = {
+  def create(createdBy: UserReference, projectId: String, `type`: EventType, summary: String, ex: Option[Throwable]): String = {
     `type` match {
       case EventType.UNDEFINED(_) => sys.error("Invalid type: " + `type`)
       case _ => {}
@@ -64,7 +64,7 @@ object EventsDao {
     id
   }
 
-  def delete(deletedBy: User, event: Event) {
+  def delete(deletedBy: UserReference, event: Event) {
     Delete.delete("events", deletedBy.id, event.id)
   }
 

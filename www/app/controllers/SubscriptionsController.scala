@@ -3,7 +3,7 @@ package controllers
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
 import io.flow.play.clients.UserTokensClient
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.UserReference
 import scala.concurrent.Future
 
 import play.api._
@@ -108,7 +108,7 @@ class SubscriptionsController @javax.inject.Inject() (
     }
   }
 
-  def uiData[T](request: Request[T], user: Option[User]): UiData = {
+  def uiData[T](request: Request[T], user: Option[UserReference]): UiData = {
     UiData(
       requestPath = request.path,
       user = user,

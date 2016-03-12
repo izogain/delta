@@ -3,7 +3,7 @@ package db
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.actors.MainActor
 import io.flow.postgresql.{Authorization, Query, OrderBy}
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.{Name, UserReference}
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -13,13 +13,13 @@ object UsersDao {
   private[db] val SystemEmailAddress = "otto@flow.io"
   private[db] val AnonymousEmailAddress = "anonymous@flow.io"
 
-  lazy val systemUser: User = {
+  lazy val systemUser: UserReference = {
     findAll(email = Some(SystemEmailAddress), limit = 1).headOption.getOrElse {
       sys.error(s"Could not find system user[$SystemEmailAddress]")
     }
   }
 
-  lazy val anonymousUser: User = {
+  lazy val anonymousUser: UserReference = {
     findAll(email = Some(AnonymousEmailAddress), limit = 1).headOption.getOrElse {
       sys.error(s"Could not find anonymous user[$AnonymousEmailAddress]")
     }
@@ -34,19 +34,19 @@ object UsersDao {
   """)
 
 
-  def findByGithubUserId(githubUserId: Long): Option[User] = {
+  def findByGithubUserId(githubUserId: Long): Option[UserReference] = {
     findAll(githubUserId = Some(githubUserId), limit = 1).headOption
   }
 
-  def findByEmail(email: String): Option[User] = {
+  def findByEmail(email: String): Option[UserReference] = {
     findAll(email = Some(email), limit = 1).headOption
   }
 
-  def findByToken(token: String): Option[User] = {
+  def findByToken(token: String): Option[UserReference] = {
     findAll(token = Some(token), limit = 1).headOption
   }
 
-  def findById(id: String): Option[User] = {
+  def findById(id: String): Option[UserReference] = {
     findAll(id = Some(id), limit = 1).headOption
   }
 
@@ -60,7 +60,7 @@ object UsersDao {
     orderBy: OrderBy = OrderBy("users.created_at"),
     limit: Long = 25,
     offset: Long = 0
-  ): Seq[User] = {
+  ): Seq[UserReference] = {
     DB.withConnection { implicit c =>
       Standards.query(
         BaseQuery,
@@ -94,7 +94,7 @@ object UsersDao {
           }
         ).bind("github_user_id", githubUserId).
         as(
-          io.flow.common.v0.anorm.parsers.User.parser().*
+          io.flow.common.v0.anorm.parsers.UserReference.parser().*
         )
     }
   }
@@ -137,7 +137,7 @@ case class UsersWriteDao @javax.inject.Inject() (
     email.indexOf("@") >= 0
   }
 
-  def create(createdBy: Option[User], form: UserForm): Either[Seq[String], User] = {
+  def create(createdBy: Option[UserReference], form: UserForm): Either[Seq[String], UserReference] = {
     validate(form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("usr").randomId()
@@ -165,4 +165,3 @@ case class UsersWriteDao @javax.inject.Inject() (
   }
 
 }
-
