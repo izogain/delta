@@ -1,15 +1,13 @@
 package controllers
 
 import db.DashboardBuildsDao
-import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.json._
-import io.flow.play.clients.UserTokensClient
 import play.api.mvc._
 import play.api.libs.json._
 
 @javax.inject.Singleton
 class DashboardBuilds @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val tokenClient: io.flow.token.v0.interfaces.Client
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(

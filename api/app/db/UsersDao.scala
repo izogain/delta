@@ -13,17 +13,9 @@ object UsersDao {
   private[db] val SystemEmailAddress = "otto@flow.io"
   private[db] val AnonymousEmailAddress = "anonymous@flow.io"
 
-  lazy val systemUser = UserReference(
-    id = findAll(email = Some(SystemEmailAddress), limit = 1).headOption.map(_.id).getOrElse {
-      sys.error(s"Could not find system user[$SystemEmailAddress]")
-    }
-  )
+  lazy val systemUser = io.flow.play.util.Constants.SystemUser
 
-  lazy val anonymousUser = UserReference(
-    id = findAll(email = Some(AnonymousEmailAddress), limit = 1).headOption.map(_.id).getOrElse {
-      sys.error(s"Could not find anonymous user[$AnonymousEmailAddress]")
-    }
-  )
+  lazy val anonymousUser = io.flow.play.util.Constants.AnonymousUser
 
   private[this] val BaseQuery = Query(s"""
     select users.id,

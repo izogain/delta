@@ -1,14 +1,13 @@
 package controllers
 
 import db.ItemsDao
-import io.flow.play.clients.UserTokensClient
 import io.flow.delta.v0.models.json._
 import play.api.mvc._
 import play.api.libs.json._
 
 @javax.inject.Singleton
 class Items @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val tokenClient: io.flow.token.v0.interfaces.Client
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(

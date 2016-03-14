@@ -1,12 +1,10 @@
 package db
 
 import io.flow.postgresql.Authorization
-import io.flow.play.clients.MockUserTokensClient
 import io.flow.play.util.Random
 import io.flow.delta.v0.models._
 import io.flow.common.v0.models.{Name, User, UserReference}
 import java.util.UUID
-import play.api.Application
 
 trait Helpers {
 

@@ -3,16 +3,13 @@ package io.flow.delta.api.lib
 import play.api.{Environment, Configuration, Mode}
 import play.api.inject.Module
 
-import io.flow.play.clients.UserTokensClient
-
-class UserTokensClientModule extends Module {
+class TokenClientModule extends Module {
 
   def bindings(env: Environment, conf: Configuration) = {
     Seq(
-      bind[UserTokensClient].to[DefaultUserTokensClient]
+      bind[io.flow.token.v0.interfaces.Client].to[DefaultTokenClient]
     )
   }
-
 }
 
 class GithubModule extends Module {

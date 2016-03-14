@@ -3,15 +3,12 @@ package controllers
 import db.EventsDao
 import io.flow.delta.v0.models.{Event, EventType}
 import io.flow.delta.v0.models.json._
-import io.flow.play.clients.UserTokensClient
-import io.flow.play.controllers.IdentifiedRestController
-import io.flow.play.util.Validation
 import play.api.mvc._
 import play.api.libs.json._
 
 @javax.inject.Singleton
 class Events @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient
+  val tokenClient: io.flow.token.v0.interfaces.Client
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(

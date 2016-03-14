@@ -3,17 +3,14 @@ package controllers
 import db.{OrganizationsDao, ProjectsDao}
 import io.flow.common.v0.models.json._
 import io.flow.delta.api.lib.Github
-import io.flow.delta.v0.models.json._
-import io.flow.github.v0.models.Repository
 import io.flow.github.v0.models.json._
-import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
 import play.api.mvc._
 import play.api.libs.json._
 import scala.concurrent.Future
 
 class Repositories @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient,
+  val tokenClient: io.flow.token.v0.interfaces.Client,
   val github: Github
 ) extends Controller with BaseIdentifiedRestController {
 

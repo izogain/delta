@@ -12,13 +12,13 @@ import scala.concurrent.Future
 class RegistryClient @javax.inject.Inject() (
   registry: Registry,
   config: DefaultConfig
-) extends RegistryConstants {
+) extends Registry {
 
   lazy val instance = {
       println("registry.host(registry): " + registry.host("registry"))
     new Client(
       registry.host("registry"),
-      auth = Some(Authorization.Basic(config.requiredString(TokenVariableName)))
+      auth = Some(Authorization.Basic(config.requiredString(RegistryConstants.TokenVariableName)))
     )
   }
 
@@ -38,4 +38,5 @@ class RegistryClient @javax.inject.Inject() (
     }
   }
 
+  override def host(applicationId: String): String = registry.host("registry")
 }
