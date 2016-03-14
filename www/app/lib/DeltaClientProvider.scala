@@ -1,14 +1,12 @@
 package io.flow.delta.www.lib
 
-import io.flow.play.clients.{Registry, UserTokensClient}
+
 import io.flow.play.util
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.{Authorization, Client}
-import io.flow.delta.v0.errors.UnitResponse
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import io.flow.token.v0.{Healthchecks, Tokens}
 
-trait DeltaClientProvider extends UserTokensClient {
+trait DeltaClientProvider extends io.flow.token.v0.interfaces.Client {
 
   def newClient(user: Option[UserReference]): Client
 
@@ -30,7 +28,7 @@ class DefaultDeltaClientProvider @javax.inject.Inject() (
       }
       case Some(u) => {
         new Client(
-          apiUrl = host,
+          baseUrl = host,
           auth = Some(
             Authorization.Basic(
               username = u.id.toString,
@@ -42,11 +40,9 @@ class DefaultDeltaClientProvider @javax.inject.Inject() (
     }
   }
 
-  override def getUserByToken(
-    token: String
-  )(implicit ec: ExecutionContext): Future[Option[UserReference]] = {
-    // Token is just the ID
-    anonymousClient.users.get(id = Some(token)).map { _.headOption.map { u => UserReference(id = u.id) } }
-  }
+  override def baseUrl: String = throw new UnsupportedOperationException()
 
+  override def healthchecks: Healthchecks = throw new UnsupportedOperationException()
+
+  override def tokens: Tokens = throw new UnsupportedOperationException()
 }

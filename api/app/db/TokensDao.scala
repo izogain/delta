@@ -191,6 +191,10 @@ object TokensDao {
     findAll(auth, id = Some(id), limit = 1).headOption
   }
 
+  def findByToken(token: String): Option[Token] = {
+    findAll(Authorization.All, userId = Some(token), limit = 1).headOption
+  }
+
   def findAll(
     auth: Authorization,
     id: Option[String] = None,

@@ -2,7 +2,6 @@ package controllers
 
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
-import io.flow.play.clients.UserTokensClient
 import io.flow.common.v0.models.User
 import scala.concurrent.Future
 
@@ -25,7 +24,7 @@ object Subscriptions {
 
 class SubscriptionsController @javax.inject.Inject() (
   val messagesApi: MessagesApi,
-  val userTokensClient: UserTokensClient,
+  val tokenClient: io.flow.token.v0.interfaces.Client,
   val deltaClientProvider: DeltaClientProvider
 ) extends Controller
     with I18nSupport
@@ -36,7 +35,7 @@ class SubscriptionsController @javax.inject.Inject() (
   lazy val client = deltaClientProvider.newClient(user = None)
 
   def index() = Action.async { implicit request =>
-    Helpers.userFromSession(userTokensClient, request.session).flatMap { userOption =>
+    Helpers.userFromSession(tokenClient, request.session).flatMap { userOption =>
       userOption match {
         case None => Future {
           Redirect(routes.LoginController.index(return_url = Some(request.path)))

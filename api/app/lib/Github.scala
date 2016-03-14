@@ -43,7 +43,7 @@ object GithubHelper {
 
   def apiClient(oauthToken: String): GithubClient = {
     new GithubClient(
-      apiUrl = "https://api.github.com",
+      baseUrl = "https://api.github.com",
       defaultHeaders = Seq(
         ("Authorization" -> s"token $oauthToken")
       )
@@ -191,7 +191,7 @@ class DefaultGithub @javax.inject.Inject() (
   private[this] lazy val clientSecret = config.requiredString("github.delta.client.secret")
 
   private[this] lazy val oauthClient = new GithubOauthClient(
-    apiUrl = "https://github.com",
+    baseUrl = "https://github.com",
     defaultHeaders = Seq(
       ("Accept" -> "application/json")
     )

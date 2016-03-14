@@ -1,16 +1,15 @@
 package controllers
 
 import db.{OrganizationsDao, OrganizationsWriteDao}
-import io.flow.play.clients.UserTokensClient
 import io.flow.play.util.Validation
-import io.flow.delta.v0.models.{Organization, OrganizationForm}
+import io.flow.delta.v0.models.OrganizationForm
 import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.json._
 import play.api.mvc._
 import play.api.libs.json._
 
 class Organizations @javax.inject.Inject() (
-  val userTokensClient: UserTokensClient,
+  val tokenClient: io.flow.token.v0.interfaces.Client,
   organizationsWriteDao: OrganizationsWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 
