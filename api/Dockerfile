@@ -1,9 +1,11 @@
 FROM flowdocker/play:0.0.37
 
-RUN sbt 'project api' clean stage
-
-ADD target/universal/stage /opt/play
+ADD . /opt/play
 
 WORKDIR /opt/play
 
-ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "run", "play", "delta", "api", "bin/delta-api"]
+RUN sbt 'project api' clean stage
+
+WORKDIR api/target/universal/stage
+
+ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "--service", "play", "delta", "bin/delta-api"]

@@ -6,4 +6,6 @@ WORKDIR /opt/play
 
 RUN sbt 'project www' clean stage
 
-ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "run", "play", "delta", "www", "target/universal/stage/bin/delta-www"]
+WORKDIR www/target/universal/stage
+
+ENTRYPOINT ["java", "-jar", "/root/environment-provider.jar", "--service", "play", "delta", "bin/delta-www"]
