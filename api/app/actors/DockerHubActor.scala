@@ -32,7 +32,7 @@ object DockerHubActor {
       */
     case class Build(version: String) extends Message
 
-    case class Monitor(version: String, start: DateTime) extends Message    
+    case class Monitor(version: String, start: DateTime) extends Message
 
     case object Setup extends Message
   }
@@ -40,7 +40,7 @@ object DockerHubActor {
   trait Factory {
     def apply(buildId: String): Actor
   }
-  
+
 }
 
 class DockerHubActor @javax.inject.Inject() (
@@ -54,7 +54,7 @@ class DockerHubActor @javax.inject.Inject() (
     val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
     new Client(
       defaultHeaders = Seq(
-        ("Authorization", s"Bearer ${config.requiredString("docker.jwt.token").replaceFirst("JWT ", "")}")
+        ("Authorization", s"Bearer ${config.requiredString("docker.jwt.token")}")
       )
     )
   }
