@@ -10,6 +10,7 @@ import collection.JavaConverters._
 
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import play.api.Logger
 
 import scala.concurrent.Future
 
@@ -48,6 +49,35 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
   /**
   * Functions that interact with AWS ECS
   **/
+  def updateContainerAgent(projectId: String): Future[Seq[String]] = {
+    Future {
+      try {
+        val cluster = getClusterName(projectId)
+
+        // find all the container instances for this cluster
+        val containerInstanceArns = client.listContainerInstances(
+          new ListContainerInstancesRequest()
+          .withCluster(cluster)
+        ).getContainerInstanceArns.asScala
+
+        // call update for each container instance
+        containerInstanceArns.map{ containerInstanceArn =>
+          val result = client.updateContainerAgent(
+            new UpdateContainerAgentRequest()
+            .withCluster(cluster)
+            .withContainerInstance(containerInstanceArn)
+          )
+
+          containerInstanceArn
+        }
+      } catch {
+        case e: UpdateInProgressException => Nil
+        case e: NoUpdateAvailableException => Nil
+        case e: Throwable => sys.error(s"Error upgrading container agent for $projectId: $e")
+      }
+    }
+  }
+
   def createCluster(projectId: String): String = {
     val name = getClusterName(projectId)
     client.createCluster(new CreateClusterRequest().withClusterName(name))

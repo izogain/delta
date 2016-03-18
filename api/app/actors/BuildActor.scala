@@ -33,6 +33,8 @@ object BuildActor {
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
     case object Setup extends Message
+
+    case object UpdateContainerAgent extends Message
   }
 
   trait Factory {
@@ -83,6 +85,12 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
+    case msg @ BuildActor.Messages.UpdateContainerAgent => withVerboseErrorHandler(msg) {
+      withBuild { build =>
+        updateContainerAgent(build)
+      }
+    }
+
     // Configure EC2 LC, ELB, ASG for a build (id: user, fulfillment, splashpage, etc)
     case msg @ BuildActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
       withBuild { build =>
@@ -124,6 +132,16 @@ class BuildActor @javax.inject.Inject() (
       } yield {
         // All steps have completed
       }
+    }
+  }
+
+  def updateContainerAgent(build: Build) {
+    log.runAsync("ECS updating container agent") {
+      ecs.updateContainerAgent(BuildNames.projectName(build))
+    }
+
+    system.scheduler.scheduleOnce(Duration(1, "days")) {
+      self ! BuildActor.Messages.UpdateContainerAgent
     }
   }
 
