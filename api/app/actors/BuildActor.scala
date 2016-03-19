@@ -62,7 +62,6 @@ class BuildActor @javax.inject.Inject() (
   )
 
   def receive = {
-
     // case msg @ BuildActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
     case msg @ BuildActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setBuildId(buildId)
@@ -138,10 +137,6 @@ class BuildActor @javax.inject.Inject() (
   def updateContainerAgent(build: Build) {
     log.runAsync("ECS updating container agent") {
       ecs.updateContainerAgent(BuildNames.projectName(build))
-    }
-
-    system.scheduler.scheduleOnce(Duration(1, "days")) {
-      self ! BuildActor.Messages.UpdateContainerAgent
     }
   }
 

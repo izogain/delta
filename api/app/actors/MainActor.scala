@@ -53,7 +53,7 @@ object MainActor {
 @javax.inject.Singleton
 class MainActor @javax.inject.Inject() (
   buildFactory: BuildActor.Factory,
-  dockerHubFactory: DockerHubActor.Factory, 
+  dockerHubFactory: DockerHubActor.Factory,
   projectFactory: ProjectActor.Factory,
   override val config: io.flow.play.util.Config,
   system: ActorSystem
@@ -89,7 +89,7 @@ class MainActor @javax.inject.Inject() (
     case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
       upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
     }
-    
+
     case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
       (buildActors -= id).map { actor =>
         // TODO: Terminate actor
@@ -202,11 +202,16 @@ class MainActor @javax.inject.Inject() (
     buildActors.lift(id).getOrElse {
       val ref = injectedChild(buildFactory(id), name = s"$name:buildActor:$id")
       ref ! BuildActor.Messages.Setup
+
+      scheduleRecurring(system, "aws.ecs.update.container.seconds") {
+        ref !  BuildActor.Messages.UpdateContainerAgent
+      }
+
       buildActors += (id -> ref)
       ref
     }
   }
-  
+
   def upsertProjectSupervisorActor(id: String): ActorRef = {
     projectSupervisorActors.lift(id).getOrElse {
       val ref = system.actorOf(Props[ProjectSupervisorActor], name = s"$name:projectSupervisorActor:$id")
