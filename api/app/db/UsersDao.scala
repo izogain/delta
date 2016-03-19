@@ -144,7 +144,6 @@ case class UsersWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        println(s"generated user $id")
         mainActor ! MainActor.Messages.UserCreated(id.toString)
 
         Right(
@@ -158,3 +157,4 @@ case class UsersWriteDao @javax.inject.Inject() (
   }
 
 }
+
