@@ -129,7 +129,9 @@ trait Helpers {
   def createUser(
     form: UserForm = createUserForm()
   ): User = {
-    rightOrErrors(injector.instanceOf[UsersWriteDao].create(None, form))
+    val user = rightOrErrors(injector.instanceOf[UsersWriteDao].create(None, form))
+    println(s"Got: $user")
+    user
   }
 
   def createUserForm(
@@ -232,7 +234,10 @@ trait Helpers {
   def createSubscription(
     form: SubscriptionForm = createSubscriptionForm()
   ): Subscription = {
-    rightOrErrors(SubscriptionsDao.create(systemUser, form))
+    println(s"============================= START, SYSUSER: ${systemUser.id}")
+    val s = rightOrErrors(SubscriptionsDao.create(systemUser, form))
+    println("============================= DONE")
+    s
   }
 
   def createSubscriptionForm(
@@ -261,7 +266,7 @@ trait Helpers {
       dockerfilePath = "./Dockerfile"
     )
   }
-  
+
   def createSha(
     form: ShaForm = createShaForm(),
     user: User = systemUser

@@ -60,6 +60,7 @@ object SubscriptionsDao {
   }
 
   def create(createdBy: UserReference, form: SubscriptionForm): Either[Seq[String], Subscription] = {
+    println(s"sub form: $form")
     validate(form) match {
       case Nil => {
         val id = io.flow.play.util.IdGenerator("sub").randomId()
