@@ -33,6 +33,8 @@ object BuildActor {
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
     case object Setup extends Message
+
+    case object UpdateContainerAgent extends Message
   }
 
   trait Factory {
@@ -60,7 +62,6 @@ class BuildActor @javax.inject.Inject() (
   )
 
   def receive = {
-
     // case msg @ BuildActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
     case msg @ BuildActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setBuildId(buildId)
@@ -80,6 +81,12 @@ class BuildActor @javax.inject.Inject() (
     case msg @ BuildActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withBuild { build =>
         captureLastState(build)
+      }
+    }
+
+    case msg @ BuildActor.Messages.UpdateContainerAgent => withVerboseErrorHandler(msg) {
+      withBuild { build =>
+        updateContainerAgent(build)
       }
     }
 
@@ -124,6 +131,12 @@ class BuildActor @javax.inject.Inject() (
       } yield {
         // All steps have completed
       }
+    }
+  }
+
+  def updateContainerAgent(build: Build) {
+    log.runAsync("ECS updating container agent") {
+      ecs.updateContainerAgent(BuildNames.projectName(build))
     }
   }
 

@@ -232,7 +232,14 @@ trait Helpers {
   def createSubscription(
     form: SubscriptionForm = createSubscriptionForm()
   ): Subscription = {
-    rightOrErrors(SubscriptionsDao.create(systemUser, form))
+    /**
+     * SubscriptionsDao.create gets into a race condition
+     * with UserWritesDao.create, which is called when a user
+     * is created in createSubscriptionForm above. When a user
+     * is created, it will trigger auto subscription in UserActor.Messages.Created
+     **/
+    //rightOrErrors(SubscriptionsDao.create(systemUser, form))
+    SubscriptionsDao.upsert(systemUser, form)
   }
 
   def createSubscriptionForm(
@@ -261,7 +268,7 @@ trait Helpers {
       dockerfilePath = "./Dockerfile"
     )
   }
-  
+
   def createSha(
     form: ShaForm = createShaForm(),
     user: User = systemUser
