@@ -30,6 +30,7 @@ lazy val api = project
   .dependsOn(generated, lib)
   .aggregate(generated, lib)
   .enablePlugins(PlayScala)
+  .enablePlugins(NewRelic)
   .settings(commonSettings: _*)
   .settings(
     routesImport += "io.flow.delta.v0.Bindables._",
@@ -52,6 +53,7 @@ lazy val www = project
   .dependsOn(generated, lib)
   .aggregate(generated, lib)
   .enablePlugins(PlayScala)
+  .enablePlugins(NewRelic)
   .settings(commonSettings: _*)
   .settings(
     routesImport += "io.flow.delta.v0.Bindables._",
