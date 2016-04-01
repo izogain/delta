@@ -30,7 +30,7 @@ object ProjectSupervisorActor {
 
 class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
 
-  private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 

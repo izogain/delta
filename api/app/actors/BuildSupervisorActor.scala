@@ -28,7 +28,7 @@ object BuildSupervisorActor {
 
 class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
-  private[this] implicit val supervisorActorExecutionContext = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 

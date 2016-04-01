@@ -9,8 +9,6 @@ import akka.actor._
 import play.api.{Application, Logger}
 import play.api.Play.current
 import play.api.libs.concurrent.InjectedActorSupport
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 object MainActor {
 
@@ -59,7 +57,7 @@ class MainActor @javax.inject.Inject() (
   system: ActorSystem
 ) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
 
-  private[this] implicit val mainActorExecutionContext: ExecutionContext = system.dispatchers.lookup("main-actor-context")
+  private[this] implicit val ec = system.dispatchers.lookup("main-actor-context")
 
   private[this] val name = "main"
 
@@ -72,11 +70,19 @@ class MainActor @javax.inject.Inject() (
   private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
-  system.scheduler.scheduleOnce(Duration(10, "seconds")) {
-    Pager.create { offset =>
-      ProjectsDao.findAll(Authorization.All, offset = offset)
-    }.foreach { project =>
-      self ! MainActor.Messages.ProjectSync(project.id)
+  scheduleRecurring(system, "main.actor.update.container.seconds") {
+    buildActors.map { case (_, ref) =>
+      ref !  BuildActor.Messages.UpdateContainerAgent
+    }
+  }
+
+  scheduleRecurring(system, "main.actor.project.sync.seconds") {
+    buildActors.map { case (name, ref) =>
+      Pager.create { offset =>
+        ProjectsDao.findAll(Authorization.All, offset = offset)
+      }.foreach { project =>
+        self ! MainActor.Messages.ProjectSync(project.id)
+      }
     }
   }
 
@@ -202,11 +208,6 @@ class MainActor @javax.inject.Inject() (
     buildActors.lift(id).getOrElse {
       val ref = injectedChild(buildFactory(id), name = s"$name:buildActor:$id")
       ref ! BuildActor.Messages.Setup
-
-      scheduleRecurring(system, "aws.ecs.update.container.seconds") {
-        ref !  BuildActor.Messages.UpdateContainerAgent
-      }
-
       buildActors += (id -> ref)
       ref
     }
