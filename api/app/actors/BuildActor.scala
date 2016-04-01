@@ -12,7 +12,6 @@ import io.flow.play.util.Config
 import org.joda.time.DateTime
 import play.api.Logger
 import akka.actor.{Actor, ActorSystem}
-import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -50,7 +49,7 @@ class BuildActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
-  implicit val buildActorExecutionContext: ExecutionContext = system.dispatchers.lookup("build-actor-context")
+  implicit private[this] val ec = system.dispatchers.lookup("build-actor-context")
 
   private[this] val TimeoutSeconds = 450
   private[this] lazy val ecs = EC2ContainerService(registryClient)

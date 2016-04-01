@@ -8,7 +8,6 @@ import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
 import play.api.Logger
 import akka.actor.{Actor, ActorSystem}
-import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -37,7 +36,7 @@ class ProjectActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with ErrorHandler with DataProject with EventLog {
 
-  implicit val projectActorExecutionContext: ExecutionContext = system.dispatchers.lookup("project-actor-context")
+  private[this] implicit val ec = system.dispatchers.lookup("project-actor-context")
 
   def receive = {
 

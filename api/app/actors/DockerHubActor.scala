@@ -11,7 +11,6 @@ import akka.actor.Actor
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Logger
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import play.api.Play.current
 import scala.util.{Failure, Success, Try}
@@ -48,7 +47,7 @@ class DockerHubActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
-  implicit val dockerHubActorExecutionContext = Akka.system.dispatchers.lookup("dockerhub-actor-context")
+  private[this] implicit val ec = Akka.system.dispatchers.lookup("dockerhub-actor-context")
 
   private[this] lazy val v2client = {
     val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
