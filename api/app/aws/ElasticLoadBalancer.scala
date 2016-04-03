@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import scala.concurrent.Future
 
-case class ElasticLoadBalancer(registryClient: RegistryClient) extends Settings with Credentials {
+case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClient) extends Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
@@ -64,8 +64,8 @@ case class ElasticLoadBalancer(registryClient: RegistryClient) extends Settings 
         new CreateLoadBalancerRequest()
           .withLoadBalancerName(name)
           .withListeners(elbListeners.asJava)
-          .withSubnets(elbSubnets.asJava)
-          .withSecurityGroups(elbSecurityGroups.asJava)
+          .withSubnets(settings.elbSubnets.asJava)
+          .withSecurityGroups(settings.elbSecurityGroups.asJava)
       )
       println(s"Created Load Balancer: ${result.getDNSName}")
     } catch {

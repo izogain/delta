@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import com.amazonaws.services.ecs.model.Service
 import db.{OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.postgresql.Authorization
-import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer}
+import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer, InstanceTypes, Settings}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.lib.{BuildNames, Semver, StateFormatter, Text}
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
@@ -52,13 +52,28 @@ class BuildActor @javax.inject.Inject() (
   implicit private[this] val ec = system.dispatchers.lookup("build-actor-context")
 
   private[this] val TimeoutSeconds = 450
-  private[this] lazy val ecs = EC2ContainerService(registryClient)
-  private[this] lazy val elb = ElasticLoadBalancer(registryClient)
+  private[this] lazy val awsSettings = withBuild { build =>
+    awsSettingsForBuild(build)
+  }.getOrElse {
+    sys.error("Must have build before getting settings for auto scaling group")
+  }
+
+  private[this] lazy val ecs = EC2ContainerService(awsSettings, registryClient)
+  private[this] lazy val elb = ElasticLoadBalancer(awsSettings, registryClient)
   private[this] lazy val asg = AutoScalingGroup(
+    awsSettings,
     ecs,
     dockerHubToken = config.requiredString("dockerhub.delta.auth.token"),
     dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
   )
+
+  private[this] def awsSettingsForBuild(build: Build): Settings = {
+    // TODO: Find place for this configuration. Probably in UI
+    build.project.name == "harmonization" match {
+      case false => InstanceTypes.T2Micro
+      case true => InstanceTypes.T2Medium
+    }
+  }
 
   def receive = {
     // case msg @ BuildActor.Messages.Data(id) => withVerboseErrorHandler(msg) {

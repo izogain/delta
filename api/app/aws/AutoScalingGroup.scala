@@ -10,10 +10,11 @@ import sun.misc.BASE64Encoder
 import collection.JavaConverters._
 
 case class AutoScalingGroup(
+  settings: Settings,
   eC2ContainerService: EC2ContainerService,
   dockerHubToken: String,
   dockerHubEmail: String
-) extends Settings with Credentials {
+) extends Credentials {
 
   lazy val client = new AmazonAutoScalingClient(awsCredentials)
   lazy val encoder = new BASE64Encoder()
@@ -50,12 +51,12 @@ case class AutoScalingGroup(
         new CreateLaunchConfigurationRequest()
           .withLaunchConfigurationName(name)
           .withAssociatePublicIpAddress(false)
-          .withIamInstanceProfile(launchConfigIamInstanceProfile)
+          .withIamInstanceProfile(settings.launchConfigIamInstanceProfile)
           .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
-          .withSecurityGroups(lcSecurityGroups.asJava)
-          .withKeyName(ec2KeyName)
-          .withImageId(launchConfigImageId)
-          .withInstanceType(launchConfigInstanceType)
+          .withSecurityGroups(settings.lcSecurityGroups.asJava)
+          .withKeyName(settings.ec2KeyName)
+          .withImageId(settings.launchConfigImageId)
+          .withInstanceType(settings.launchConfigInstanceType)
           .withUserData(encoder.encode(lcUserData(id).getBytes))
       )
     } catch {
@@ -73,12 +74,12 @@ case class AutoScalingGroup(
           .withAutoScalingGroupName(name)
           .withLaunchConfigurationName(launchConfigName)
           .withLoadBalancerNames(Seq(loadBalancerName).asJava)
-          .withVPCZoneIdentifier(asgSubnets.mkString(","))
+          .withVPCZoneIdentifier(settings.asgSubnets.mkString(","))
           .withNewInstancesProtectedFromScaleIn(false)
-          .withHealthCheckGracePeriod(asgHealthCheckGracePeriod)
-          .withMinSize(asgMinSize)
-          .withMaxSize(asgMaxSize)
-          .withDesiredCapacity(asgDesiredSize)
+          .withHealthCheckGracePeriod(settings.asgHealthCheckGracePeriod)
+          .withMinSize(settings.asgMinSize)
+          .withMaxSize(settings.asgMaxSize)
+          .withDesiredCapacity(settings.asgDesiredSize)
       )
     } catch {
       case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")

@@ -25,13 +25,13 @@ trait Settings {
   val asgHealthCheckGracePeriod = 300
 
   // The minimum size of the Auto Scaling group
-  val asgMinSize = 4
+  val asgMinSize = 2
 
   // The maximum size of the Auto Scaling group
   val asgMaxSize = 4
 
   // The number of Amazon EC2 instances that should be running in the autoscaling group
-  val asgDesiredSize = 4
+  val asgDesiredSize = 2
 
   // Keypair name used to SSH into EC2 instances created by the autoscaling group
   val ec2KeyName = "flow-admin"
@@ -42,16 +42,16 @@ trait Settings {
   // Role for the new launch configuration
   val launchConfigIamInstanceProfile = "ecsInstanceRole"
 
-  // Should this be higher? And if so, probably should use something other than t2.micro
-  val containerMemory = 400
-
-  // Launch configuration EC2 instance type. t2 micro for now, but probably change later or make configurable
-  val launchConfigInstanceType = "t2.micro"
-
   // EC2 service role
   val serviceRole = "ecsServiceRole"
 
   // When a new service is created, explicitly set the desired count to 0, then scale up to 3
   val createServiceDesiredCount = 0
 
+  // Launch configuration EC2 instance type, ex. t2.micro
+  val launchConfigInstanceType: String
+
+  // MB of memory
+  val containerMemory: Int
 }
+

@@ -14,7 +14,7 @@ import play.api.Logger
 
 import scala.concurrent.Future
 
-case class EC2ContainerService(registryClient: RegistryClient) extends Settings with Credentials {
+case class EC2ContainerService(settings: Settings, registryClient: RegistryClient) extends Credentials {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
@@ -194,7 +194,7 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
               new ContainerDefinition()
               .withName(containerName)
               .withImage(imageName + ":" + imageVersion)
-              .withMemory(containerMemory)
+              .withMemory(settings.containerMemory)
               .withPortMappings(
                 Seq(
                   new PortMapping()
@@ -239,7 +239,7 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
     val clusterName = getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer(registryClient).getLoadBalancerName(projectId)
+    val loadBalancerName = ElasticLoadBalancer(settings, registryClient).getLoadBalancerName(projectId)
 
     registryClient.getById(projectId).map {
       case None => {
@@ -263,8 +263,8 @@ case class EC2ContainerService(registryClient: RegistryClient) extends Settings 
             new CreateServiceRequest()
             .withServiceName(serviceName)
             .withCluster(clusterName)
-            .withDesiredCount(createServiceDesiredCount)
-            .withRole(serviceRole)
+            .withDesiredCount(settings.createServiceDesiredCount)
+            .withRole(settings.serviceRole)
             .withTaskDefinition(taskDefinition)
             .withDeploymentConfiguration(
               new DeploymentConfiguration()
