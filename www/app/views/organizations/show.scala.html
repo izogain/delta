@@ -5,7 +5,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(organization.id))) {
-
+<section class="col-xs-12 px0">
   <div class="pull-right">
     <a href="@routes.MembersController.index(organization.id)">Members</a>
 
@@ -29,7 +29,7 @@
          }}
     </li>
   </ul>
-  
+
   <h3>Projects</h3>
   @if(projects.isEmpty) {
     <em>This organization does not have any projects</em>
@@ -47,5 +47,5 @@
     }
 
   }
-
+</section>
 }

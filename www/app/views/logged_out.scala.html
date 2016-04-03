@@ -1,11 +1,11 @@
 @(data: io.flow.delta.www.lib.UiData)(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("You are now logged out"))) {
-
+<section class="col-xs-12 px0">
   <em>You are now logged out</em>
 
   <p>
     <a href="@routes.LoginController.index()">Log back in</a>
   </p>
-
+</section>
 }

@@ -4,7 +4,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Create Token")), errorMessages = errorMessages) {
-
+<section class="col-xs-12 px0">
   <div class="container">
 
     @helper.form(action = routes.TokensController.postCreate()) {
@@ -28,6 +28,5 @@
     }
 
   </div>
-
+</section>
 }
-

@@ -7,7 +7,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data) {
-
+<section class="col-xs-12 px0">
   @if(events.isEmpty) {
     <em>No changes</em>
   } else {
@@ -32,4 +32,5 @@
       </ul>
     }
   }
+</section>
 }

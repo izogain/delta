@@ -3,7 +3,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Token: " + token.masked))) {
-
+<section class="col-xs-12 px0">
   @if(!token.cleartext.isEmpty) {
     <blockquote>
       <em>This is the only time you will see this token. Please copy it immediately.</em>
@@ -22,5 +22,5 @@
     <li> Masked token: @token.masked</li>
     <li> Description: @token.description.getOrElse("-")</liL
   </ul>
-
+</section>
 }

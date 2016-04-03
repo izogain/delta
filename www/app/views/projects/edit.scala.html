@@ -7,7 +7,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Edit project")), errorMessages = errorMessages) {
-
+<section class="col-xs-12 px0">
   <div class="container">
 
     @helper.form(action = routes.ProjectsController.postEdit(project.id)) {
@@ -17,5 +17,5 @@
     }
 
   </div>
-
+</section>
 }

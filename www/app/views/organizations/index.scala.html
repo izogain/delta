@@ -4,14 +4,13 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Organizations"))) {
-
-  <div class="pull-right">
+<section class="col-xs-12 px0">
+  <div class="col-xs-12 text-right">
     <span class="glyphicon glyphicon-plus"></span> <a href="@routes.OrganizationsController.create()">Add organization</a>
   </div>
 
   @if(organizations.isEmpty) {
     <em>No organizations</em>
-
   } else {
   <div class="table-responsive">
     <table class="table">
@@ -34,5 +33,5 @@
       </ul>
     }
   }
-
+</section>
 }

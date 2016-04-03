@@ -6,7 +6,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Add project")), errorMessages = errorMessages) {
-
+<section class="col-xs-12 px0">
   <div class="pull-right">
     <span class="glyphicon glyphicon-plus"></span> <a href="@routes.ProjectsController.github()">Add project from Github</a>
   </div>
@@ -20,5 +20,5 @@
     }
 
   </div>
-
+</section>
 }

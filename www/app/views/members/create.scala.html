@@ -6,7 +6,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some(s"${org.id}: Add member")), errorMessages = errorMessages) {
-
+<section class="col-xs-12 px0">
   <div class="container">
 
     @helper.form(action = routes.MembersController.postCreate(org.id)) {
@@ -33,4 +33,5 @@
     }
 
   </div>
+</section>
 }

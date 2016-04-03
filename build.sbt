@@ -12,6 +12,7 @@ parallelExecution in Test in ThisBuild := true
 lazy val generated = project
   .in(file("generated"))
   .enablePlugins(PlayScala)
+  .enablePlugins(SbtWeb)
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
@@ -54,6 +55,7 @@ lazy val www = project
   .aggregate(generated, lib)
   .enablePlugins(PlayScala)
   .enablePlugins(NewRelic)
+  .enablePlugins(SbtWeb)
   .settings(commonSettings: _*)
   .settings(
     routesImport += "io.flow.delta.v0.Bindables._",

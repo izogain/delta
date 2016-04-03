@@ -5,7 +5,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Subscriptions"))) {
-
+<section class="col-xs-12 px0">
   @if(userPublications.isEmpty) {
     <em>No publications found</em>
   } else {
@@ -28,5 +28,5 @@
       </tbody>
     </table>
   }
-
+</section>
 }

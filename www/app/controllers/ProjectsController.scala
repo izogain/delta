@@ -1,9 +1,11 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{EventType, Project, ProjectForm, Scms, SettingsForm, Visibility}
+import io.flow.delta.v0.models.{EventType, Project, ProjectForm, Scms, Settings, SettingsForm, Visibility}
+import io.flow.delta.v0.models.json._
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.util.{Pagination, PaginatedCollection}
+import play.api.libs.json.Json
 import scala.concurrent.Future
 import play.api.i18n.MessagesApi
 import play.api.mvc._
@@ -285,26 +287,7 @@ class ProjectsController @javax.inject.Inject() (
    */
   def postSettingsToggle(id: String, name: String) = Identified.async { implicit request =>
     deltaClient(request).projects.getSettingsById(id).flatMap { settings =>
-      val form = name match {
-        case "syncMasterSha" => {
-          Some(SettingsForm(syncMasterSha = Some(!settings.syncMasterSha)))
-        }
-        case "tagMaster" => {
-          Some(SettingsForm(tagMaster = Some(!settings.tagMaster)))
-        }
-        case "setDesiredState" => {
-          Some(SettingsForm(setDesiredState = Some(!settings.setDesiredState)))
-        }
-        case "buildDockerImage" => {
-          Some(SettingsForm(buildDockerImage = Some(!settings.buildDockerImage)))
-        }
-        case "scale" => {
-          Some(SettingsForm(scale = Some(!settings.scale)))
-        }
-        case other => {
-          None
-        }
-      }
+      val form = createSettingsForm(name, settings)
 
       form match {
         case None => {
@@ -317,6 +300,48 @@ class ProjectsController @javax.inject.Inject() (
             Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Settings updated")
           }
         }
+      }
+    }
+  }
+
+  def postSettings(projectId: String) = Identified.async { implicit request =>
+    val boundForm = ProjectsController.settingUiForm.bindFromRequest
+
+    deltaClient(request).projects.getSettingsById(projectId).flatMap { settings =>
+      boundForm.fold(
+
+        formWithErrors => Future {
+          UnprocessableEntity(formWithErrors.errorsAsJson)
+        },
+
+        uiForm => {
+          deltaClient(request).projects.putSettingsById(projectId, uiForm).map { updated =>
+            Ok(Json.toJson(updated))
+          }
+        }
+      )
+    }
+  }
+
+  private def createSettingsForm(name: String, settings: Settings): Option[SettingsForm] = {
+    name match {
+      case "syncMasterSha" => {
+        Some(SettingsForm(syncMasterSha = Some(!settings.syncMasterSha)))
+      }
+      case "tagMaster" => {
+        Some(SettingsForm(tagMaster = Some(!settings.tagMaster)))
+      }
+      case "setDesiredState" => {
+        Some(SettingsForm(setDesiredState = Some(!settings.setDesiredState)))
+      }
+      case "buildDockerImage" => {
+        Some(SettingsForm(buildDockerImage = Some(!settings.buildDockerImage)))
+      }
+      case "scale" => {
+        Some(SettingsForm(scale = Some(!settings.scale)))
+      }
+      case other => {
+        None
       }
     }
   }
@@ -356,6 +381,17 @@ object ProjectsController {
       "visibility" -> nonEmptyText,
       "uri" -> nonEmptyText
     )(UiForm.apply)(UiForm.unapply)
+  )
+
+
+  private val settingUiForm = Form(
+    mapping(
+      "syncMasterSha" -> optional(boolean),
+      "tagMaster" -> optional(boolean),
+      "setDesiredState" -> optional(boolean),
+      "buildDockerImage" -> optional(boolean),
+      "scale" -> optional(boolean)
+    )(SettingsForm.apply)(SettingsForm.unapply)
   )
 
 }

@@ -13,7 +13,9 @@ GET     /projects/:id/edit                      controllers.ProjectsController.e
 POST    /projects/:id/postEdit                  controllers.ProjectsController.postEdit(id: String)
 POST    /projects/:id/postSync                  controllers.ProjectsController.postSync(id: String)
 POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
+POST    /projects/:id/settings                  controllers.ProjectsController.postSettings(id: String)
 POST    /projects/:id/settings/:name            controllers.ProjectsController.postSettingsToggle(id: String, name: String)
+
 
 GET     /events                                 controllers.ApplicationController.redirect
 GET     /events/                                controllers.EventsController.index(page: Int ?= 0, project_id: Option[String] ?= None, event_type: Option[io.flow.delta.v0.models.EventType] ?= None, has_error: Option[Boolean] ?= None)

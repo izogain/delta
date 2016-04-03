@@ -4,7 +4,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data.copy(title = Some("Add project - Select organization"))) {
-
+<section class="col-xs-12 px0">
   <div class="pull-right">
     <span class="glyphicon glyphicon-plus"></span> <a href="@routes.ProjectsController.create()">Add project manually</a>
   </div>
@@ -18,5 +18,5 @@
       }
     </table>
   </div>
-
+</section>
 }

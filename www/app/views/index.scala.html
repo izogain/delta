@@ -4,7 +4,7 @@
 )(implicit flash: Flash, messages: Messages)
 
 @main(data) {
-
+<section class="col-xs-12 px0 mt3">
   @if(dashboardBuilds.isEmpty) {
     <p><em>Get started by creating a project and a successful first build.</em></p>
   } else {
@@ -41,5 +41,5 @@
     }
 
   }
-
+</section>
 }

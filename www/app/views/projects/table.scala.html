@@ -1,11 +1,13 @@
 @(projects: Seq[io.flow.delta.v0.models.Project])
 
-<div class="table-responsive">
-  <table class="table">
-    @projects.map { p =>
-      <tr>
-        <td><a href="@routes.ProjectsController.show(p.id)">@{p.organization.id}/@{p.name}</a></td>
-      </tr>
-    }
-  </table>
+<div class="col-xs-12 px0">
+  <div class="table-responsive">
+    <table class="table">
+      @projects.map { p =>
+        <tr>
+          <td><a href="@routes.ProjectsController.show(p.id)">@{p.organization.id}/@{p.name}</a></td>
+        </tr>
+      }
+    </table>
+  </div>
 </div>
