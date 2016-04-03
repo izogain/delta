@@ -28,7 +28,7 @@ trait Settings {
   val asgMinSize = 2
 
   // The maximum size of the Auto Scaling group
-  val asgMaxSize = 4
+  val asgMaxSize = 16
 
   // The number of Amazon EC2 instances that should be running in the autoscaling group
   val asgDesiredSize = 2
