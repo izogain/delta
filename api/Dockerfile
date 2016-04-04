@@ -1,5 +1,6 @@
 FROM flowdocker/play:0.0.43
 
+RUN apt-get install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_5.x | bash -
 RUN apt-get install -y nodejs
 RUN update-alternatives --install /usr/bin/node node /usr/bin/nodejs 10
