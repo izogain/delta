@@ -39,7 +39,7 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.27",
+      "io.flow" %% "lib-postgresql" % "0.0.28",
       "com.typesafe.play" %% "anorm" % "2.5.0",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
       "com.amazonaws" % "aws-java-sdk" % "1.10.66",
@@ -63,7 +63,7 @@ lazy val www = project
     libraryDependencies ++= Seq(
       "org.webjars" %% "webjars-play" % "2.5.0",
       "org.webjars" % "bootstrap" % "3.3.6",
-      "org.webjars.bower" % "bootstrap-social" % "4.10.1",
+      "org.webjars.bower" % "bootstrap-social" % "4.12.0",
       "org.webjars" % "font-awesome" % "4.5.0",
       "org.webjars" % "jquery" % "2.1.4"
     )
