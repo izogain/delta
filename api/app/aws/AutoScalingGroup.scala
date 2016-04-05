@@ -5,7 +5,6 @@ import io.flow.play.util.DefaultConfig
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
 import com.amazonaws.services.autoscaling.model._
 
-import play.api.Logger
 import sun.misc.BASE64Encoder
 
 import collection.JavaConverters._
@@ -61,36 +60,7 @@ case class AutoScalingGroup(
           .withUserData(encoder.encode(lcUserData(id).getBytes))
       )
     } catch {
-      case e: AlreadyExistsException => Logger.error(s"Launch Configuration '$name' already exists")
-    }
-
-    return name
-  }
-
-  def updateAutoScalingGroupDesiredCount(id: String, diff: Long): String = {
-    val name = getAutoScalingGroupName(id)
-    try {
-      val result = client.describeAutoScalingGroups(
-        new DescribeAutoScalingGroupsRequest()
-          .withAutoScalingGroupNames(name)
-      )
-
-      val newDesiredCount = result.getAutoScalingGroups.asScala.headOption match {
-        case None => sys.error(s"Problem finding autoscaling group $name")
-        case Some(asg) => asg.getDesiredCapacity + diff.toInt
-      }
-
-      client.updateAutoScalingGroup(
-        new UpdateAutoScalingGroupRequest()
-          .withAutoScalingGroupName(name)
-          .withDesiredCapacity(newDesiredCount)
-      )
-    } catch {
-      case e: ScalingActivityInProgressException => Logger.error(s"Error scaling group $name to count $diff")
-      case e: Throwable => {
-        e.printStackTrace
-        Logger.error(s"Error processing incoming queue message: ${e.getMessage}, Class: ${e.getClass.getName}")
-      }
+      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
     }
 
     return name
@@ -112,7 +82,7 @@ case class AutoScalingGroup(
           .withDesiredCapacity(settings.asgDesiredSize)
       )
     } catch {
-      case e: AlreadyExistsException => Logger.error(s"Launch Configuration '$name' already exists")
+      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
     }
 
     return name
