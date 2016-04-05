@@ -1,5 +1,6 @@
 package io.flow.delta.actors
 
+import io.flow.delta.actors.functions.SetDesiredState
 import com.amazonaws.services.ecs.model.Service
 import db.{OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.postgresql.Authorization
@@ -162,12 +163,14 @@ class BuildActor @javax.inject.Inject() (
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
       log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        asg.updateAutoScalingGroupDesiredCount(projectName, -SetDesiredState.DefaultNumberInstances)
         ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
 
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        asg.updateAutoScalingGroupDesiredCount(projectName, SetDesiredState.DefaultNumberInstances)
         ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
