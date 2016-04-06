@@ -69,7 +69,7 @@ end.select { |v| !v.empty? }
 key_file = File.join(KEYS_REPO_DIR, "ec2", "apps", "%s-%s" % [name, subproject])
 if File.exists?(key_file)
   puts "Loading environment variables from %s" % key_file
-  vars = IO.readlines(key_file).map do |line|
+  vars = ["DEV_HOST=vm"] + IO.readlines(key_file).map do |line|
     (key, value) = line.strip.split("=", 2).map(&:strip)
     if names.include?(key) && value && !value.empty?
       puts " - setting env var %s" % key
