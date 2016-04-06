@@ -119,10 +119,11 @@
           <td><strong>Latest Tag</strong></td>
           <td>
             @latestTag.map { tag =>
+              @tag.name
               @if(tag.hash == masterHash) {
                 [master]
               } else {
-                [@tag.hash]
+                [@io.flow.delta.lib.Text.truncate(tag.hash, 10)]
               }
             }.getOrElse(Html("&dash;"))
           </td>
