@@ -103,17 +103,6 @@
       </div>  
     </article>
     
-    
-    <article class="state-desired col-xs-12 col-md-4 center">
-      <div class="panel panel-default">
-        <section class="state-heading panel-heading">
-          <span class="lead panel-title">Latest Docker Image</span>
-        </section>
-        <section class="panel-body">
-          @buildState.latestImage.getOrElse(Html("&dash;"))
-        </section>
-      </div> 
-    </article>
   </section>
   }
 </div>
@@ -123,6 +112,9 @@
   <div class="table-responsive">
     <table class="table table-striped">
       <tbody>
+        <tr>
+          <td><strong>Latest Docker Image</strong></td><td>@buildState.latestImage.getOrElse(Html("&dash;"))</td>
+        </tr>
         <tr>
           <td><strong>Latest Tag</strong></td>
           <td>
