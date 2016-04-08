@@ -14,14 +14,23 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
 
   private[this] val MinutesUntilError = 30
 
-  private[this] val last = format(dashboardBuild.last.versions)
-  private[this] val desired = format(dashboardBuild.desired.versions)
+  private[this] val lastNames = format(dashboardBuild.last.versions)
+  private[this] val desiredNames = format(dashboardBuild.desired.versions)
+
+  private[this] val lastInstances = formatInstances(dashboardBuild.last.versions)
+  private[this] val desiredInstances = formatInstances(dashboardBuild.desired.versions)
 
   val status: Option[String] = {
-    last == desired match {
+    lastNames == desiredNames match {
       case true =>
-        if(last._2 != desired._2)
-          Some("warning")
+        if(lastInstances != desiredInstances)
+          Some(
+            if (dashboardBuild.desired.timestamp.isBefore(new DateTime().minusMinutes(MinutesUntilError))) {
+              "danger"
+            } else {
+              "warning"
+            }
+          )
         else
           None
       case false => {
@@ -37,32 +46,32 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
   }
 
   val label = {
-    last == desired match {
+    lastNames == desiredNames match {
       case true => {
-        if(last._2 != desired._2)
-          s"Transitioning from ${last._1} to ${desired._1}"
+        if(lastInstances != desiredInstances)
+          s"Transitioning from $lastNames to $desiredNames"
         else
-          s"Running ${desired._1}"
+          s"Running $desiredNames"
       }
       case false => {
-        s"Transitioning from ${last._1} to ${desired._1}"
+        s"Transitioning from $lastNames to $desiredNames"
       }
     }
 
   }
 
-  def format(versions: Seq[Version]): (String, String) = {
-    (
-      versions.map(_.name) match {
-        case Nil => "Nothing"
-        case names => names.mkString(", ")
-      },
+  def format(versions: Seq[Version]): String = {
+    versions.map(_.name) match {
+      case Nil => "Nothing"
+      case names => names.mkString(", ")
+    }
+  }
 
-      versions.map(_.instances) match {
-        case Nil => "Nothing"
-        case instances => instances.mkString(", ")
-      }
-    )
+  def formatInstances(versions: Seq[Version]): String = {
+    versions.map(_.instances) match {
+      case Nil => "Nothing"
+      case instances => instances.mkString(", ")
+    }
   }
 
 }
