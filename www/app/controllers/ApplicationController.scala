@@ -39,7 +39,10 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
   val label = {
     last == desired match {
       case true => {
-        s"Running ${desired._1}"
+        if(last._2 != desired._2)
+          s"Transitioning from ${last._1} to ${desired._1}"
+        else
+          s"Running ${desired._1}"
       }
       case false => {
         s"Transitioning from ${last._1} to ${desired._1}"
