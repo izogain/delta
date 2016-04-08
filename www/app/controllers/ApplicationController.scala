@@ -19,7 +19,11 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
 
   val status: Option[String] = {
     last == desired match {
-      case true => None
+      case true =>
+        if(last._2 != desired._2)
+          Some("warning")
+        else
+          None
       case false => {
         Some(
           if (dashboardBuild.desired.timestamp.isBefore(new DateTime().minusMinutes(MinutesUntilError))) {
@@ -35,20 +39,27 @@ case class BuildView(val dashboardBuild: io.flow.delta.v0.models.DashboardBuild)
   val label = {
     last == desired match {
       case true => {
-        s"Running $desired"
+        s"Running ${desired._1}"
       }
       case false => {
-        s"Transitioning from $last to $desired"
+        s"Transitioning from ${last._1} to ${desired._1}"
       }
     }
 
   }
 
-  def format(versions: Seq[Version]): String = {
-    versions.map(_.name) match {
-      case Nil => "Nothing" 
-      case names => names.mkString(", ")
-    }
+  def format(versions: Seq[Version]): (String, String) = {
+    (
+      versions.map(_.name) match {
+        case Nil => "Nothing"
+        case names => names.mkString(", ")
+      },
+
+      versions.map(_.instances) match {
+        case Nil => "Nothing"
+        case instances => instances.mkString(", ")
+      }
+    )
   }
 
 }
