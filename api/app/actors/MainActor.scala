@@ -73,6 +73,7 @@ class MainActor @javax.inject.Inject() (
   scheduleRecurring(system, "main.actor.update.container.seconds") {
     buildActors.map { case (_, ref) =>
       ref !  BuildActor.Messages.UpdateContainerAgent
+      ref !  BuildActor.Messages.RemoveOldServices
     }
   }
 

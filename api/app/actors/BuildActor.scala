@@ -34,6 +34,8 @@ object BuildActor {
     case object Setup extends Message
 
     case object UpdateContainerAgent extends Message
+
+    case object RemoveOldServices extends Message
   }
 
   trait Factory {
@@ -104,6 +106,12 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
+    case msg @ BuildActor.Messages.RemoveOldServices => withVerboseErrorHandler(msg) {
+      withBuild { build =>
+        removeOldServices(build)
+      }
+    }
+
     // Configure EC2 LC, ELB, ASG for a build (id: user, fulfillment, splashpage, etc)
     case msg @ BuildActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
       withBuild { build =>
@@ -151,6 +159,12 @@ class BuildActor @javax.inject.Inject() (
   def updateContainerAgent(build: Build) {
     log.runAsync("ECS updating container agent") {
       ecs.updateContainerAgent(BuildNames.projectName(build))
+    }
+  }
+
+  def removeOldServices(build: Build): Unit = {
+    log.runAsync("ECS cleanup old services") {
+      ecs.removeOldServices(BuildNames.projectName(build))
     }
   }
 

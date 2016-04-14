@@ -10,7 +10,8 @@ import collection.JavaConverters._
 
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import play.api.Logger
+
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
@@ -49,6 +50,46 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   /**
   * Functions that interact with AWS ECS
   **/
+  def removeOldServices(projectId: String, nextToken: Option[String] = None): Future[Unit] = {
+    Future {
+      try {
+        val cluster = getClusterName(projectId)
+
+        val baseRequest = new ListServicesRequest().withCluster(cluster)
+        val request = nextToken match {
+          case None => baseRequest
+          case Some(token) => baseRequest.withNextToken(token)
+        }
+
+        val result = client.listServices(request)
+        result.getServiceArns.asScala.map{ serviceName =>
+          getServiceInfo(cluster, serviceName).map{ service =>
+            service.getEvents.asScala.headOption match {
+              case None => // do nothing
+              case Some(event) => {
+                // if there are no instances running, desired count is zero,
+                // and has been 2 weeks since something happened with the service
+                // let's just delete the service
+                val eventDateTime = new DateTime(event.getCreatedAt)
+                val twoWeeksAgo = new DateTime().minusWeeks(2)
+
+                if (service.getDesiredCount == 0 && service.getRunningCount == 0 && eventDateTime.compareTo(twoWeeksAgo) < 0) {
+                  client.deleteService(new DeleteServiceRequest().withCluster(cluster).withService(service.getServiceName))
+                }
+              }
+            }
+          }
+        }
+
+        if (result.getNextToken != null) {
+          removeOldServices(projectId, Some(result.getNextToken))
+        }
+      } catch {
+        case e: Throwable => sys.error(s"Removing old services for $projectId: $e")
+      }
+    }
+  }
+
   def updateContainerAgent(projectId: String): Future[Seq[String]] = {
     Future {
       try {
@@ -164,12 +205,15 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Option[Service] = {
     val cluster = getClusterName(projectId)
     val service = getServiceName(imageName, imageVersion)
+    getServiceInfo(cluster, service)
+  }
 
+  def getServiceInfo(cluster: String, service: String): Option[Service] = {
     // should only be one thing, since we are passing cluster and service
     client.describeServices(
       new DescribeServicesRequest()
-      .withCluster(cluster)
-      .withServices(Seq(service).asJava)
+        .withCluster(cluster)
+        .withServices(Seq(service).asJava)
     ).getServices().asScala.headOption
   }
 
