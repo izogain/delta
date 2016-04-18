@@ -39,7 +39,7 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.29",
+      "io.flow" %% "lib-postgresql" % "0.0.30",
       "com.typesafe.play" %% "anorm" % "2.5.1",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
       "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.69",
