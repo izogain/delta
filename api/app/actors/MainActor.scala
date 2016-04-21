@@ -35,8 +35,7 @@ object MainActor {
 
     case class Scale(buildId: String, diffs: Seq[StateDiff])
 
-    case class ShaCreated(projectId: String, id: String)
-    case class ShaUpdated(projectId: String, id: String)
+    case class ShaUpserted(projectId: String, id: String)
 
     case class TagCreated(projectId: String, id: String, name: String)
     case class TagUpdated(projectId: String, id: String, name: String)
@@ -138,11 +137,7 @@ class MainActor @javax.inject.Inject() (
       upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
     }
 
-    case msg @ MainActor.Messages.ShaCreated(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.ShaUpdated(projectId, id) => withVerboseErrorHandler(msg) {
+    case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withVerboseErrorHandler(msg) {
       upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
     }
 

@@ -45,7 +45,6 @@ object ShasDao {
     findAll(auth, ids = Some(Seq(id)), limit = 1).headOption
   }
 
-
   def findAll(
     auth: Authorization,
     ids: Option[Seq[String]] = None,
@@ -92,20 +91,15 @@ case class ShasWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
-  private[this] val InsertQuery = """
+  private[this] val UpsertQuery = """
     insert into shas
     (id, project_id, branch, hash, updated_by_user_id)
     values
     ({id}, {project_id}, {branch}, {hash}, {updated_by_user_id})
-  """
-
-  private[this] val UpdateQuery = """
-    update shas
-       set project_id = {project_id},
-           branch = {branch},
-           hash = {hash},
+    on conflict (project_id, branch)
+    do update
+       set hash = {hash},
            updated_by_user_id = {updated_by_user_id}
-     where id = {id}
   """
 
   private[db] def validate(
@@ -145,30 +139,8 @@ case class ShasWriteDao @javax.inject.Inject() (
 
   def create(createdBy: UserReference, form: ShaForm): Either[Seq[String], Sha] = {
     validate(createdBy, form) match {
-      case Nil => {
-        val id = io.flow.play.util.IdGenerator("sha").randomId()
-
-        DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
-            'id -> id,
-            'project_id -> form.projectId,
-            'branch -> form.branch.trim,
-            'hash -> form.hash.trim,
-            'updated_by_user_id -> createdBy.id
-          ).execute()
-        }
-
-        mainActor ! MainActor.Messages.ShaCreated(form.projectId, id)
-
-        Right(
-          ShasDao.findById(Authorization.All, id).getOrElse {
-            sys.error("Failed to create sha")
-          }
-        )
-      }
-      case errors => {
-        Left(errors)
-      }
+      case Nil => Right(upsert(createdBy, form))
+      case errors => Left(errors)
     }
   }
 
@@ -178,62 +150,34 @@ case class ShasWriteDao @javax.inject.Inject() (
     * sha.
     */
   def upsertMaster(createdBy: UserReference, projectId: String, hash: String): Sha = {
-    upsertBranch(createdBy, projectId, ShasDao.Master, hash)
-  }
-
-  private[this] def upsertBranch(createdBy: UserReference, projectId: String, branch: String, hash: String): Sha = {
     val form = ShaForm(
       projectId = projectId,
-      branch = branch,
+      branch = ShasDao.Master,
       hash = hash
     )
-
-    ShasDao.findByProjectIdAndBranch(Authorization.All, projectId, branch) match {
-      case None => {
-        create(createdBy, form) match {
-          case Left(errors) => {
-            sys.error(errors.mkString(", "))
-          }
-          case Right(sha) => sha
-        }
-      }
-      case Some(existing) => {
-        existing.hash == hash match {
-          case true => existing
-          case false => {
-            update(createdBy, existing, form) match {
-              case Left(errors) => sys.error(errors.mkString(", "))
-              case Right(sha) => sha
-            }
-          }
-        }
-      }
-    }
+    upsert(createdBy, form)
   }
 
-  private[this] def update(createdBy: UserReference, sha: Sha, form: ShaForm): Either[Seq[String], Sha] = {
-    validate(createdBy, form, Some(sha)) match {
-      case Nil => {
-        DB.withConnection { implicit c =>
-          SQL(UpdateQuery).on(
-            'id -> sha.id,
-            'project_id -> form.projectId,
-            'branch -> form.branch.trim,
-            'hash -> form.hash.trim,
-            'updated_by_user_id -> createdBy.id
-          ).execute()
-        }
+  private[this] def upsert(createdBy: UserReference, form: ShaForm): Sha = {
+    val newId = io.flow.play.util.IdGenerator("sha").randomId()
 
-        mainActor ! MainActor.Messages.ShaUpdated(form.projectId, sha.id)
-
-        Right(
-          ShasDao.findById(Authorization.All, sha.id).getOrElse {
-            sys.error("Failed to update sha")
-          }
-        )
-      }
-      case errors => Left(errors)
+    DB.withConnection { implicit c =>
+      SQL(UpsertQuery).on(
+        'id -> newId,
+        'project_id -> form.projectId.trim,
+        'branch -> form.branch.trim,
+        'hash -> form.hash.trim,
+        'updated_by_user_id -> createdBy.id
+      ).execute()
     }
+
+    val sha = ShasDao.findByProjectIdAndBranch(Authorization.All, form.projectId, form.branch).getOrElse {
+      sys.error(s"Failed to upsert projectId[${form.projectId}] branch[${form.branch}]")
+    }
+
+    mainActor ! MainActor.Messages.ShaUpserted(form.projectId, sha.id)
+
+    sha
   }
 
   def delete(deletedBy: UserReference, sha: Sha) {
