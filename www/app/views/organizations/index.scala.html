@@ -12,16 +12,18 @@
   @if(organizations.isEmpty) {
     <em>No organizations</em>
   } else {
-  <div class="table-responsive">
-    <table class="table">
-      @organizations.items.map { org =>
-        <tr>
-          <td><a href="@routes.OrganizationsController.show(org.id)">@{org.id}</a></td>
-        </tr>
-      }
-    </table>
-  </div>
-    
+    <div class="col-xs-12 px0">
+      <div class="table-responsive">
+        <table class="table">
+          @organizations.items.map { org =>
+            <tr>
+              <td><a href="@routes.OrganizationsController.show(org.id)">@{org.id}</a></td>
+            </tr>
+          }
+        </table>
+      </div>
+    </div>
+
     @if(organizations.hasPrevious || organizations.hasNext) {
       <ul class="pager">
         @if(organizations.hasPrevious) {
