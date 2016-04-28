@@ -114,6 +114,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
   private[this] def isEnabled(settings: Settings, f: Any): Boolean = {
     format(f) match {
       case "SyncMasterSha" => settings.syncMasterSha
+      case "SyncTags" => settings.syncTags
       case "TagMaster" => settings.tagMaster
       case other => sys.error(s"Cannot determine project setting for function[$other]")
     }
