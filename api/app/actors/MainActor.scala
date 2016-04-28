@@ -44,6 +44,7 @@ object MainActor {
 
     case class ImageCreated(buildId: String, id: String, version: String)
 
+    case class ConfigureAWS(buildId: String)
   }
 }
 
@@ -167,6 +168,10 @@ class MainActor @javax.inject.Inject() (
 
     case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withVerboseErrorHandler(msg) {
       upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
+    }
+
+    case msg @ MainActor.Messages.ConfigureAWS(buildId) => withVerboseErrorHandler(msg) {
+      upsertBuildActor(buildId) ! BuildActor.Messages.ConfigureAWS
     }
 
     case msg: Any => logUnhandledMessage(msg)

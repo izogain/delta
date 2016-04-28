@@ -315,6 +315,16 @@
       ]
     },
 
+    "aws_actor": {
+      "description": "Defines an aws actor",
+      "fields": [
+        {
+          "name": "id",
+          "type": "long"
+        }
+      ]
+    },
+
     "build" : {
       "description": "A build provides information abuot a dockerfile and the name of the build in the registry.",
       "fields": [
@@ -349,7 +359,7 @@
         { "name": "version", "type": "string" }
       ]
     },
-    
+
     "event": {
       "fields": [
         { "name": "id", "type": "string" },
@@ -896,6 +906,18 @@
 	  "path": "/:project_id",
 	  "description": "Receives a webhook on push for this particular project"
 	}
+      ]
+    },
+
+    "aws_actor": {
+      "path": "/actors/aws",
+      "description": "way to trigger aws configure actor message",
+      "operations": [
+        {
+          "method": "POST",
+          "path": "/:build_id",
+          "description": "Trigger actor message for build id"
+        }
       ]
     },
 
