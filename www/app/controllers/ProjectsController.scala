@@ -387,6 +387,7 @@ object ProjectsController {
   private val settingUiForm = Form(
     mapping(
       "syncMasterSha" -> optional(boolean),
+      "syncTags" -> optional(boolean),
       "tagMaster" -> optional(boolean),
       "setDesiredState" -> optional(boolean),
       "buildDockerImage" -> optional(boolean),
