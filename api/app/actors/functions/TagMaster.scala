@@ -5,7 +5,7 @@ import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.{Email, GithubUtil}
 import io.flow.delta.lib.Semver
 import io.flow.delta.v0.models.Project
-import io.flow.github.v0.models.{RefForm, TagForm, Tagger, TagSummary}
+import io.flow.github.v0.models.{RefForm, TagForm, Tagger}
 import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import play.api.Logger
@@ -55,13 +55,7 @@ case class TagMaster(project: Project) extends Github {
       case Some(master) => {
         withGithubClient(project.user.id) { client =>
           client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
-            val localTags = toTags(tags)
-            // latest tag version first to set the expected state to
-            // that version, if needed. Otherwise we will trigger a
-            // state update for every tag.
-            persist(localTags.reverse)
-
-            localTags.reverse.headOption match {
+            GithubUtil.toTags(tags).reverse.headOption match {
               case None => {
                 createTag(TagMaster.InitialTag, master)
               }
@@ -130,28 +124,6 @@ case class TagMaster(project: Project) extends Github {
         }
       }
     }
-  }
-
-  /**
-    * Ensures that all of these tags are in our local db
-    */
-  private[this] def persist(tags: Seq[Tag]) = {
-    tags.foreach { tag =>
-      tagsWriteDao.upsert(UsersDao.systemUser, project.id, tag.semver.label, tag.sha)
-    }
-  }
-
-  /**
-    * Given a list of tag summaries from github, selects out the tags
-    * that are semver, sorts them, and maps to our internal Tag class
-    * instances
-    */
-  private[this] def toTags(tags: Seq[TagSummary]): Seq[Tag] = {
-    tags.
-      flatMap { t =>
-        Semver.parse(t.name).map( semvar => Tag(semvar, t.commit.sha) )
-      }.
-      sortBy { _.semver }
   }
 
 }

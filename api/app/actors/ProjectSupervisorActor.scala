@@ -23,6 +23,7 @@ object ProjectSupervisorActor {
 
   val Functions = Seq(
     functions.SyncMasterSha,
+    functions.SyncTags,
     functions.TagMaster
   )
 

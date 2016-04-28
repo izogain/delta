@@ -13,6 +13,7 @@ object SettingsDao {
 
   private[this] val BaseQuery = Query(s"""
     select settings.sync_master_sha,
+           settings.sync_tags,
            settings.tag_master,
            settings.set_desired_state,
            settings.build_docker_image,
@@ -23,14 +24,15 @@ object SettingsDao {
 
   private[this] val InsertQuery = """
     insert into settings
-    (id, project_id, sync_master_sha, tag_master, set_desired_state, build_docker_image, scale, updated_by_user_id)
+    (id, project_id, sync_master_sha, sync_tags, tag_master, set_desired_state, build_docker_image, scale, updated_by_user_id)
     values
-    ({id}, {project_id}, {sync_master_sha}, {tag_master}, {set_desired_state}, {build_docker_image}, {scale}, {updated_by_user_id})
+    ({id}, {project_id}, {sync_master_sha}, {sync_tags}, {tag_master}, {set_desired_state}, {build_docker_image}, {scale}, {updated_by_user_id})
   """
 
   private[this] val UpdateQuery = """
     update settings
        set sync_master_sha = {sync_master_sha},
+           sync_tags = {sync_tags},
            tag_master = {tag_master},
            set_desired_state = {set_desired_state},
            build_docker_image = {build_docker_image},
@@ -71,6 +73,7 @@ object SettingsDao {
       'id -> idGenerator.randomId(),
       'project_id -> projectId,
       'sync_master_sha -> form.syncMasterSha.getOrElse(defaults.syncMasterSha),
+      'sync_tags -> form.syncTags.getOrElse(defaults.syncTags),
       'tag_master -> form.tagMaster.getOrElse(defaults.tagMaster),
       'set_desired_state -> form.setDesiredState.getOrElse(defaults.setDesiredState),
       'build_docker_image -> form.buildDockerImage.getOrElse(defaults.buildDockerImage),
@@ -83,6 +86,7 @@ object SettingsDao {
     SQL(UpdateQuery).on(
       'project_id -> projectId,
       'sync_master_sha -> form.syncMasterSha.getOrElse(settings.syncMasterSha),
+      'sync_tags -> form.syncTags.getOrElse(settings.syncTags),
       'tag_master -> form.tagMaster.getOrElse(settings.tagMaster),
       'set_desired_state -> form.setDesiredState.getOrElse(settings.setDesiredState),
       'build_docker_image -> form.buildDockerImage.getOrElse(settings.buildDockerImage),

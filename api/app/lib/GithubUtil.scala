@@ -1,5 +1,8 @@
 package io.flow.delta.api.lib
 
+import io.flow.delta.lib.Semver
+import io.flow.github.v0.models.TagSummary
+
 object GithubUtil {
 
   def parseUri(uri: String): Either[String, Repo] = {
@@ -23,4 +26,18 @@ object GithubUtil {
     }
   }
 
+  case class Tag(semver: Semver, sha: String)
+  
+  /**
+    * Given a list of tag summaries from github, selects out the tags
+    * that are semver, sorts them, and maps to our internal Tag class
+    * instances
+    */
+  def toTags(tags: Seq[TagSummary]): Seq[Tag] = {
+    tags.
+      flatMap { t =>
+        Semver.parse(t.name).map( semvar => Tag(semvar, t.commit.sha) )
+      }.
+      sortBy { _.semver }
+  }
 }

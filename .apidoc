@@ -12,6 +12,7 @@ code:
     github:
       version: latest
       generators:
+        anorm_2_x_parsers: api/app/generated
         play_2_4_client: generated/app
     github-oauth:
       version: latest
