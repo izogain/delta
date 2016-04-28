@@ -113,7 +113,13 @@
     <table class="table table-striped">
       <tbody>
         <tr>
-          <td><strong>Latest Docker Image</strong></td><td>@buildStates.headOption.map(_.latestImage).getOrElse(Html("&dash;"))</td>
+          <td><strong>Latest Docker Image</strong></td>
+          <td>@{buildStates.flatMap(_.latestImage).toList match {
+                case Nil => Html("&dash;")
+                case image :: Nil => image
+                case images => Html("<ul>" + images.sorted.mkString("</li><li>", "<li>", "</li>") + "</ul>")
+              }}
+          </td>
         </tr>
         <tr>
           <td><strong>Latest Tag</strong></td>
