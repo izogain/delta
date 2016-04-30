@@ -89,6 +89,7 @@ class MainActor @javax.inject.Inject() (
     Pager.create { offset =>
       ProjectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
     }.foreach { project =>
+      Logger.info(s"Sending ProjectSync(${project.id}) - no events found in last 15 minutes")
       self ! MainActor.Messages.ProjectSync(project.id)
     }
   }

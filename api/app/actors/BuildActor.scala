@@ -236,11 +236,12 @@ class BuildActor @javax.inject.Inject() (
       serviceInstances <- ecs.getServiceInstances(imageName, imageVersion, BuildNames.projectName(build))
       healthyInstances <- elb.getHealthyInstances(BuildNames.projectName(build))
     } yield {
+      val result = !serviceInstances.isEmpty && serviceInstances.forall(healthyInstances.contains(_))
       val projectName = BuildNames.projectName(build)
-      Logger.info(s"isServiceHealthy($imageName, $imageVersion, $projectName:")
-      Logger.info(s"  - $projectName: healthyInstances: $healthyInstances")
-      Logger.info(s"  - $projectName: serviceInstances: $serviceInstances")
-      !serviceInstances.isEmpty && serviceInstances.forall(healthyInstances.contains(_))
+      Logger.info(s"isServiceHealthy($imageName, $imageVersion, $projectName ==> $result")
+      Logger.info(s"  - $projectName: healthyInstances: ${healthyInstances.sorted}")
+      Logger.info(s"  - $projectName: serviceInstances: ${serviceInstances.sorted}")
+      result
     }
   }
 
