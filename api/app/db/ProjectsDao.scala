@@ -40,6 +40,7 @@ object ProjectsDao {
     ids: Option[Seq[String]] = None,
     organizationId: Option[String] = None,
     name: Option[String] = None,
+    minutesSinceLastEvent: Option[Long] = None,
     orderBy: OrderBy = OrderBy("lower(projects.name), projects.created_at"),
     limit: Long = 25,
     offset: Long = 0
@@ -67,6 +68,11 @@ object ProjectsDao {
           columnFunctions = Seq(Query.Function.Lower),
           valueFunctions = Seq(Query.Function.Lower, Query.Function.Trim)
         ).
+        and(
+          minutesSinceLastEvent.map { min =>
+            "not exists (select 1 from events where events.project_id = projects.id and events.created_at > now() - interval '1 minute' * {minutes_since_last_event}::bigint)"
+          }
+        ).bind("minutes_since_last_event", minutesSinceLastEvent).
         as(
           io.flow.delta.v0.anorm.parsers.Project.parser().*
         )

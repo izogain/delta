@@ -165,6 +165,16 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       ProjectsDao.findAll(Authorization.All, id = Some(project1.id), organizationId = Some(createOrganization().id)) must be(Nil)
     }
 
+    "minutesSinceLastEvent" in {
+      createEvent(project1)
+
+      ProjectsDao.findAll(Authorization.All, id = Some(project1.id), minutesSinceLastEvent = Some(-100)).map(_.id) must be(
+        Seq(project1.id)
+      )
+
+      ProjectsDao.findAll(Authorization.All, id = Some(project1.id), minutesSinceLastEvent = Some(100)) must be(Nil)
+    }
+
     "authorization for public projects" in {
       val user = createUser()
       val org = createOrganization(user = user)

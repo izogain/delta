@@ -78,12 +78,18 @@ class MainActor @javax.inject.Inject() (
   }
 
   scheduleRecurring(system, "main.actor.project.sync.seconds") {
-    buildActors.map { case (name, ref) =>
-      Pager.create { offset =>
-        ProjectsDao.findAll(Authorization.All, offset = offset)
-      }.foreach { project =>
-        self ! MainActor.Messages.ProjectSync(project.id)
-      }
+    Pager.create { offset =>
+      ProjectsDao.findAll(Authorization.All, offset = offset)
+    }.foreach { project =>
+      self ! MainActor.Messages.ProjectSync(project.id)
+    }
+  }
+
+  scheduleRecurring(system, "main.actor.project.inactive.check.seconds") {
+    Pager.create { offset =>
+      ProjectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
+    }.foreach { project =>
+      self ! MainActor.Messages.ProjectSync(project.id)
     }
   }
 
