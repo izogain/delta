@@ -194,7 +194,6 @@ class BuildActor @javax.inject.Inject() (
 
     for {
       ecsServiceOpt <- getServiceInfo(imageName, imageVersion, build)
-      isHealthy <- isServiceHealthy(imageName, imageVersion, build)
     } yield {
       ecsServiceOpt match {
         case None => {
@@ -206,19 +205,9 @@ class BuildActor @javax.inject.Inject() (
           val intervalSeconds = 5
 
           if (service.getRunningCount == service.getDesiredCount) {
-            if (isHealthy) {
-              log.completed(s"${imageName}:${imageVersion} $summary")
-            } else {
-              log.checkpoint(s"${imageName}:${imageVersion} running, but waiting for ELB instances to become healthy. Will recheck in $intervalSeconds seconds. $summary")
-
-              system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
-                self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
-              }
-            }
-
+            log.completed(s"${imageName}:${imageVersion} $summary")
           } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
             log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
-
           } else {
             log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")
 
