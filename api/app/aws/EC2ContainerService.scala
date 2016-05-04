@@ -182,7 +182,7 @@ case class EC2ContainerService @javax.inject.Inject() (
       var nextToken: String = null // null nextToken gets the first page
 
       while (hasMore) {
-        Logger.info(s"AWS EC2ContainerService listServices projectId[$projectId]")
+        Logger.info(s"AWS EC2ContainerService listServices projectId[$projectId] nextToken[$nextToken]")
         var result = client.listServices(
           new ListServicesRequest()
           .withCluster(cluster)
@@ -225,12 +225,6 @@ case class EC2ContainerService @javax.inject.Inject() (
         }
       }
     }
-  }
-
-  def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Option[Service] = {
-    val cluster = EC2ContainerService.getClusterName(projectId)
-    val service = getServiceName(imageName, imageVersion)
-    getServiceInfo(cluster, service)
   }
 
   def getServiceInfo(cluster: String, service: String): Option[Service] = {

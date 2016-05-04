@@ -28,8 +28,6 @@ object BuildActor {
 
     case object ConfigureAWS extends Message // One-time AWS setup
 
-    case class MonitorScale(imageName: String, imageVersion: String, start: DateTime) extends Message
-
     case class Scale(diffs: Seq[StateDiff]) extends Message
 
     case object Setup extends Message
@@ -125,12 +123,6 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ BuildActor.Messages.MonitorScale(imageName, imageVersion, start) => withVerboseErrorHandler(msg) {
-      withBuild { build =>
-        monitorScale(build, imageName, imageVersion, start)
-      }
-    }
-
     case msg: Any => logUnhandledMessage(msg)
 
   }
@@ -169,49 +161,16 @@ class BuildActor @javax.inject.Inject() (
     val imageName = BuildNames.dockerImageName(docker, build)
     val imageVersion = diff.versionName
 
-    if (diff.lastInstances == diff.desiredInstances) {
-      // Nothing left to scale
-
-    } else {
-      if (diff.lastInstances > diff.desiredInstances) {
-        val instances = diff.lastInstances - diff.desiredInstances
-        log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-          ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
-        }
-
-      } else if (diff.lastInstances < diff.desiredInstances) {
-        val instances = diff.desiredInstances - diff.lastInstances
-        log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-          ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
-        }
+    if (diff.lastInstances > diff.desiredInstances) {
+      val instances = diff.lastInstances - diff.desiredInstances
+      log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
       }
 
-      monitorScale(build, imageName, imageVersion, new DateTime())
-    }
-  }
-
-  def monitorScale(build: Build, imageName: String, imageVersion: String, start: DateTime) {
-    for {
-      ecsServiceOpt <- getServiceInfo(imageName, imageVersion, build)
-    } yield {
-      val service = ecsServiceOpt.getOrElse {
-        sys.error(s"ECS Service not found for build $build.id, image $imageName, version $imageVersion")
-      }
-
-      val summary = ecs.summary(service)
-
-      if (service.getRunningCount == service.getDesiredCount) {
-        log.completed(s"${imageName}:${imageVersion} $summary")
-
-      } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
-        log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
-
-      } else {
-        log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in ${BuildActor.ScaleIntervalSeconds} seconds. $summary")
-
-        system.scheduler.scheduleOnce(Duration(BuildActor.ScaleIntervalSeconds, "seconds")) {
-          self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
-        }
+    } else if (diff.lastInstances < diff.desiredInstances) {
+      val instances = diff.desiredInstances - diff.lastInstances
+      log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
   }
@@ -233,6 +192,7 @@ class BuildActor @javax.inject.Inject() (
   }
 
   def captureLastState(build: Build): Future[String] = {
+    Logger.info(s"BuildActor[$buildId] captureLastState this.id[$this]")
     log.runAsync("captureLastState") {
       ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
         buildLastStatesWriteDao.upsert(
@@ -242,12 +202,6 @@ class BuildActor @javax.inject.Inject() (
         )
         StateFormatter.label(versions)
       }
-    }
-  }
-
-  def getServiceInfo(imageName: String, imageVersion: String, build: Build): Future[Option[Service]] = {
-    log.runSync("Getting ECS service Info", quiet = true) {
-      ecs.getServiceInfo(imageName, imageVersion, BuildNames.projectName(build))
     }
   }
 
