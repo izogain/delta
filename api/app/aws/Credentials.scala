@@ -1,13 +1,14 @@
 package io.flow.delta.aws
 
 import com.amazonaws.auth.BasicAWSCredentials
-import io.flow.play.util.DefaultConfig
+import io.flow.play.util.Config
 
-trait Credentials {
+@javax.inject.Singleton
+class Credentials @javax.inject.Inject() (
+  config: Config
+) {
 
-  private[this] val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
-
-  val awsCredentials = new BasicAWSCredentials(
+  val aws = new BasicAWSCredentials(
     config.requiredString("aws.delta.access.key"),
     config.requiredString("aws.delta.secret.key")
   )

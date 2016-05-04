@@ -9,24 +9,34 @@ import com.amazonaws.services.ecs.model._
 import collection.JavaConverters._
 
 import play.api.libs.concurrent.Akka
+import play.api.Logger
 import play.api.Play.current
 
 import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
-case class EC2ContainerService(settings: Settings, registryClient: RegistryClient) extends Credentials {
-
-  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
-
-  private[this] lazy val client = new AmazonECSClient(awsCredentials)
+object EC2ContainerService {
 
   /**
-  * Name creation helper functions
-  **/
+    * Name creation helper functions
+    **/
   def getClusterName(projectId: String): String = {
     return s"$projectId-cluster"
   }
+
+}
+
+
+@javax.inject.Singleton
+case class EC2ContainerService @javax.inject.Inject() (
+  credentials: Credentials,
+  registryClient: RegistryClient
+) {
+
+  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
+
+  private[this] lazy val client = new AmazonECSClient(credentials.aws)
 
   def getBaseName(imageName: String, imageVersion: String): String = {
     return Seq(
@@ -53,7 +63,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   def removeOldServices(projectId: String, nextToken: Option[String] = None): Future[Unit] = {
     Future {
       try {
-        val cluster = getClusterName(projectId)
+        val cluster = EC2ContainerService.getClusterName(projectId)
 
         val baseRequest = new ListServicesRequest().withCluster(cluster)
         val request = nextToken match {
@@ -61,6 +71,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
           case Some(token) => baseRequest.withNextToken(token)
         }
 
+        Logger.info(s"AWS EC2ContainerService listServices projectId[$projectId]")
         val result = client.listServices(request)
         result.getServiceArns.asScala.map{ serviceName =>
           getServiceInfo(cluster, serviceName).map{ service =>
@@ -74,6 +85,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
                 val twoWeeksAgo = new DateTime().minusWeeks(2)
 
                 if (service.getDesiredCount == 0 && service.getRunningCount == 0 && eventDateTime.compareTo(twoWeeksAgo) < 0) {
+                  Logger.info(s"AWS EC2ContainerService deleteService projectId[$projectId]")
                   client.deleteService(new DeleteServiceRequest().withCluster(cluster).withService(service.getServiceName))
                 }
               }
@@ -93,9 +105,10 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   def updateContainerAgent(projectId: String): Future[Seq[String]] = {
     Future {
       try {
-        val cluster = getClusterName(projectId)
+        val cluster = EC2ContainerService.getClusterName(projectId)
 
         // find all the container instances for this cluster
+        Logger.info(s"AWS EC2ContainerService listContainerInstances projectId[$projectId]")
         val containerInstanceArns = client.listContainerInstances(
           new ListContainerInstancesRequest()
           .withCluster(cluster)
@@ -103,6 +116,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
 
         // call update for each container instance
         containerInstanceArns.map{ containerInstanceArn =>
+          Logger.info(s"AWS EC2ContainerService updateContainerAgent projectId[$projectId]")
           val result = client.updateContainerAgent(
             new UpdateContainerAgentRequest()
             .withCluster(cluster)
@@ -120,18 +134,25 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   }
 
   def createCluster(projectId: String): String = {
-    val name = getClusterName(projectId)
+    val name = EC2ContainerService.getClusterName(projectId)
+    Logger.info(s"AWS EC2ContainerService createCluster projectId[$projectId]")
     client.createCluster(new CreateClusterRequest().withClusterName(name))
     return name
   }
 
   // scale to the desired count - can be up or down
-  def scale(imageName: String, imageVersion: String, projectId: String, desiredCount: Long): Future[Unit] = {
-    val cluster = getClusterName(projectId)
+  def scale(
+    settings: Settings,
+    imageName: String,
+    imageVersion: String,
+    projectId: String,
+    desiredCount: Long
+  ): Future[Unit] = {
+    val cluster = EC2ContainerService.getClusterName(projectId)
 
     for {
-      taskDef <- registerTaskDefinition(imageName, imageVersion, projectId)
-      service <- createService(imageName, imageVersion, projectId, taskDef)
+      taskDef <- registerTaskDefinition(settings, imageName, imageVersion, projectId)
+      service <- createService(settings, imageName, imageVersion, projectId, taskDef)
       count <- updateServiceDesiredCount(cluster, service, desiredCount)
     } yield {
       // Nothing
@@ -140,6 +161,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
 
   def updateServiceDesiredCount(cluster: String, service: String, desiredCount: Long): Future[Long] = {
     Future {
+      Logger.info(s"AWS EC2ContainerService updateService cluster[$cluster]")
       client.updateService(
         new UpdateServiceRequest()
         .withCluster(cluster)
@@ -152,7 +174,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
 
   def getClusterInfo(projectId: String): Future[Seq[Version]] = {
     Future {
-      val cluster = getClusterName(projectId)
+      val cluster = EC2ContainerService.getClusterName(projectId)
 
       // TODO: How to make more functional?
       var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
@@ -160,6 +182,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
       var nextToken: String = null // null nextToken gets the first page
 
       while (hasMore) {
+        Logger.info(s"AWS EC2ContainerService listServices projectId[$projectId]")
         var result = client.listServices(
           new ListServicesRequest()
           .withCluster(cluster)
@@ -177,7 +200,8 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
         }
       }
 
-      serviceArns.flatten.distinct.map{ serviceArn =>
+      serviceArns.flatten.distinct.map { serviceArn =>
+        Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] serviceArn[$serviceArn]")
         val service = client.describeServices(
           new DescribeServicesRequest()
           .withCluster(cluster)
@@ -186,6 +210,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
           sys.error(s"Service ARN $serviceArn does not exist for cluster $cluster")
         }
 
+        Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] serviceArn[$serviceArn]")
         client.describeTaskDefinition(
           new DescribeTaskDefinitionRequest()
           .withTaskDefinition(service.getTaskDefinition)
@@ -203,13 +228,14 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   }
 
   def getServiceInfo(imageName: String, imageVersion: String, projectId: String): Option[Service] = {
-    val cluster = getClusterName(projectId)
+    val cluster = EC2ContainerService.getClusterName(projectId)
     val service = getServiceName(imageName, imageVersion)
     getServiceInfo(cluster, service)
   }
 
   def getServiceInfo(cluster: String, service: String): Option[Service] = {
     // should only be one thing, since we are passing cluster and service
+    Logger.info(s"AWS EC2ContainerService describeServices cluster[$cluster]")
     client.describeServices(
       new DescribeServicesRequest()
         .withCluster(cluster)
@@ -217,7 +243,12 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
     ).getServices().asScala.headOption
   }
 
-  def registerTaskDefinition(imageName: String, imageVersion: String, projectId: String): Future[String] = {
+  def registerTaskDefinition(
+    settings: Settings,
+    imageName: String,
+    imageVersion: String,
+    projectId: String
+  ): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
     registryClient.getById(projectId).map {
@@ -230,6 +261,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
           sys.error(s"project[$projectId] does not have any ports in the registry")
         }
 
+        Logger.info(s"AWS EC2ContainerService registerTaskDefinition projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
         client.registerTaskDefinition(
           new RegisterTaskDefinitionRequest()
           .withFamily(taskName)
@@ -257,10 +289,11 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
   }
 
   def getServiceInstances(imageName: String, imageVersion: String, projectId: String): Future[Seq[String]] = {
-    val clusterName = getClusterName(projectId)
+    val clusterName = EC2ContainerService.getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
 
     Future {
+      Logger.info(s"AWS EC2ContainerService describeTasks projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
       val containerInstances = client.describeTasks(
         new DescribeTasksRequest()
         .withCluster(clusterName)
@@ -271,6 +304,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
         ).getTaskArns)
       ).getTasks.asScala.map(_.getContainerInstanceArn).asJava
 
+      Logger.info(s"AWS EC2ContainerService describeContainerInstances projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
       client.describeContainerInstances(
         new DescribeContainerInstancesRequest()
         .withCluster(clusterName)
@@ -279,11 +313,17 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
     }
   }
 
-  def createService(imageName: String, imageVersion: String, projectId: String, taskDefinition: String): Future[String] = {
-    val clusterName = getClusterName(projectId)
+  def createService(
+    settings: Settings,
+    imageName: String,
+    imageVersion: String,
+    projectId: String,
+    taskDefinition: String
+  ): Future[String] = {
+    val clusterName = EC2ContainerService.getClusterName(projectId)
     val serviceName = getServiceName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer(settings, registryClient).getLoadBalancerName(projectId)
+    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
     registryClient.getById(projectId).map {
       case None => {
@@ -295,6 +335,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
           sys.error(s"project[$projectId] does not have any ports in the registry")
         }
 
+        Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
         val resp = client.describeServices(
           new DescribeServicesRequest()
             .withCluster(clusterName)
@@ -303,6 +344,7 @@ case class EC2ContainerService(settings: Settings, registryClient: RegistryClien
 
         // if service doesn't exist in the cluster
         if (!resp.getFailures().isEmpty()) {
+          Logger.info(s"AWS EC2ContainerService createService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
           client.createService(
             new CreateServiceRequest()
             .withServiceName(serviceName)

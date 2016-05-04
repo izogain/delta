@@ -1,22 +1,24 @@
 package io.flow.delta.aws
 
-import io.flow.play.util.DefaultConfig
+import io.flow.play.util.Config
 
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
 import com.amazonaws.services.autoscaling.model._
-
+import play.api.Logger
 import sun.misc.BASE64Encoder
 
 import collection.JavaConverters._
 
-case class AutoScalingGroup(
-  settings: Settings,
-  eC2ContainerService: EC2ContainerService,
-  dockerHubToken: String,
-  dockerHubEmail: String
-) extends Credentials {
+@javax.inject.Singleton
+class AutoScalingGroup @javax.inject.Inject() (
+  config: Config,
+  credentials: Credentials
+) {
 
-  lazy val client = new AmazonAutoScalingClient(awsCredentials)
+  private[this] lazy val dockerHubToken = config.requiredString("dockerhub.delta.auth.token")
+  private[this] lazy val dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
+
+  lazy val client = new AmazonAutoScalingClient(credentials.aws)
   lazy val encoder = new BASE64Encoder()
 
   /**
@@ -44,9 +46,10 @@ case class AutoScalingGroup(
 
   def getAutoScalingGroupName(id: String) = s"$id-ecs-auto-scaling-group"
 
-  def createLaunchConfiguration(id: String): String = {
+  def createLaunchConfiguration(settings: Settings, id: String): String = {
     val name = getLaunchConfigurationName(id)
     try {
+      Logger.info(s"AWS AutoScalingGroup createLaunchConfiguration id[$id]")
       client.createLaunchConfiguration(
         new CreateLaunchConfigurationRequest()
           .withLaunchConfigurationName(name)
@@ -66,9 +69,10 @@ case class AutoScalingGroup(
     return name
   }
 
-  def createAutoScalingGroup(id: String, launchConfigName: String, loadBalancerName: String): String = {
+  def createAutoScalingGroup(settings: Settings, id: String, launchConfigName: String, loadBalancerName: String): String = {
     val name = getAutoScalingGroupName(id)
     try {
+      Logger.info(s"AWS AutoScalingGroup createAutoScalingGroup id[$id]")
       client.createAutoScalingGroup(
         new CreateAutoScalingGroupRequest()
           .withAutoScalingGroupName(name)
@@ -89,7 +93,7 @@ case class AutoScalingGroup(
   }
 
   def lcUserData(id: String): String = {
-    val ecsClusterName = eC2ContainerService.getClusterName(id)
+    val ecsClusterName = EC2ContainerService.getClusterName(id)
 
     return Seq(
       """#!/bin/bash""",

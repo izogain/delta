@@ -8,20 +8,30 @@ import com.amazonaws.services.elasticloadbalancing.model._
 import collection.JavaConverters._
 
 import play.api.libs.concurrent.Akka
+import play.api.Logger
 import play.api.Play.current
 import scala.concurrent.Future
 
-case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClient) extends Credentials {
-
-  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
-
-  private[this] lazy val client = new AmazonElasticLoadBalancingClient(awsCredentials)
+object ElasticLoadBalancer {
 
   def getLoadBalancerName(projectId: String): String = s"$projectId-ecs-lb"
 
+}
+
+@javax.inject.Singleton
+case class ElasticLoadBalancer @javax.inject.Inject() (
+  credentials: Credentials,
+  registryClient: RegistryClient
+) {
+
+  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
+
+  private[this] lazy val client = new AmazonElasticLoadBalancingClient(credentials.aws)
+
   def getHealthyInstances(projectId: String): Future[Seq[String]] = {
-    val loadBalancerName = getLoadBalancerName(projectId)
+    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
     Future {
+      Logger.info(s"AWS ElasticLoadBalancer describeInstanceHealth projectId[$projectId]")
       client.describeInstanceHealth(
         new DescribeInstanceHealthRequest()
         .withLoadBalancerName(loadBalancerName)
@@ -29,10 +39,10 @@ case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClien
     }
   }
 
-  def createLoadBalancerAndHealthCheck(projectId: String): Future[String] = {
+  def createLoadBalancerAndHealthCheck(settings: Settings, projectId: String): Future[String] = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
-    val name = getLoadBalancerName(projectId)
+    val name = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
     registryClient.getById(projectId).map {
       case None => sys.error(s"project[$projectId] was not found in the registry")
@@ -42,7 +52,7 @@ case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClien
         }
         val externalPort: Long = registryPorts.external
 
-        createLoadBalancer(name, externalPort)
+        createLoadBalancer(settings, name, externalPort)
         configureHealthCheck(name, externalPort)
 
         name
@@ -50,7 +60,7 @@ case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClien
     }
   }
 
-  def createLoadBalancer(name: String, externalPort: Long) {
+  def createLoadBalancer(settings: Settings, name: String, externalPort: Long) {
     val elbListeners = Seq(
       new Listener()
         .withProtocol("HTTP")
@@ -60,6 +70,7 @@ case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClien
     )
 
     try {
+      Logger.info(s"AWS ElasticLoadBalancer createLoadBalancer name[$name]")
       val result = client.createLoadBalancer(
         new CreateLoadBalancerRequest()
           .withLoadBalancerName(name)
@@ -75,6 +86,7 @@ case class ElasticLoadBalancer(settings: Settings, registryClient: RegistryClien
 
   def configureHealthCheck(name: String, externalPort: Long) {
     try {
+      Logger.info(s"AWS ElasticLoadBalancer configureHealthCheck name[$name]")
       client.configureHealthCheck(
         new ConfigureHealthCheckRequest()
           .withLoadBalancerName(name)

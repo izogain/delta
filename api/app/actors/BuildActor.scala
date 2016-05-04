@@ -48,6 +48,9 @@ class BuildActor @javax.inject.Inject() (
   registryClient: RegistryClient,
   config: Config,
   system: ActorSystem,
+  asg: AutoScalingGroup,
+  ecs: EC2ContainerService,
+  elb: ElasticLoadBalancer,
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
@@ -59,15 +62,6 @@ class BuildActor @javax.inject.Inject() (
   }.getOrElse {
     sys.error("Must have build before getting settings for auto scaling group")
   }
-
-  private[this] lazy val ecs = EC2ContainerService(awsSettings, registryClient)
-  private[this] lazy val elb = ElasticLoadBalancer(awsSettings, registryClient)
-  private[this] lazy val asg = AutoScalingGroup(
-    awsSettings,
-    ecs,
-    dockerHubToken = config.requiredString("dockerhub.delta.auth.token"),
-    dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
-  )
 
   private[this] def awsSettingsForBuild(build: Build): Settings = {
     // TODO: Find place for this configuration. Probably in UI
@@ -176,13 +170,13 @@ class BuildActor @javax.inject.Inject() (
     if (diff.lastInstances > diff.desiredInstances) {
       val instances = diff.lastInstances - diff.desiredInstances
       log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
+        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
       }
 
     } else if (diff.lastInstances < diff.desiredInstances) {
       val instances = diff.desiredInstances - diff.lastInstances
       log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(imageName, imageVersion, projectName, diff.desiredInstances)
+        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
 
@@ -255,19 +249,19 @@ class BuildActor @javax.inject.Inject() (
 
   def createLaunchConfiguration(build: Build): Future[String] = {
     log.runSync("EC2 auto scaling group launch configuration") {
-      asg.createLaunchConfiguration(BuildNames.projectName(build))
+      asg.createLaunchConfiguration(awsSettings, BuildNames.projectName(build))
     }
   }
 
   def createLoadBalancer(build: Build): Future[String] = {
     log.runAsync("EC2 load balancer") {
-      elb.createLoadBalancerAndHealthCheck(BuildNames.projectName(build))
+      elb.createLoadBalancerAndHealthCheck(awsSettings, BuildNames.projectName(build))
     }
   }
 
   def createAutoScalingGroup(build: Build, launchConfigName: String, loadBalancerName: String): Future[String] = {
     log.runSync("EC2 auto scaling group") {
-      asg.createAutoScalingGroup(BuildNames.projectName(build), launchConfigName, loadBalancerName)
+      asg.createAutoScalingGroup(awsSettings, BuildNames.projectName(build), launchConfigName, loadBalancerName)
     }
   }
 
