@@ -19,6 +19,7 @@ import scala.concurrent.Future
 object BuildActor {
 
   val CheckLastStateIntervalSeconds = 45
+  val ScaleIntervalSeconds = 5
 
   trait Message
 
@@ -48,6 +49,7 @@ class BuildActor @javax.inject.Inject() (
   registryClient: RegistryClient,
   config: Config,
   system: ActorSystem,
+  buildLastStatesWriteDao: BuildLastStatesWriteDao,
   asg: AutoScalingGroup,
   ecs: EC2ContainerService,
   elb: ElasticLoadBalancer,
@@ -72,7 +74,7 @@ class BuildActor @javax.inject.Inject() (
   }
 
   def receive = {
-    // case msg @ BuildActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+
     case msg @ BuildActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setBuildId(buildId)
 
@@ -167,48 +169,48 @@ class BuildActor @javax.inject.Inject() (
     val imageName = BuildNames.dockerImageName(docker, build)
     val imageVersion = diff.versionName
 
-    if (diff.lastInstances > diff.desiredInstances) {
-      val instances = diff.lastInstances - diff.desiredInstances
-      log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
+    if (diff.lastInstances == diff.desiredInstances) {
+      // Nothing left to scale
+
+    } else {
+      if (diff.lastInstances > diff.desiredInstances) {
+        val instances = diff.lastInstances - diff.desiredInstances
+        log.runAsync(s"Bring down ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+          ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
+        }
+
+      } else if (diff.lastInstances < diff.desiredInstances) {
+        val instances = diff.desiredInstances - diff.lastInstances
+        log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
+          ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
+        }
       }
 
-    } else if (diff.lastInstances < diff.desiredInstances) {
-      val instances = diff.desiredInstances - diff.lastInstances
-      log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
-        ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
-      }
+      monitorScale(build, imageName, imageVersion, new DateTime())
     }
-
-    monitorScale(build, imageName, imageVersion, new DateTime())
   }
 
   def monitorScale(build: Build, imageName: String, imageVersion: String, start: DateTime) {
-    captureLastState(build)
-
     for {
       ecsServiceOpt <- getServiceInfo(imageName, imageVersion, build)
     } yield {
-      ecsServiceOpt match {
-        case None => {
-          sys.error(s"ECS Service not found for build $build.id, image $imageName, version $imageVersion")
-        }
+      val service = ecsServiceOpt.getOrElse {
+        sys.error(s"ECS Service not found for build $build.id, image $imageName, version $imageVersion")
+      }
 
-        case Some(service) => {
-          val summary = ecs.summary(service)
-          val intervalSeconds = 5
+      val summary = ecs.summary(service)
 
-          if (service.getRunningCount == service.getDesiredCount) {
-            log.completed(s"${imageName}:${imageVersion} $summary")
-          } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
-            log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
-          } else {
-            log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in $intervalSeconds seconds. $summary")
+      if (service.getRunningCount == service.getDesiredCount) {
+        log.completed(s"${imageName}:${imageVersion} $summary")
 
-            system.scheduler.scheduleOnce(Duration(intervalSeconds, "seconds")) {
-              self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
-            }
-          }
+      } else if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
+        log.error(s"Timeout after $TimeoutSeconds seconds. Failed to scale ${imageName}:${imageVersion}. $summary")
+
+      } else {
+        log.checkpoint(s"Waiting for ${imageName}:${imageVersion}. Will recheck in ${BuildActor.ScaleIntervalSeconds} seconds. $summary")
+
+        system.scheduler.scheduleOnce(Duration(BuildActor.ScaleIntervalSeconds, "seconds")) {
+          self ! BuildActor.Messages.MonitorScale(imageName, imageVersion, start)
         }
       }
     }
@@ -231,13 +233,15 @@ class BuildActor @javax.inject.Inject() (
   }
 
   def captureLastState(build: Build): Future[String] = {
-    ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
-      play.api.Play.current.injector.instanceOf[BuildLastStatesWriteDao].upsert(
-        UsersDao.systemUser,
-        build,
-        StateForm(versions = versions)
-      )
-      StateFormatter.label(versions)
+    log.runAsync("captureLastState") {
+      ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
+        buildLastStatesWriteDao.upsert(
+          UsersDao.systemUser,
+          build,
+          StateForm(versions = versions)
+        )
+        StateFormatter.label(versions)
+      }
     }
   }
 
