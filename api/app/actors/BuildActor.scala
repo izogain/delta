@@ -71,7 +71,7 @@ class BuildActor @javax.inject.Inject() (
 
   private[this] def awsSettingsForBuild(build: Build): Settings = {
     // TODO: Find place for this configuration. Probably in UI
-    build.project.name == "harmonization" match {
+    build.project.name == "classification" match {
       case false => InstanceTypes.T2Micro
       case true => InstanceTypes.T2Medium
     }
