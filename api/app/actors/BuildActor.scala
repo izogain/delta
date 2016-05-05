@@ -175,22 +175,6 @@ class BuildActor @javax.inject.Inject() (
     }
   }
 
-  def isServiceHealthy(imageName: String, imageVersion: String, build: Build): Future[Boolean] = {
-    log.runAsync(s"Check service health of image: ${imageName}, version: ${imageVersion}") {
-      for {
-        serviceInstances <- ecs.getServiceInstances(imageName, imageVersion, BuildNames.projectName(build))
-        healthyInstances <- elb.getHealthyInstances(BuildNames.projectName(build))
-      } yield {
-        val result = !serviceInstances.isEmpty && serviceInstances.forall(healthyInstances.contains(_))
-        val projectName = BuildNames.projectName(build)
-        Logger.info(s"isServiceHealthy($imageName, $imageVersion, $projectName ==> $result")
-        Logger.info(s"  - $projectName: healthyInstances: ${healthyInstances.sorted}")
-        Logger.info(s"  - $projectName: serviceInstances: ${serviceInstances.sorted}")
-        result
-      }
-    }
-  }
-
   def captureLastState(build: Build): Future[String] = {
     Logger.info(s"BuildActor[$buildId] captureLastState this.id[$this]")
     log.runAsync("captureLastState") {

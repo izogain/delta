@@ -28,15 +28,12 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
 
   private[this] lazy val client = new AmazonElasticLoadBalancingClient(credentials.aws)
 
-  def getHealthyInstances(projectId: String): Future[Seq[String]] = {
+  def getHealthyInstances(projectId: String): Seq[String] = {
     val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
-    Future {
-      Logger.info(s"AWS ElasticLoadBalancer describeInstanceHealth projectId[$projectId]")
-      client.describeInstanceHealth(
-        new DescribeInstanceHealthRequest()
-        .withLoadBalancerName(loadBalancerName)
-      ).getInstanceStates.asScala.filter(_.getState == "InService").map(_.getInstanceId)
-    }
+    Logger.info(s"AWS ElasticLoadBalancer describeInstanceHealth projectId[$projectId]")
+    client.describeInstanceHealth(
+      new DescribeInstanceHealthRequest().withLoadBalancerName(loadBalancerName)
+    ).getInstanceStates.asScala.filter(_.getState == "InService").map(_.getInstanceId)
   }
 
   def createLoadBalancerAndHealthCheck(settings: Settings, projectId: String): Future[String] = {

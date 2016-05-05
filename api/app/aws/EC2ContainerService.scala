@@ -31,7 +31,8 @@ object EC2ContainerService {
 @javax.inject.Singleton
 case class EC2ContainerService @javax.inject.Inject() (
   credentials: Credentials,
-  registryClient: RegistryClient
+  registryClient: RegistryClient,
+  elb: ElasticLoadBalancer
 ) {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
@@ -176,7 +177,6 @@ case class EC2ContainerService @javax.inject.Inject() (
     Future {
       val cluster = EC2ContainerService.getClusterName(projectId)
 
-      // TODO: How to make more functional?
       var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
       var hasMore: Boolean = true
       var nextToken: String = null // null nextToken gets the first page
@@ -220,7 +220,34 @@ case class EC2ContainerService @javax.inject.Inject() (
             val image = Util.parseImage(containerDef.getImage()).getOrElse {
               sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
             }
-            Version(image.version, service.getRunningCount.toInt)
+
+            /**
+              * service.runningCount is what ECS thinks is running but we need to verify that the actual EC2 instances are healthy
+              * Steps:
+              * 1. Get the ECS container instances for this service
+              * 2. Check the ELB if these instances are actually healthy from the ELB
+              */
+            Logger.info(s"AWS EC2ContainerService describeTasks - get ECS container instances - projectId[$projectId] service[$serviceArn]")
+            val taskArns = client.listTasks(new ListTasksRequest().withCluster(cluster).withServiceName(serviceArn)).getTaskArns
+            val serviceContainerInstances = client.describeTasks(
+              new DescribeTasksRequest().withCluster(cluster).withTasks(taskArns)
+            ).getTasks.asScala.map(_.getContainerInstanceArn).asJava
+
+            Logger.info(s"AWS EC2ContainerService describeContainerInstances - get ec2 instance IDs for - projectId[$projectId] service[$serviceArn]")
+            val serviceInstances = client.describeContainerInstances(
+              new DescribeContainerInstancesRequest().withCluster(cluster).withContainerInstances(serviceContainerInstances)
+            ).getContainerInstances().asScala.map{containerInstance => containerInstance.getEc2InstanceId }
+
+            Logger.info(s"AWS ELB getHealthyInstances - get ec2 instance IDs for - projectId[$projectId] service[$serviceArn]")
+            val elbInstances = elb.getHealthyInstances(projectId)
+
+            // healthy instances = count of service instances actually in the elb which are healthy
+            val healthyInstances = serviceInstances.filter(elbInstances.contains(_))
+
+            Logger.info(s"  - $projectId: elbInstances: ${elbInstances.sorted}")
+            Logger.info(s"  - $projectId: serviceInstances: ${serviceInstances.sorted}")
+            Logger.info(s"  - $projectId: healthyInstances: ${healthyInstances.sorted}")
+            Version(image.version, healthyInstances.size)
           }
         }
       }
