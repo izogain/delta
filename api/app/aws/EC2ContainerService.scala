@@ -173,34 +173,40 @@ case class EC2ContainerService @javax.inject.Inject() (
     }
   }
 
+  /**
+    * Wrapper class that will call fetch healthy instances on first
+    * call to instances or contains, caching result thereafter.
+    */
+  private[this] case class ElbHealthyInstances(projectId: String) {
+
+    private[this] var initialized = false
+    private[this] var instances: Seq[String] = Nil
+
+    def instances(): Seq[String] = {
+      this.synchronized {
+        if (!initialized) {
+          instances = elb.getHealthyInstances(projectId)
+          initialized = true
+        }
+        instances
+      }
+    }
+
+    def contains(name: String): Boolean = {
+      instances().contains(name)
+    }
+
+  }
+
   def getClusterInfo(projectId: String): Future[Seq[Version]] = {
     Future {
+      val elbHealthyInstances = ElbHealthyInstances(projectId)
+
       val cluster = EC2ContainerService.getClusterName(projectId)
+      val serviceArns = getServiceArns(cluster)
+      Logger.info(s"AWS EC2ContainerService serviceArns[${serviceArns.mkString(", ")}]")
 
-      var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
-      var hasMore: Boolean = true
-      var nextToken: String = null // null nextToken gets the first page
-
-      while (hasMore) {
-        Logger.info(s"AWS EC2ContainerService listServices projectId[$projectId] nextToken[$nextToken]")
-        var result = client.listServices(
-          new ListServicesRequest()
-          .withCluster(cluster)
-          .withNextToken(nextToken)
-        )
-        serviceArns += result.getServiceArns.asScala.toList
-
-        Option(result.getNextToken) match {
-          case Some(token) => {
-            nextToken = token
-          }
-          case None => {
-            hasMore = false
-          }
-        }
-      }
-
-      serviceArns.flatten.distinct.map { serviceArn =>
+      serviceArns.map { serviceArn =>
         Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] serviceArn[$serviceArn]")
         val service = client.describeServices(
           new DescribeServicesRequest()
@@ -210,12 +216,15 @@ case class EC2ContainerService @javax.inject.Inject() (
           sys.error(s"Service ARN $serviceArn does not exist for cluster $cluster")
         }
 
-        Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] serviceArn[$serviceArn]")
+        Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] taskDefinition[${service.getTaskDefinition}]")
         client.describeTaskDefinition(
           new DescribeTaskDefinitionRequest()
           .withTaskDefinition(service.getTaskDefinition)
         ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
-          case None => sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
+          case None => {
+            sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
+          }
+
           case Some(containerDef) => {
             val image = Util.parseImage(containerDef.getImage()).getOrElse {
               sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
@@ -242,18 +251,15 @@ case class EC2ContainerService @javax.inject.Inject() (
                   }
 
                   case serviceContainerInstances => {
-                    Logger.info(s"AWS EC2ContainerService describeContainerInstances - get ec2 instance IDs for - projectId[$projectId] service[$serviceArn]")
+                    Logger.info(s"AWS EC2ContainerService describeContainerInstances - get ec2 instance IDs for - projectId[$projectId] serviceContainerInstances[${serviceContainerInstances.mkString(", ")}]")
                     val serviceInstances = client.describeContainerInstances(
                       new DescribeContainerInstancesRequest().withCluster(cluster).withContainerInstances(serviceContainerInstances.asJava)
-                    ).getContainerInstances().asScala.map{containerInstance => containerInstance.getEc2InstanceId }
-
-                    Logger.info(s"AWS ELB getHealthyInstances - get ec2 instance IDs for - projectId[$projectId] service[$serviceArn]")
-                    val elbInstances = elb.getHealthyInstances(projectId)
+                    ).getContainerInstances().asScala.map(_.getEc2InstanceId)
 
                     // healthy instances = count of service instances actually in the elb which are healthy
-                    val healthyInstances = serviceInstances.filter(elbInstances.contains(_))
+                    val healthyInstances = serviceInstances.filter(elbHealthyInstances.contains(_))
 
-                    Logger.info(s"  - $projectId: elbInstances: ${elbInstances.sorted}")
+                    Logger.info(s"  - $projectId: elbInstances: ${elbHealthyInstances.instances().sorted}")
                     Logger.info(s"  - $projectId: serviceInstances: ${serviceInstances.sorted}")
                     Logger.info(s"  - $projectId: healthyInstances: ${healthyInstances.sorted}")
                     Version(image.version, healthyInstances.size)
@@ -265,6 +271,32 @@ case class EC2ContainerService @javax.inject.Inject() (
         }
       }
     }
+  }
+
+  private[this] def getServiceArns(cluster: String): Seq[String] = {
+    var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
+    var hasMore = true
+    var nextToken: String = null // null nextToken gets the first page
+
+    while (hasMore) {
+      Logger.info(s"AWS EC2ContainerService listServices cluster[$cluster] nextToken[$nextToken]")
+      var result = client.listServices(
+        new ListServicesRequest()
+          .withCluster(cluster)
+          .withNextToken(nextToken)
+      )
+      serviceArns += result.getServiceArns.asScala.toList
+
+      Option(result.getNextToken) match {
+        case Some(token) => {
+          nextToken = token
+        }
+        case None => {
+          hasMore = false
+        }
+      }
+    }
+    serviceArns.flatten.distinct
   }
 
   def getServiceInfo(cluster: String, service: String): Option[Service] = {
