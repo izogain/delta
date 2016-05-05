@@ -80,12 +80,12 @@ case class EC2ContainerService @javax.inject.Inject() (
               case None => // do nothing
               case Some(event) => {
                 // if there are no instances running, desired count is zero,
-                // and has been 2 weeks since something happened with the service
+                // and has been 1 day since something happened with the service
                 // let's just delete the service
                 val eventDateTime = new DateTime(event.getCreatedAt)
-                val twoWeeksAgo = new DateTime().minusWeeks(2)
+                val oneDayAgo = new DateTime().minusDays(1)
 
-                if (service.getDesiredCount == 0 && service.getRunningCount == 0 && eventDateTime.compareTo(twoWeeksAgo) < 0) {
+                if (service.getDesiredCount == 0 && service.getRunningCount == 0 && eventDateTime.compareTo(oneDayAgo) < 0) {
                   Logger.info(s"AWS EC2ContainerService deleteService projectId[$projectId]")
                   client.deleteService(new DeleteServiceRequest().withCluster(cluster).withService(service.getServiceName))
                 }
