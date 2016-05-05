@@ -126,7 +126,7 @@
           <td>
             @latestTag.map { tag =>
               @tag.name
-              @if(tag.hash == masterHash) {
+              @if(Some(tag.hash) == masterHash) {
                 [master]
               } else {
                 [@io.flow.delta.lib.Text.truncate(tag.hash, 10)]
