@@ -30,6 +30,15 @@ class StateFormatterSpec extends Specification {
     ) must beEqualTo("0.0.1: 4 instances, 0.0.2: 1 instance, 0.0.3: 3 instances, 1.2.1: 2 instances")
   }
 
+  "strips versions w/ no instances" in {
+    StateFormatter.label(
+      Seq(
+        Version("0.0.2", 0),
+        Version("1.2.1", 1)
+      )
+    ) must beEqualTo("1.2.1: 1 instance")
+  }
+
   "non semver at end" in {
     StateFormatter.label(
       Seq(

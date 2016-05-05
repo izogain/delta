@@ -12,6 +12,7 @@ object StateFormatter {
           case Some(tag) => s"1:${tag.sortKey}"
         }
       }.
+      filter { v => v.instances > 0 }.
       map { v =>
         val label = Text.pluralize(v.instances, "instance", "instances")
         s"${v.name}: $label"
