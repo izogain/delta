@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import db.ProjectsDao
+import db.{BuildsDao, ProjectsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.play.actors.{ErrorHandler, Scheduler}
 import io.flow.postgresql.{Authorization, Pager}
@@ -45,6 +45,9 @@ object MainActor {
     case class ImageCreated(buildId: String, id: String, version: String)
 
     case class ConfigureAWS(buildId: String)
+
+    case class UpdateContainerAgent(buildId: String)
+    case class RemoveOldServices(buildId: String)
   }
 }
 
@@ -70,10 +73,19 @@ class MainActor @javax.inject.Inject() (
   private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
-  scheduleRecurring(system, "main.actor.update.container.seconds") {
-    buildActors.map { case (_, ref) =>
-      ref !  BuildActor.Messages.UpdateContainerAgent
-      ref !  BuildActor.Messages.RemoveOldServices
+  scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
+    Pager.create { offset =>
+      BuildsDao.findAll(Authorization.All, offset = offset)
+    }.foreach { build =>
+      self ! MainActor.Messages.UpdateContainerAgent(build.id)
+    }
+  }
+
+  scheduleRecurring(system, "main.actor.remove.old.services.seconds") {
+    Pager.create { offset =>
+      BuildsDao.findAll(Authorization.All, offset = offset)
+    }.foreach { build =>
+      self ! MainActor.Messages.RemoveOldServices(build.id)
     }
   }
 
@@ -179,6 +191,14 @@ class MainActor @javax.inject.Inject() (
 
     case msg @ MainActor.Messages.ConfigureAWS(buildId) => withVerboseErrorHandler(msg) {
       upsertBuildActor(buildId) ! BuildActor.Messages.ConfigureAWS
+    }
+
+    case msg @ MainActor.Messages.RemoveOldServices(buildId) => withVerboseErrorHandler(msg) {
+      upsertBuildActor(buildId) ! BuildActor.Messages.RemoveOldServices
+    }
+
+    case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withVerboseErrorHandler(msg) {
+      upsertBuildActor(buildId) ! BuildActor.Messages.UpdateContainerAgent
     }
 
     case msg: Any => logUnhandledMessage(msg)
