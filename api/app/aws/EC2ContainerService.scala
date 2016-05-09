@@ -292,14 +292,18 @@ case class EC2ContainerService @javax.inject.Inject() (
   private[this] def getServicesInfo(cluster: String, serviceNames: Seq[String]): Seq[Service] = {
     // describe services 10 at a time
     var services = scala.collection.mutable.ListBuffer.empty[List[Service]]
-    var servicesToDescribe = serviceNames.take(10)
+    val batchSize = 10
+    var dropped = 0
+    var servicesToDescribe = serviceNames.take(batchSize)
 
     while (!servicesToDescribe.isEmpty) {
       Logger.info(s"AWS EC2ContainerService getServicesInfo cluster[$cluster], services[${servicesToDescribe.mkString(", ")}]")
       services += client.describeServices(
         new DescribeServicesRequest().withCluster(cluster).withServices(servicesToDescribe.asJava)
       ).getServices().asScala.toList
-      servicesToDescribe = serviceNames.drop(10).take(10)
+
+      dropped += batchSize
+      servicesToDescribe = serviceNames.drop(dropped).take(batchSize)
     }
 
     services.flatten.distinct
