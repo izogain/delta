@@ -21,12 +21,13 @@ object ElasticLoadBalancer {
 @javax.inject.Singleton
 case class ElasticLoadBalancer @javax.inject.Inject() (
   credentials: Credentials,
+  configuration: Configuration,
   registryClient: RegistryClient
 ) {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
-  private[this] lazy val client = new AmazonElasticLoadBalancingClient(credentials.aws)
+  private[this] lazy val client = new AmazonElasticLoadBalancingClient(credentials.aws, configuration.aws)
 
   def getHealthyInstances(projectId: String): Seq[String] = {
     val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)

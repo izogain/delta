@@ -12,13 +12,14 @@ import collection.JavaConverters._
 @javax.inject.Singleton
 class AutoScalingGroup @javax.inject.Inject() (
   config: Config,
-  credentials: Credentials
+  credentials: Credentials,
+  configuration: Configuration
 ) {
 
   private[this] lazy val dockerHubToken = config.requiredString("dockerhub.delta.auth.token")
   private[this] lazy val dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
 
-  lazy val client = new AmazonAutoScalingClient(credentials.aws)
+  lazy val client = new AmazonAutoScalingClient(credentials.aws, configuration.aws)
   lazy val encoder = new BASE64Encoder()
 
   /**
