@@ -8,6 +8,7 @@ class ActorsModule extends AbstractModule with AkkaGuiceSupport {
     bindActorFactory[BuildActor, BuildActor.Factory]
     bindActorFactory[DockerHubActor, DockerHubActor.Factory]
     bindActorFactory[ProjectActor, ProjectActor.Factory]
+    bindActorFactory[DockerHubTokenActor, DockerHubTokenActor.Factory]
     bindActor[MainActor]("main-actor")
   }
 }

@@ -55,6 +55,7 @@ object MainActor {
 class MainActor @javax.inject.Inject() (
   buildFactory: BuildActor.Factory,
   dockerHubFactory: DockerHubActor.Factory,
+  dockerHubTokenFactory: DockerHubTokenActor.Factory,
   projectFactory: ProjectActor.Factory,
   override val config: io.flow.play.util.Config,
   system: ActorSystem
@@ -65,7 +66,7 @@ class MainActor @javax.inject.Inject() (
   private[this] val name = "main"
 
   private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
-  private[this] val dockerHubTokenActor = system.actorOf(Props[DockerHubTokenActor], name = s"$name:DockerHubActor")
+  private[this] val dockerHubTokenActor = injectedChild(dockerHubTokenFactory(), name = s"main:DockerHubActor")
 
   private[this] val buildActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val buildSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()

@@ -29,7 +29,7 @@ class DockerHubToken @javax.inject.Inject() (
     * If yes, then load to memory
     * If no, then create one and wait
     */
-  private[this] val orgTokenMap = {
+  private[this] lazy val orgTokenMap = {
     val map = scala.collection.mutable.HashMap.empty[String, String]
     db.OrganizationsDao.findAll(auth = auth).foreach { organization =>
       val token = db.VariablesDao.findByOrganizationAndKey(auth = auth, organization = organization.id, key = tokenKey) match {
@@ -101,6 +101,10 @@ class DockerHubToken @javax.inject.Inject() (
 object DockerHubTokenActor {
   object Messages {
     case object Refresh
+  }
+
+  trait Factory {
+    def apply(): Actor
   }
 }
 
