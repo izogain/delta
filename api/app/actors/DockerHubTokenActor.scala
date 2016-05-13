@@ -33,7 +33,12 @@ class DockerHubToken @javax.inject.Inject() (
     val map = scala.collection.mutable.HashMap.empty[String, String]
     db.OrganizationsDao.findAll(auth = auth).foreach { organization =>
       val token = db.VariablesDao.findByOrganizationAndKey(auth = auth, organization = organization.id, key = tokenKey) match {
-        case None => generate
+        case None => {
+          val jwt = generate
+          val form = VariableForm(organization.id, tokenKey, jwt)
+          db.VariablesDao.upsert(Authorization.All, db.UsersDao.systemUser, form)
+          jwt
+        }
         case Some(variable) => variable.value
       }
       map += (organization.id -> token)
