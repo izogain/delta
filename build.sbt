@@ -41,9 +41,9 @@ lazy val api = project
       jdbc,
       "io.flow" %% "lib-postgresql" % "0.0.30",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
-      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.76",
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.76",
-      "com.amazonaws" % "aws-java-sdk-autoscaling" % "1.10.76",
+      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.77",
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.77",
+      "com.amazonaws" % "aws-java-sdk-autoscaling" % "1.10.77",
       "org.postgresql" % "postgresql" % "9.4.1208",
       "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
@@ -65,7 +65,7 @@ lazy val www = project
       "org.webjars" %% "webjars-play" % "2.5.0",
       "org.webjars" % "bootstrap" % "3.3.6",
       "org.webjars.bower" % "bootstrap-social" % "5.0.0",
-      "org.webjars" % "font-awesome" % "4.6.1",
+      "org.webjars" % "font-awesome" % "4.6.2",
       "org.webjars" % "jquery" % "2.1.4"
     )
   )
