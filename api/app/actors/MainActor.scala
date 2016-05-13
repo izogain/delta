@@ -65,6 +65,7 @@ class MainActor @javax.inject.Inject() (
   private[this] val name = "main"
 
   private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
+  private[this] val dockerHubTokenActor = system.actorOf(Props[DockerHubTokenActor], name = s"$name:DockerHubActor")
 
   private[this] val buildActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val buildSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
@@ -72,6 +73,10 @@ class MainActor @javax.inject.Inject() (
   private[this] val projectActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
+
+  scheduleRecurring(system, "main.actor.update.jwt.token.seconds") {
+    dockerHubTokenActor ! DockerHubTokenActor.Messages.Refresh
+  }
 
   scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
     Pager.create { offset =>
@@ -107,7 +112,6 @@ class MainActor @javax.inject.Inject() (
   }
 
   def receive = akka.event.LoggingReceive {
-
     case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
       upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
     }

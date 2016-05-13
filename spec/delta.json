@@ -399,6 +399,24 @@
         { "name": "desired", "type": "state" },
         { "name": "last", "type": "state" }
       ]
+    },
+
+    "variable": {
+      "description": "Configuration variable of an organization",
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "organization", "type": "organization_summary" },
+        { "name": "key", "type": "string" },
+        { "name": "value", "type": "string" }
+      ]
+    },
+
+    "variable_form": {
+      "fields": [
+        { "name": "organization", "type": "string" },
+        { "name": "key", "type": "string" },
+        { "name": "value", "type": "string" }
+      ]
     }
 
   },

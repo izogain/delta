@@ -1,23 +1,20 @@
 package io.flow.delta.actors
 
+import akka.actor.{Actor, ActorSystem}
 import db.{ImagesDao, ImagesWriteDao, UsersDao}
 import io.flow.delta.lib.{BuildNames, Semver}
 import io.flow.delta.v0.models._
-import io.flow.docker.registry.v0.models.{BuildTag => DockerBuildTag, BuildForm => DockerBuildForm}
+import io.flow.docker.registry.v0.models.{BuildForm => DockerBuildForm, BuildTag => DockerBuildTag}
 import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.ErrorHandler
-import io.flow.play.util.DefaultConfig
-import akka.actor.Actor
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Akka
 import play.api.Logger
+
 import scala.concurrent.duration._
-import play.api.Play.current
+
 import scala.util.{Failure, Success, Try}
 
 object DockerHubActor {
-
-  lazy val SystemUser = db.UsersDao.systemUser
 
   trait Message
 
@@ -25,12 +22,12 @@ object DockerHubActor {
 
     /**
       * Message to start the build the docker image for the specified
-      * version. Note the current implementation does not actually
+      * version. Note the current implementation does not actually!
       * trigger a build - just watches docker until the build
       * completed - thus assuming an automated build in docker hub.
       */
     case class Build(version: String) extends Message
-
+    
     case class Monitor(version: String, start: DateTime) extends Message
 
     case object Setup extends Message
@@ -44,25 +41,19 @@ object DockerHubActor {
 
 class DockerHubActor @javax.inject.Inject() (
   imagesWriteDao: ImagesWriteDao,
+  system: ActorSystem,
+  dockerHubToken: DockerHubToken,
   @com.google.inject.assistedinject.Assisted buildId: String
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
-  private[this] implicit val ec = Akka.system.dispatchers.lookup("dockerhub-actor-context")
-
-  private[this] lazy val v2client = {
-    val config = play.api.Play.current.injector.instanceOf[DefaultConfig]
-    new Client(
-      defaultHeaders = Seq(
-        ("Authorization", s"Bearer ${config.requiredString("docker.jwt.token")}")
-      )
-    )
-  }
+  private[this] implicit val ec = system.dispatchers.lookup("dockerhub-actor-context")
+  
+  private[this] val client = new Client()
 
   private[this] val IntervalSeconds = 30
   private[this] val TimeoutSeconds = 1500
 
   def receive = {
-
     case msg @ DockerHubActor.Messages.Setup => withVerboseErrorHandler(msg) {
       setBuildId(buildId)
     }
@@ -71,8 +62,10 @@ class DockerHubActor @javax.inject.Inject() (
       withOrganization { org =>
         withProject { project =>
           withBuild { build =>
-            v2client.DockerRepositories.postAutobuild(
-              org.docker.organization, BuildNames.projectName(build), createBuildForm(org.docker, project.scms, project.uri, build)
+            client.DockerRepositories.postAutobuild(
+              org.docker.organization,
+              BuildNames.projectName(build), createBuildForm(org.docker, project.scms, project.uri, build),
+              requestHeaders = requestHeaders(org.id)
             ).map { dockerHubBuild =>
               // TODO: Log the docker hub URL and not the VCS url
               log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
@@ -118,7 +111,7 @@ class DockerHubActor @javax.inject.Inject() (
 
               } else {
                 log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
-                Akka.system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
+                system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
                   self ! DockerHubActor.Messages.Monitor(version, start)
                 }
               }
@@ -129,11 +122,20 @@ class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg: Any => logUnhandledMessage(msg)
- }
+  }
 
+  private[this] def requestHeaders(organization: String) = {
+    Seq(
+      ("Authorization", s"Bearer ${dockerHubToken.get(organization)}")
+    )
+  }
 
   def syncImages(docker: Docker, build: Build) {
-    v2client.V2Tags.get(docker.organization, BuildNames.projectName(build)).map { tags =>
+    client.V2Tags.get(
+      docker.organization,
+      BuildNames.projectName(build),
+      requestHeaders = requestHeaders(build.project.organization.id)
+    ).map { tags =>
       tags.results.filter(t => Semver.isSemver(t.name)).foreach { tag =>
 
         Try(

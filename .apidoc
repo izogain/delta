@@ -9,6 +9,10 @@ code:
       version: latest
       generators:
         play_2_4_client: generated/app
+    docker-hub:
+      version: latest
+      generators:
+        play_2_4_client: generated/app
     github:
       version: latest
       generators:
