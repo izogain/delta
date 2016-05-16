@@ -9,6 +9,8 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
+val awsVersion = "1.11.0"
+
 lazy val generated = project
   .in(file("generated"))
   .enablePlugins(PlayScala)
@@ -41,9 +43,9 @@ lazy val api = project
       jdbc,
       "io.flow" %% "lib-postgresql" % "0.0.30",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
-      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.77",
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.77",
-      "com.amazonaws" % "aws-java-sdk-autoscaling" % "1.10.77",
+      "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
       "org.postgresql" % "postgresql" % "9.4.1208",
       "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
