@@ -6,6 +6,9 @@ package io.flow.delta.aws
 **/
 trait Settings {
 
+  // SSL settings for ELB listeners
+  val elbSslCertificateId = "arn:aws:acm:us-east-1:479720515435:certificate/6ed9a4a3-5d83-4cae-8506-ea0b379ae793"
+
   // Subnets for the load balancer and autoscaling group instances
   // Use these, per Kunal @ AWS
   // subnet-3538f243 = production-dmz-us-east-1a
