@@ -1,10 +1,9 @@
 package io.flow.delta.www.lib
 
-
 import io.flow.play.util
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.{Authorization, Client}
-import io.flow.token.v0.{Healthchecks, Tokens}
+import io.flow.token.v0.Tokens
 
 trait DeltaClientProvider extends io.flow.token.v0.interfaces.Client {
 
@@ -41,8 +40,6 @@ class DefaultDeltaClientProvider @javax.inject.Inject() (
   }
 
   override def baseUrl: String = throw new UnsupportedOperationException()
-
-  override def healthchecks: Healthchecks = throw new UnsupportedOperationException()
 
   override def tokens: Tokens = throw new UnsupportedOperationException()
 }
