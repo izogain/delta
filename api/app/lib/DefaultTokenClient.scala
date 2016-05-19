@@ -12,8 +12,6 @@ class DefaultTokenClient() extends Client {
 
   def baseUrl = throw new UnsupportedOperationException()
 
-  def healthchecks: io.flow.token.v0.Healthchecks = throw new UnsupportedOperationException()
-
   def tokens: io.flow.token.v0.Tokens = new Tokens()
 
 }
