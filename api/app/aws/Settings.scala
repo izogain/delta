@@ -39,8 +39,14 @@ trait Settings {
   // Keypair name used to SSH into EC2 instances created by the autoscaling group
   val ec2KeyName = "flow-admin"
 
-  // Launch configuration image ID. AMI instance is: Amazon Linux AMI for ECS
-  val launchConfigImageId = "ami-9886a0f2"
+  /**
+    * TODO:
+    * Figure out how to update existing Launch configurations (or create new ones),
+    * associate to the autoscaling group, and gracefully update existing instances.
+    *
+    */
+  // Launch configuration image ID. AMI instance is: Amazon Linux AMI for ECS (2016.03)
+  val launchConfigImageId = "ami-1d48ab70"
 
   // Role for the new launch configuration
   val launchConfigIamInstanceProfile = "ecsInstanceRole"
