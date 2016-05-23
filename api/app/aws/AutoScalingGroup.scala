@@ -43,12 +43,12 @@ class AutoScalingGroup @javax.inject.Inject() (
       )
   ).asJava
 
-  def getLaunchConfigurationName(id: String) = s"$id-ecs-launch-configuration"
+  def getLaunchConfigurationName(settings: Settings, id: String) = s"$id-ecs-lc-${settings.launchConfigImageId}"
 
   def getAutoScalingGroupName(id: String) = s"$id-ecs-auto-scaling-group"
 
   def createLaunchConfiguration(settings: Settings, id: String): String = {
-    val name = getLaunchConfigurationName(id)
+    val name = getLaunchConfigurationName(settings, id)
     try {
       Logger.info(s"AWS AutoScalingGroup createLaunchConfiguration id[$id]")
       client.createLaunchConfiguration(
