@@ -53,7 +53,7 @@ trait DataProject {
     dataProject.flatMap { project =>
       configsDao.findByProjectId(Authorization.All, project.id).map(_.config) match {
         case None => {
-          Logger.warn(s"Project[${project.id}] does not have a configuration")
+          Logger.info(s"Project[${project.id}] does not have a configuration")
           None
         }
 
