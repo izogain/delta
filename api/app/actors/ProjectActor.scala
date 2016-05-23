@@ -39,6 +39,7 @@ class ProjectActor @javax.inject.Inject() (
   github: Github,
   parser: Parser,
   override val configsDao: ConfigsDao,
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with ErrorHandler with DataProject with EventLog {
 
@@ -68,7 +69,7 @@ class ProjectActor @javax.inject.Inject() (
     case msg @ ProjectActor.Messages.SyncBuilds => withVerboseErrorHandler(msg) {
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
-          sender ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
+          mainActor ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
         }
       }
     }
@@ -95,7 +96,7 @@ class ProjectActor @javax.inject.Inject() (
           limit = 1
         ).headOption match {
           case Some(_) => // No-op as there is recent activity in the event log
-          case None => sender ! MainActor.Messages.ProjectSync(project.id)
+          case None => mainActor ! MainActor.Messages.ProjectSync(project.id)
         }
       }
     }
