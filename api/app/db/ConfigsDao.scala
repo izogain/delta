@@ -101,6 +101,7 @@ class ConfigsDao @javax.inject.Inject() (
     existing match {
       case None => {
         Logger.info(s"upsertIfChanged[$projectId] Setting initial configuration")
+        upsert(createdBy, projectId, newConfig)
       }
 
       case Some(ex) => {
