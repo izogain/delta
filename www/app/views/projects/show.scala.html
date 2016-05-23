@@ -147,21 +147,18 @@
   </div>
 </section>
 
-<section class="col-xs-12 col-md-6">
-  <h3 class="p2">Project Stages</h3>
-  <div class="table-responsive">
-    <table class="table table-striped">
-      <tbody>
-        @io.flow.delta.config.v0.models.ProjectStage.all.map { stage =>
-          <tr>
-            <td><strong>@stage</strong></td>
-            <td>TODO</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+  <h3 class="p2">Configuration</h3>
+  @{project.config match {
+    case io.flow.delta.config.v0.models.ConfigError(errors) => configError(errors)
+    case io.flow.delta.config.v0.models.ConfigUndefinedType(other) => configError(Seq(s"Unknown configuration error[$other]"))
+    case cfg: io.flow.delta.config.v0.models.ConfigProject => configProject(cfg)
+  }}
 </section> 
+
+@{project.config match {
+  case cfg: io.flow.delta.config.v0.models.ConfigProject => configBuilds(cfg)
+  case _ => ""
+}}
 
 <section class="col-xs-12">
   <h3>Change Events (<a href="@routes.EventsController.index(project_id = Some(project.id), event_type = Some(io.flow.delta.v0.models.EventType.Change))">View all</a>)</h3>

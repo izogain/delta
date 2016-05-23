@@ -68,6 +68,8 @@ object GithubHelper {
 
 trait Github {
 
+  private[this] val DotDeltaPath = ".delta"
+
   /**
     * Given an auth validation code, pings the github UI to access the
     * user data, upserts that user with the delta database, and
@@ -150,6 +152,15 @@ trait Github {
   ) (
     implicit ec: ExecutionContext
   ): Future[Option[String]]
+  
+  /**
+    * Fetches the specified file, if it exists, from this repo
+    */
+  def dotDeltaFile(
+    user: UserReference, owner: String, repo: String
+  ) (
+    implicit ec: ExecutionContext
+  ) = file(user, owner, repo, DotDeltaPath)
   
   /**
     * Recursively calls the github API until we either:

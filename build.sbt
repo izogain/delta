@@ -29,7 +29,7 @@ lazy val lib = project
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.yaml" % "snakeyaml" % "1.16"
+      "org.yaml" % "snakeyaml" % "1.17"
     )
   )
 
@@ -86,7 +86,7 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name <<= name("delta-" + _),
   libraryDependencies ++= Seq(
-    "io.flow" %% "lib-play" % "0.1.20",
+    "io.flow" %% "lib-play" % "0.1.21",
     specs2 % Test,
     "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   ),

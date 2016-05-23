@@ -59,10 +59,8 @@ trait DataBuild extends DataProject {
 
       case Some(build) => {
         withConfig { config =>
-          println(s"build.name[${build.name}]")
-          println(s"config.builds[${config.builds.map(_.name)}]")
           val bc = config.builds.find(_.name == build.name).getOrElse {
-            sys.error(s"Build[${build.id}] does not have a matching configuration")
+            sys.error(s"Build[${build.id}] does not have a configuration matching name[${build.name}]")
           }
           f(bc)
         }

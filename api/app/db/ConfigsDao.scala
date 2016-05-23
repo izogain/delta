@@ -8,6 +8,7 @@ import io.flow.delta.config.v0.models.json._
 import io.flow.play.util.IdGenerator
 import io.flow.postgresql.{Authorization, Query, OrderBy}
 import anorm._
+import play.api.Logger
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
@@ -91,7 +92,23 @@ class ConfigsDao @javax.inject.Inject() (
       }
     }
   }
-  
+
+  def updateIfChanged(createdBy: UserReference, projectId: String, newConfig: Config) {
+    val existing: Config = findByProjectId(Authorization.All, projectId).map(_.config).getOrElse { Defaults.Config }
+    Logger.info(s"upsertIfChanged[$projectId] existing: $existing")
+    Logger.info(s"upsertIfChanged[$projectId] newConfig: $newConfig")
+
+    existing == newConfig match {
+      case false => {
+        Logger.info(s"upsertIfChanged[$projectId] Updating configuration")
+        upsert(createdBy, projectId, newConfig)
+      }
+      case true => {
+        Logger.info(s"upsertIfChanged[$projectId] No change in configuration")
+      }
+    }
+  }
+
   def upsert(createdBy: UserReference, projectId: String, config: Config): InternalConfig = {
     DB.withConnection { implicit c =>
       upsertWithConnection(c, createdBy, projectId, config)

@@ -1,0 +1,37 @@
+@(config: io.flow.delta.config.v0.models.ConfigProject)
+
+<section class="col-xs-12 col-md-6">
+  <div class="table-responsive">
+    @config.builds.map { buildConfig =>
+      <h3 class="p2">@buildConfig.name</h3>
+      <table class="table table-striped">
+        <tbody>
+          <tr>
+            <td><strong>Dockerfile</strong></td>
+            <td>@buildConfig.dockerfile</td>
+          </tr>
+          <tr>
+            <td><strong>Initial # Instances</strong></td>
+            <td>@buildConfig.initialNumberInstances</td>
+          </tr>
+          <tr>
+            <td><strong>Instance Type</strong></td>
+            <td>@buildConfig.instanceType</td>
+          </tr>
+          <tr>
+            <td><strong>Stages</strong></td>
+            <td>@buildConfig.stages.map(_.toString).mkString(", ")</td>
+          </tr>
+          <tr>
+            <td><strong>Dependencies</strong></td>
+            <td>@{buildConfig.dependencies.toList match {
+                   case Nil => Html("<em>none</em>")
+                   case dependencies => dependencies.mkString(", ")
+                 }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    }
+  </div>
+</section> 

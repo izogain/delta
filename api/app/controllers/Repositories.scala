@@ -71,7 +71,7 @@ class Repositories @javax.inject.Inject() (
     owner: String,
     repo: String
   ) = Identified.async { request =>
-    github.file(request.user, owner, repo, ".delta").map { result =>
+    github.dotDeltaFile(request.user, owner, repo).map { result =>
       Ok(
         Json.toJson(
           result.map { parser.parse(_) }.getOrElse { Defaults.Config }
