@@ -7,12 +7,11 @@ import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
 import io.flow.delta.v0.models.{Project, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
+import play.api.Logger
 import play.libs.Akka
 
 object ProjectSupervisorActor {
 
-  val StartedMessage = "started PursueDesiredState"
-  
   trait Message
 
   object Messages {
@@ -44,15 +43,16 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
 
     case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
+        Logger.info(s"PursueDesiredState project[${project.id}]")
         withConfig { config =>
-          log.message(ProjectSupervisorActor.StartedMessage)
-          run(project, config, ProjectSupervisorActor.Functions)
+          Logger.info(s"  - config: $config")
+          log.runSync("PursueDesiredState") {
+            run(project, config, ProjectSupervisorActor.Functions)
 
-          BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
-            sender ! MainActor.Messages.BuildSync(build.id)
+            BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
+              sender ! MainActor.Messages.BuildSync(build.id)
+            }
           }
-
-          log.completed("PursueDesiredState")
         }
       }
     }
