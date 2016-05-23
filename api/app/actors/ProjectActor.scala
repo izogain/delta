@@ -1,6 +1,6 @@
 package io.flow.delta.actors
 
-import db.{BuildsDao, EventsDao}
+import db.{BuildsDao, ConfigsDao, EventsDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.api.lib.{GithubHelper, Repo}
 import io.flow.delta.v0.models.Project
@@ -33,6 +33,7 @@ object ProjectActor {
 class ProjectActor @javax.inject.Inject() (
   config: Config,
   system: ActorSystem,
+  override val configsDao: ConfigsDao,
   @com.google.inject.assistedinject.Assisted projectId: String
 ) extends Actor with ErrorHandler with DataProject with EventLog {
 

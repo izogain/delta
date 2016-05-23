@@ -1,6 +1,6 @@
 package db
 
-import io.flow.delta.v0.models.{Project, Scms, SettingsForm, Visibility}
+import io.flow.delta.v0.models.{Project, Scms, Visibility}
 import io.flow.postgresql.Authorization
 import org.scalatest._
 import play.api.test._
@@ -39,50 +39,6 @@ class ProjectsDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     val project = createProject()
     projectsWriteDao.delete(systemUser, project)
     ProjectsDao.findById(Authorization.All, project.id) must be(None)
-  }
-
-  "create respects settings" in {
-    val disabledForm = createProjectForm(org).copy(
-      settings = SettingsForm(
-        syncMasterSha = Some(false),
-        tagMaster = Some(false),
-        setDesiredState = Some(false),
-        buildDockerImage = Some(false),
-        scale = Some(false)
-      )
-    )
-
-    val project = createProject(org)(disabledForm)
-    val disabled = SettingsDao.findByProjectId(Authorization.All, project.id).getOrElse {
-      sys.error("Failed to create settings")
-    }
-
-    disabled.syncMasterSha must be(false)
-    disabled.tagMaster must be(false)
-    disabled.setDesiredState must be(false)
-    disabled.buildDockerImage must be(false)
-    disabled.scale must be(false)
-
-    val enabledForm = createProjectForm(org).copy(
-      settings = SettingsForm(
-        syncMasterSha = Some(true),
-        tagMaster = Some(true),
-        setDesiredState = Some(true),
-        buildDockerImage = Some(true),
-        scale = Some(true)
-      )
-    )
-
-    val project2 = createProject(org)(enabledForm)
-    val enabled = SettingsDao.findByProjectId(Authorization.All, project2.id).getOrElse {
-      sys.error("Failed to create settings")
-    }
-
-    enabled.syncMasterSha must be(true)
-    enabled.tagMaster must be(true)
-    enabled.setDesiredState must be(true)
-    enabled.buildDockerImage must be(true)
-    enabled.scale must be(true)
   }
 
   "update" in {

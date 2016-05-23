@@ -17,8 +17,6 @@ case class ShaForm(
 
 object ShasDao {
 
-  private[db] val Master = "master"
-
   private[this] val BaseQuery = Query(s"""
     select shas.id,
            shas.created_at,
@@ -32,10 +30,6 @@ object ShasDao {
       join projects on shas.project_id = projects.id
   """)
 
-
-  def findByProjectIdAndMaster(auth: Authorization, projectId: String): Option[Sha] = {
-    findByProjectIdAndBranch(auth, projectId, Master)
-  }
 
   def findByProjectIdAndBranch(auth: Authorization, projectId: String, branch: String): Option[Sha] = {
     findAll(auth, projectId = Some(projectId), branch = Some(branch), limit = 1).headOption
@@ -149,10 +143,10 @@ case class ShasWriteDao @javax.inject.Inject() (
     * updated the sha record as needed. Returns the created or updated
     * sha.
     */
-  def upsertMaster(createdBy: UserReference, projectId: String, hash: String): Sha = {
+  def upsertBranch(createdBy: UserReference, projectId: String, branch: String, hash: String): Sha = {
     val form = ShaForm(
       projectId = projectId,
-      branch = ShasDao.Master,
+      branch = branch,
       hash = hash
     )
     upsert(createdBy, form)

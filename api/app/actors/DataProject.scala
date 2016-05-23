@@ -1,12 +1,15 @@
 package io.flow.delta.actors
 
-import db.{OrganizationsDao, ProjectsDao, SettingsDao}
+import db.{ConfigsDao, OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.{GithubUtil, Repo}
-import io.flow.delta.v0.models.{Organization, Project, Settings}
+import io.flow.delta.v0.models.{Organization, Project}
+import io.flow.delta.config.v0.models.{ConfigError, ConfigProject, ConfigUndefinedType}
 import io.flow.postgresql.Authorization
 import play.api.Logger
 
 trait DataProject {
+
+  def configsDao: ConfigsDao
 
   private[this] var dataProject: Option[Project] = None
 
@@ -42,13 +45,16 @@ trait DataProject {
   }
 
   /**
-    * Invokes the specified function w/ the current project settings,
-    * but only if we have settings.
+    * Invokes the specified function w/ the current project config, if
+    * it is valid.
     */
-  def withSettings[T](f: Settings => T): Option[T] = {
+  def withConfig[T](f: ConfigProject => T): Option[T] = {
     dataProject.flatMap { project =>
-      SettingsDao.findByProjectId(Authorization.All, project.id).map { settings =>
-        f(settings)
+      configsDao.findByProjectId(Authorization.All, project.id).flatMap { internal =>
+        internal.config match {
+          case c: ConfigProject => Some(f(c))
+          case ConfigError(_) | ConfigUndefinedType(_) => None
+        }
       }
     }
   }

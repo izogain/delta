@@ -1,6 +1,6 @@
 package controllers
 
-import io.flow.delta.v0.Client
+import io.flow.common.v0.Client
 import io.flow.common.v0.models.Healthcheck
 
 import play.api.libs.ws._

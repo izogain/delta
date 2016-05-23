@@ -1,12 +1,14 @@
 package controllers
 
 import io.flow.delta.v0.errors.UnitResponse
-import io.flow.delta.v0.models.{EventType, Project, ProjectForm, Scms, Settings, SettingsForm, Visibility}
+import io.flow.delta.v0.models.{EventType, Project, ProjectForm, Scms, Visibility}
 import io.flow.delta.v0.models.json._
+import io.flow.delta.config.v0.models.{Config, ConfigError, ConfigProject, ConfigUndefinedType}
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.util.{Pagination, PaginatedCollection}
 import play.api.libs.json.Json
 import scala.concurrent.Future
+import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.mvc._
 import play.api.data._
@@ -41,7 +43,6 @@ class ProjectsController @javax.inject.Inject() (
   def show(id: String) = Identified.async { implicit request =>
     withProject(request, id) { project =>
       for {
-        settings <- deltaClient(request).projects.getSettingsById(id)
         buildStates <- deltaClient(request).projects.getBuildsAndStatesById(id)
         changeEvents <- deltaClient(request).events.get(
           projectId = Some(project.id),
@@ -75,7 +76,6 @@ class ProjectsController @javax.inject.Inject() (
             uiData(request),
             project,
             buildStates,
-            settings,
             shas.headOption.map(_.hash),
             tags.headOption,
             changeEvents,
@@ -113,7 +113,7 @@ class ProjectsController @javax.inject.Inject() (
   def githubOrg(orgId: String, repositoriesPage: Int = 0) = Identified.async { implicit request =>
     withOrganization(request, orgId) { org =>
       for {
-        repositories <- deltaClient(request).repositories.getGithub(
+        repositories <- deltaClient(request).repositories.get(
           organizationId = Some(org.id),
           existingProject = Some(false),
           limit = Pagination.DefaultLimit+1,
@@ -136,7 +136,7 @@ class ProjectsController @javax.inject.Inject() (
     repositoriesPage: Int = 0
   ) = Identified.async { implicit request =>
     withOrganization(request, orgId) { org =>
-      deltaClient(request).repositories.getGithub(
+      deltaClient(request).repositories.get(
         organizationId = Some(org.id),
         owner = Some(owner),
         name = Some(name),
@@ -144,20 +144,35 @@ class ProjectsController @javax.inject.Inject() (
       ).flatMap { selected =>
         selected.headOption match {
           case None => Future {
-            Redirect(routes.ProjectsController.github()).flashing("warning" -> "Project not found")
+            Redirect(routes.ProjectsController.githubOrg(orgId)).flashing("warning" -> "Project not found")
           }
           case Some(repo) => {
-            deltaClient(request).projects.post(
-              ProjectForm(
-                organization = org.id,
-                name = repo.name,
-                scms = Scms.Github,
-                visibility = if (repo.`private`) { Visibility.Private } else { Visibility.Public },
-                uri = repo.htmlUrl,
-                settings = SettingsForm()
-              )
-            ).map { project =>
-              Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project added")
+            deltaClient(request).repositories.getConfigByOwnerAndRepo(owner, name).flatMap { config =>
+              config match {
+                case ConfigError(errors) => Future {
+                  Redirect(routes.ProjectsController.githubOrg(orgId)).flashing("warning" -> s"Error parsing .delta config file: ${errors.mkString(", ")}")
+                }
+
+                case ConfigUndefinedType(other) => Future {
+                  Logger.warn(s"$owner/$repo returned ConfigUndefinedType[$other]")
+                  Redirect(routes.ProjectsController.githubOrg(orgId)).flashing("warning" -> s"Unknown error parsing .delta config file")
+                }
+
+                case c: ConfigProject => {
+                  deltaClient(request).projects.post(
+                    ProjectForm(
+                      organization = org.id,
+                      name = repo.name,
+                      scms = Scms.Github,
+                      visibility = if (repo.`private`) { Visibility.Private } else { Visibility.Public },
+                      uri = repo.htmlUrl,
+                      config = Some(c)
+                    )
+                  ).map { project =>
+                    Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project added")
+                  }
+                }
+              }
             }
           }
         }
@@ -195,7 +210,7 @@ class ProjectsController @javax.inject.Inject() (
               scms = Scms(uiForm.scms),
               visibility = Visibility(uiForm.visibility),
               uri = uiForm.uri,
-              settings = SettingsForm()
+              config = None
             )
           ).map { project =>
             Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project created")
@@ -250,8 +265,7 @@ class ProjectsController @javax.inject.Inject() (
                   name = uiForm.name,
                   scms = Scms(uiForm.scms),
                   visibility = Visibility(uiForm.visibility),
-                  uri = uiForm.uri,
-                  settings = SettingsForm()
+                  uri = uiForm.uri
                 )
               ).map { project =>
                 Redirect(routes.ProjectsController.show(project.id)).flashing("success" -> "Project updated")
@@ -279,70 +293,6 @@ class ProjectsController @javax.inject.Inject() (
   def postSync(id: String) = Identified.async { implicit request =>
     deltaClient(request).projects.postEventsAndPursueDesiredStateById(id).map { _ =>
       Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Project sync triggered")
-    }
-  }
-
-  /**
-   * Toggle the setting w/ the given name
-   */
-  def postSettingsToggle(id: String, name: String) = Identified.async { implicit request =>
-    deltaClient(request).projects.getSettingsById(id).flatMap { settings =>
-      val form = createSettingsForm(name, settings)
-
-      form match {
-        case None => {
-          Future {
-            Redirect(routes.ProjectsController.show(id)).flashing("warning" -> s"Unknown setting")
-          }
-        }
-        case Some(f) => {
-          deltaClient(request).projects.putSettingsById(id, f).map { _ =>
-            Redirect(routes.ProjectsController.show(id)).flashing("success" -> s"Settings updated")
-          }
-        }
-      }
-    }
-  }
-
-  def postSettings(projectId: String) = Identified.async { implicit request =>
-    val boundForm = ProjectsController.settingUiForm.bindFromRequest
-
-    deltaClient(request).projects.getSettingsById(projectId).flatMap { settings =>
-      boundForm.fold(
-
-        formWithErrors => Future {
-          UnprocessableEntity(formWithErrors.errorsAsJson)
-        },
-
-        uiForm => {
-          deltaClient(request).projects.putSettingsById(projectId, uiForm).map { updated =>
-            Ok(Json.toJson(updated))
-          }
-        }
-      )
-    }
-  }
-
-  private def createSettingsForm(name: String, settings: Settings): Option[SettingsForm] = {
-    name match {
-      case "syncMasterSha" => {
-        Some(SettingsForm(syncMasterSha = Some(!settings.syncMasterSha)))
-      }
-      case "tagMaster" => {
-        Some(SettingsForm(tagMaster = Some(!settings.tagMaster)))
-      }
-      case "setDesiredState" => {
-        Some(SettingsForm(setDesiredState = Some(!settings.setDesiredState)))
-      }
-      case "buildDockerImage" => {
-        Some(SettingsForm(buildDockerImage = Some(!settings.buildDockerImage)))
-      }
-      case "scale" => {
-        Some(SettingsForm(scale = Some(!settings.scale)))
-      }
-      case other => {
-        None
-      }
     }
   }
 
@@ -381,18 +331,6 @@ object ProjectsController {
       "visibility" -> nonEmptyText,
       "uri" -> nonEmptyText
     )(UiForm.apply)(UiForm.unapply)
-  )
-
-
-  private val settingUiForm = Form(
-    mapping(
-      "syncMasterSha" -> optional(boolean),
-      "syncTags" -> optional(boolean),
-      "tagMaster" -> optional(boolean),
-      "setDesiredState" -> optional(boolean),
-      "buildDockerImage" -> optional(boolean),
-      "scale" -> optional(boolean)
-    )(SettingsForm.apply)(SettingsForm.unapply)
   )
 
 }

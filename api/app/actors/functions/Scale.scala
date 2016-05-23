@@ -2,6 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{BuildLastStatesDao, BuildDesiredStatesDao}
 import io.flow.delta.actors.{MainActor, MainActorProvider, BuildActor, BuildSupervisorFunction, SupervisorResult}
+import io.flow.delta.config.v0.models.BuildStage
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Build
 import org.joda.time.DateTime
@@ -16,6 +17,8 @@ import scala.concurrent.Future
 object Scale extends BuildSupervisorFunction {
 
   private[this] val SecondsUntilStale = (BuildActor.CheckLastStateIntervalSeconds * 2.5).toInt
+
+  override val stage = BuildStage.Scale
 
   override def run(
     build: Build

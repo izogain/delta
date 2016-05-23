@@ -1,6 +1,7 @@
 package controllers
 
 import io.flow.delta.v0.models.Version
+import io.flow.delta.v0.errors.UnitResponse
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.util.{Pagination, PaginatedCollection}
 import org.joda.time.DateTime
@@ -95,7 +96,9 @@ class ApplicationController @javax.inject.Inject() (
       dashboardBuilds <- deltaClient(request).dashboardBuilds.get(
         limit = Pagination.DefaultLimit+1,
         offset = buildsPage * Pagination.DefaultLimit
-      )
+      ).recover {
+        case UnitResponse(401) => Nil
+      }
     } yield {
       Ok(
         views.html.index(

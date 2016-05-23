@@ -2,6 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{ShasDao, TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
+import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
 import io.flow.delta.api.lib.{Email, GithubUtil}
 import io.flow.delta.lib.Semver
 import io.flow.delta.v0.models.Project
@@ -15,21 +16,30 @@ import scala.concurrent.Future
   * If there is no tag pointing to the master sha, creates a tag in
   * github and records it here.
   */
-object TagMaster extends ProjectSupervisorFunction {
+object Tag extends ProjectSupervisorFunction {
 
   val InitialTag = "0.0.1"
 
+  override val stage = ProjectStage.Tag
+
   override def run(
-    project: Project
+    project: Project,
+    config: ConfigProject
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    TagMaster(project).run
+    Future.sequence {
+      config.branches.map { branch =>
+        Tag(project, branch.name).run
+      }
+    }.map {
+      SupervisorResult.merge(_)
+    }
   }
 
 }
 
-case class TagMaster(project: Project) extends Github {
+case class Tag(project: Project, branchName: String) extends Github {
 
   private[this] lazy val tagsWriteDao = play.api.Play.current.injector.instanceOf[TagsWriteDao]
 
@@ -44,30 +54,30 @@ case class TagMaster(project: Project) extends Github {
   def run(
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
-    ShasDao.findByProjectIdAndMaster(Authorization.All, project.id).map(_.hash) match {
+    ShasDao.findByProjectIdAndBranch(Authorization.All, project.id, branchName).map(_.hash) match {
 
       case None => {
         Future {
-          SupervisorResult.Error("Shas table does not have an entry for master branch")
+          SupervisorResult.Error(s"Shas table does not have an entry for $branchName branch")
         }
       }
 
-      case Some(master) => {
+      case Some(sha) => {
         withGithubClient(project.user.id) { client =>
           client.tags.getTags(repo.owner, repo.project).flatMap { tags =>
             GithubUtil.toTags(tags).reverse.headOption match {
               case None => {
-                createTag(TagMaster.InitialTag, master)
+                createTag(io.flow.delta.actors.functions.Tag.InitialTag, sha)
               }
               case Some(tag) => {
-                tag.sha == master match {
+                tag.sha == sha match {
                   case true => {
                     Future {
-                      SupervisorResult.Ready(s"Latest tag[${tag.semver.label}] already points to master[${master}]")
+                      SupervisorResult.Ready(s"Latest tag[${tag.semver.label}] already points to sha[$sha]")
                     }
                   }
                   case false => {
-                    createTag(tag.semver.next.label, master)
+                    createTag(tag.semver.next.label, sha)
                   }
                 }
               }

@@ -3,6 +3,7 @@ package db
 import io.flow.postgresql.Authorization
 import io.flow.play.util.Random
 import io.flow.delta.v0.models._
+import io.flow.delta.config.v0.{models => config}
 import io.flow.common.v0.models.{Name, User, UserReference}
 import java.util.UUID
 
@@ -101,13 +102,7 @@ trait Helpers {
       visibility = Visibility.Private,
       scms = Scms.Github,
       uri = s"http://github.com/test/${UUID.randomUUID.toString}",
-      settings = SettingsForm(
-        syncMasterSha = Some(false),
-        tagMaster = Some(false),
-        setDesiredState = Some(false),
-        buildDockerImage = Some(false),
-        scale = Some(false)
-      )
+      config = None
     )
   }
 
@@ -252,20 +247,27 @@ trait Helpers {
     )
   }
 
-  def createBuild(
-    form: BuildForm = createBuildForm(),
-    user: User = systemUser
+  def upsertBuild(
+    project: Project = createProject()
+  ) (
+    implicit cfg: config.Build = createBuildConfig(project),
+             user: User = systemUser
   ): Build = {
-    rightOrErrors(injector.instanceOf[BuildsWriteDao].create(user, form))
+    injector.instanceOf[BuildsWriteDao].upsert(user, project.id, Status.Enabled, cfg)
   }
 
-  def createBuildForm(
+  def createBuildConfig(
     project: Project = createProject()
   ) = {
-    BuildForm(
-      projectId = project.id,
+    config.Build(
       name = createTestKey(),
-      dockerfilePath = "./Dockerfile"
+      dockerfile = "./Dockerfile",
+      initialNumberInstances = 2,
+      instanceType = config.InstanceType.fromString("t2.micro").getOrElse {
+        sys.error("Default instance type[t2.micro] not found")
+      },
+      stages = config.BuildStage.all,
+      dependencies = Nil
     )
   }
 
@@ -323,7 +325,7 @@ trait Helpers {
   }
 
   def createImageForm(
-   build: Build = createBuild()
+   build: Build = upsertBuild()
   ) = {
     ImageForm(
       buildId = build.id,

@@ -1,5 +1,15 @@
 package io.flow.delta.aws
 
+import io.flow.delta.config.v0.models.InstanceType
+
+case class DefaultSettings(
+  instanceType: InstanceType,
+  override val containerMemory: Int
+) extends Settings {
+
+  override val launchConfigInstanceType = instanceType.toString
+}
+
 /**
 * Single place to find all the AWS-related configuration settings.
 * Make it easy to change (or fix) in one place.
@@ -54,7 +64,7 @@ trait Settings {
   // EC2 service role
   val serviceRole = "ecsServiceRole"
 
-  // When a new service is created, explicitly set the desired count to 0, then scale up to 3
+  // When a new service is created, explicitly set the desired count to 0
   val createServiceDesiredCount = 0
 
   // Launch configuration EC2 instance type, ex. t2.micro

@@ -83,6 +83,18 @@ package io.flow.common.v0.anorm.parsers {
 
   }
 
+  object SortDirection {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
+
+    def parser(name: String = "sort_direction"): RowParser[io.flow.common.v0.models.SortDirection] = {
+      SqlParser.str(name) map {
+        case value => io.flow.common.v0.models.SortDirection(value)
+      }
+    }
+
+  }
+
   object UnitOfMeasurement {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
@@ -126,66 +138,6 @@ package io.flow.common.v0.anorm.parsers {
     def parser(name: String = "visibility"): RowParser[io.flow.common.v0.models.Visibility] = {
       SqlParser.str(name) map {
         case value => io.flow.common.v0.models.Visibility(value)
-      }
-    }
-
-  }
-
-  object Address {
-
-    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      text = s"$prefix${sep}text",
-      streets = s"$prefix${sep}streets",
-      city = s"$prefix${sep}city",
-      province = s"$prefix${sep}province",
-      postal = s"$prefix${sep}postal",
-      country = s"$prefix${sep}country"
-    )
-
-    def parser(
-      text: String = "text",
-      streets: String = "streets",
-      city: String = "city",
-      province: String = "province",
-      postal: String = "postal",
-      country: String = "country"
-    ): RowParser[io.flow.common.v0.models.Address] = {
-      SqlParser.str(text).? ~
-      SqlParser.get[Seq[String]](streets).? ~
-      SqlParser.str(city).? ~
-      SqlParser.str(province).? ~
-      SqlParser.str(postal).? ~
-      SqlParser.str(country).? map {
-        case text ~ streets ~ city ~ province ~ postal ~ country => {
-          io.flow.common.v0.models.Address(
-            text = text,
-            streets = streets,
-            city = city,
-            province = province,
-            postal = postal,
-            country = country
-          )
-        }
-      }
-    }
-
-  }
-
-  object AddressSummary {
-
-    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      text = s"$prefix${sep}text"
-    )
-
-    def parser(
-      text: String = "text"
-    ): RowParser[io.flow.common.v0.models.AddressSummary] = {
-      SqlParser.str(text).? map {
-        case text => {
-          io.flow.common.v0.models.AddressSummary(
-            text = text
-          )
-        }
       }
     }
 
@@ -338,16 +290,64 @@ package io.flow.common.v0.anorm.parsers {
   object Location {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
-      value = s"$prefix${sep}value"
+      text = s"$prefix${sep}text",
+      streets = s"$prefix${sep}streets",
+      city = s"$prefix${sep}city",
+      province = s"$prefix${sep}province",
+      postal = s"$prefix${sep}postal",
+      country = s"$prefix${sep}country",
+      latitude = s"$prefix${sep}latitude",
+      longitude = s"$prefix${sep}longitude"
     )
 
     def parser(
-      value: String = "value"
+      text: String = "text",
+      streets: String = "streets",
+      city: String = "city",
+      province: String = "province",
+      postal: String = "postal",
+      country: String = "country",
+      latitude: String = "latitude",
+      longitude: String = "longitude"
     ): RowParser[io.flow.common.v0.models.Location] = {
-      SqlParser.str(value) map {
-        case value => {
+      SqlParser.str(text).? ~
+      SqlParser.get[Seq[String]](streets).? ~
+      SqlParser.str(city).? ~
+      SqlParser.str(province).? ~
+      SqlParser.str(postal).? ~
+      SqlParser.str(country).? ~
+      SqlParser.str(latitude).? ~
+      SqlParser.str(longitude).? map {
+        case text ~ streets ~ city ~ province ~ postal ~ country ~ latitude ~ longitude => {
           io.flow.common.v0.models.Location(
-            value = value
+            text = text,
+            streets = streets,
+            city = city,
+            province = province,
+            postal = postal,
+            country = country,
+            latitude = latitude,
+            longitude = longitude
+          )
+        }
+      }
+    }
+
+  }
+
+  object LocationReference {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      text = s"$prefix${sep}text"
+    )
+
+    def parser(
+      text: String = "text"
+    ): RowParser[io.flow.common.v0.models.LocationReference] = {
+      SqlParser.str(text).? map {
+        case text => {
+          io.flow.common.v0.models.LocationReference(
+            text = text
           )
         }
       }
@@ -606,13 +606,13 @@ package io.flow.common.v0.anorm.parsers {
   object ExpandableLocation {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = {
-      io.flow.common.v0.anorm.parsers.Address.parserWithPrefix(prefix, sep) |
-      io.flow.common.v0.anorm.parsers.AddressSummary.parserWithPrefix(prefix, sep)
+      io.flow.common.v0.anorm.parsers.Location.parserWithPrefix(prefix, sep) |
+      io.flow.common.v0.anorm.parsers.LocationReference.parserWithPrefix(prefix, sep)
     }
 
     def parser() = {
-      io.flow.common.v0.anorm.parsers.Address.parser() |
-      io.flow.common.v0.anorm.parsers.AddressSummary.parser()
+      io.flow.common.v0.anorm.parsers.Location.parser() |
+      io.flow.common.v0.anorm.parsers.LocationReference.parser()
     }
 
   }

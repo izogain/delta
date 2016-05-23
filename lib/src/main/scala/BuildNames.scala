@@ -1,37 +1,10 @@
 package io.flow.delta.lib
 
-import io.flow.delta.v0.models.{Build, BuildForm, DashboardBuild, Docker, Project}
-import io.flow.play.util.UrlKey
+import io.flow.delta.v0.models.{Build, DashboardBuild, Docker}
 
 object BuildNames {
 
-  private[this] val DefaultBuildName = "root"
-
-  private[this] val urlKey = UrlKey(minKeyLength = 3)
-
-  /**
-    * Given the path to a dockerfile, returns the name of the build,
-    * based on the directory structure.
-    * 
-    * ./Dockerfile => "root"
-    * ./api/Dockerfile => "api"
-    * www/Dockerfile => "www"
-    * /Dockerfile.www => "www"
-    * /Dockerfile.api => "api"
-    * /a/b/c/Dockerfile => "a-b-c"
-    */
-  def dockerfilePathToBuildForm(projectId: String, path: String): BuildForm = {
-    val name = path.replace("Dockerfile.", "").replace("Dockerfile", "").split("/").filter(!_.startsWith(".")).filter(!_.isEmpty).toList match {
-      case Nil => DefaultBuildName
-      case multiple => multiple.mkString("-")
-    }
-
-    BuildForm(
-      projectId = projectId,
-      name = urlKey.generate(name),
-      dockerfilePath = path
-    )
-  }
+  val DefaultBuildName = "root"
 
   /**
     * Given a build, returns the full docker image name

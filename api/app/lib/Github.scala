@@ -8,8 +8,9 @@ import io.flow.github.oauth.v0.{Client => GithubOauthClient}
 import io.flow.github.oauth.v0.models.AccessTokenForm
 import io.flow.github.v0.{Client => GithubClient}
 import io.flow.github.v0.errors.UnitResponse
-import io.flow.github.v0.models.{Repository => GithubRepository}
-import io.flow.github.v0.models.{User => GithubUser}
+import io.flow.github.v0.models.{Repository => GithubRepository, User => GithubUser, Contents, Encoding}
+import org.apache.commons.codec.binary.Base64
+
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.Logger
 
@@ -142,6 +143,15 @@ trait Github {
   def githubRepos(user: UserReference, page: Long = 1)(implicit ec: ExecutionContext): Future[Seq[GithubRepository]]
 
   /**
+    * Fetches the specified file, if it exists, from this repo
+    */
+  def file(
+    user: UserReference, owner: String, repo: String, path: String
+  ) (
+    implicit ec: ExecutionContext
+  ): Future[Option[String]]
+  
+  /**
     * Recursively calls the github API until we either:
     *  - consume all records
     *  - meet the specified limit/offset
@@ -236,6 +246,43 @@ class DefaultGithub @javax.inject.Inject() (
     }
   }
 
+  override def file(
+    user: UserReference, owner: String, repo: String, path: String
+  ) (
+    implicit ec: ExecutionContext
+  ): Future[Option[String]] = {
+    oauthToken(user) match {
+      case None => Future { None }
+      case Some(token) => {
+        GithubHelper.apiClient(token).contents.getContentsByPath(
+          owner = owner,
+          repo = repo,
+          path = path
+        ).map { contents =>
+          Some(toText(contents))
+        }.recover {
+          case UnitResponse(404) => {
+            None
+          }
+        }
+      }
+    }
+  }
+
+  private[this] def toText(contents: Contents): String = {
+    (contents.content, contents.encoding) match {
+      case (Some(encoded), Encoding.Base64) => {
+        new String(Base64.decodeBase64(encoded.getBytes))
+      }
+      case (Some(_), Encoding.UNDEFINED(name)) => {
+        sys.error(s"Unsupported encoding[$name] for content: $contents")
+      }
+      case (None, _) => {
+        sys.error(s"No contents for: $contents")
+      }
+    }
+  }
+  
   override def oauthToken(user: UserReference): Option[String] = {
     TokensDao.getCleartextGithubOauthTokenByUserId(user.id)
   }
@@ -259,6 +306,14 @@ class MockGithub() extends Github {
     }
   }
 
+  override def file(
+    user: UserReference, owner: String, repo: String, path: String
+  ) (
+    implicit ec: ExecutionContext
+  ) = Future {
+    MockGithubData.getFile(repo, path)
+  }
+  
   override def oauthToken(user: UserReference): Option[String] = {
     MockGithubData.getToken(user)
   }
@@ -270,6 +325,7 @@ object MockGithubData {
   private[this] var githubUserByCodes = scala.collection.mutable.Map[String, GithubUserData]()
   private[this] var userTokens = scala.collection.mutable.Map[String, String]()
   private[this] var repositories = scala.collection.mutable.Map[String, GithubRepository]()
+  private[this] var files = scala.collection.mutable.Map[String, String]()
 
   def addUser(githubUser: GithubUser, code: String, token: Option[String] = None) {
     githubUserByCodes +== (
@@ -307,4 +363,11 @@ object MockGithubData {
     }
   }
 
+  def addFile(repo: String, path: String, contents: String) = {
+    files += (s"repo:$path" -> contents)
+  }
+
+  def getFile(repo: String, path: String) = {
+    files.get(s"repo:$path")
+  }
 }

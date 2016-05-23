@@ -98,13 +98,11 @@ abstract class BaseController(
     val user = Await.result(
       client.users.get(id = Some(request.user.id)),
       Duration(1, "seconds")
-    ).headOption.getOrElse {
-      sys.error(s"Could not find user[${request.user.id}")
-    }
+    ).headOption
 
     UiData(
       requestPath = request.path,
-      user = Some(user),
+      user = user,
       section = section
     )
   }

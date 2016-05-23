@@ -1,12 +1,13 @@
 package io.flow.delta.actors
 
 import com.amazonaws.services.ecs.model.Service
-import db.{OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
+import db.{ConfigsDao, OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.postgresql.Authorization
-import io.flow.delta.aws.{AutoScalingGroup, EC2ContainerService, ElasticLoadBalancer, InstanceTypes, Settings}
+import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer, InstanceTypeDefaults}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.lib.{BuildNames, Semver, StateFormatter, Text}
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
+import io.flow.delta.config.v0.models.BuildStage
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
 import org.joda.time.DateTime
@@ -48,6 +49,7 @@ class BuildActor @javax.inject.Inject() (
   config: Config,
   system: ActorSystem,
   buildLastStatesWriteDao: BuildLastStatesWriteDao,
+  override val configsDao: ConfigsDao,
   asg: AutoScalingGroup,
   ecs: EC2ContainerService,
   elb: ElasticLoadBalancer,
@@ -57,14 +59,13 @@ class BuildActor @javax.inject.Inject() (
   implicit private[this] val ec = system.dispatchers.lookup("build-actor-context")
 
   private[this] val TimeoutSeconds = 450
-  private[this] lazy val awsSettings = withBuild { build =>
-    // TODO: Find place for this configuration. Probably in UI
-    build.project.name == "classification" match {
-      case false => InstanceTypes.T2Micro
-      case true => InstanceTypes.T2Medium
-    }
+  private[this] lazy val awsSettings = withBuildConfig { bc =>
+    DefaultSettings(
+      instanceType = bc.instanceType,
+      containerMemory = InstanceTypeDefaults.containerMemory(bc.instanceType)
+    )
   }.getOrElse {
-    sys.error("Must have build before getting settings for auto scaling group")
+    sys.error("Must have build configuration before getting settings for auto scaling group")
   }
 
   def receive = {
@@ -85,33 +86,33 @@ class BuildActor @javax.inject.Inject() (
     }
 
     case msg @ BuildActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
-      withBuild { build =>
+      withEnabledBuild { build =>
         captureLastState(build)
       }
     }
 
     case msg @ BuildActor.Messages.UpdateContainerAgent => withVerboseErrorHandler(msg) {
-      withBuild { build =>
+      withEnabledBuild { build =>
         updateContainerAgent(build)
       }
     }
 
     case msg @ BuildActor.Messages.RemoveOldServices => withVerboseErrorHandler(msg) {
-      withBuild { build =>
+      withEnabledBuild { build =>
         removeOldServices(build)
       }
     }
 
     // Configure EC2 LC, ELB, ASG for a build (id: user, fulfillment, splashpage, etc)
     case msg @ BuildActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
-      withBuild { build =>
+      withEnabledBuild { build =>
         configureAWS(build)
       }
     }
 
     case msg @ BuildActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
       withOrganization { org =>
-        withBuild { build =>
+        withEnabledBuild { build =>
           diffs.foreach { diff =>
             scale(org.docker, build, diff)
           }
@@ -124,7 +125,9 @@ class BuildActor @javax.inject.Inject() (
   }
 
   private[this] def isScaleEnabled(): Boolean = {
-    withSettings { _.scale }.getOrElse(false)
+    withBuildConfig { buildConfig =>
+      buildConfig.stages.contains(BuildStage.Scale)
+    }.getOrElse(false)
   }
 
   def configureAWS(build: Build): Future[Unit] = {

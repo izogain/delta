@@ -1,9 +1,10 @@
 package io.flow.delta.actors
 
 import akka.actor.Actor
-import db.{BuildsDao, BuildDesiredStatesDao, SettingsDao}
+import db.{BuildsDao, BuildDesiredStatesDao, ConfigsDao}
 import io.flow.delta.api.lib.StateDiff
-import io.flow.delta.v0.models.{Project, Settings, Version}
+import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
+import io.flow.delta.v0.models.{Project, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import play.libs.Akka
@@ -22,9 +23,9 @@ object ProjectSupervisorActor {
   }
 
   val Functions = Seq(
-    functions.SyncMasterSha,
+    functions.SyncShas,
     functions.SyncTags,
-    functions.TagMaster
+    functions.Tag
   )
 
 }
@@ -32,6 +33,8 @@ object ProjectSupervisorActor {
 class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
 
   private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
+
+  override lazy val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
 
   def receive = {
 
@@ -41,15 +44,16 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
 
     case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
       withProject { project =>
-        val settings = SettingsDao.findByProjectIdOrDefault(Authorization.All, project.id)
-        log.message(ProjectSupervisorActor.StartedMessage)
-        run(project, settings, ProjectSupervisorActor.Functions)
+        withConfig { config =>
+          log.message(ProjectSupervisorActor.StartedMessage)
+          run(project, config, ProjectSupervisorActor.Functions)
 
-        BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
-          sender ! MainActor.Messages.BuildSync(build.id)
+          BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
+            sender ! MainActor.Messages.BuildSync(build.id)
+          }
+
+          log.completed("PursueDesiredState")
         }
-
-        log.completed("PursueDesiredState")
       }
     }
 
@@ -69,20 +73,20 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Ready at the end of all the functions.
     */
-  private[this] def run(project: Project, settings: Settings, functions: Seq[ProjectSupervisorFunction]) {
+  private[this] def run(project: Project, config: ConfigProject, functions: Seq[ProjectSupervisorFunction]) {
     functions.headOption match {
       case None => {
         SupervisorResult.Ready("All functions returned without modification")
       }
       case Some(f) => {
-        isEnabled(settings, f) match {
+        config.stages.contains(f.stage) match {
           case false => {
-            log.skipped(format(f, "is disabled in the project settings"))
-            run(project, settings, functions.drop(1))
+            log.skipped(s"Stage ${f.stage} is disabled")
+            run(project, config, functions.drop(1))
           }
           case true => {
             log.started(format(f))
-            f.run(project).map { result =>
+            f.run(project, config).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
                   log.changed(format(f, desc))
@@ -98,7 +102,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
                 }
                 case SupervisorResult.Ready(desc)=> {
                   log.completed(format(f, desc))
-                  run(project, settings, functions.drop(1))
+                  run(project, config, functions.drop(1))
                 }
               }
 
@@ -108,15 +112,6 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
           }
         }
       }
-    }
-  }
-
-  private[this] def isEnabled(settings: Settings, f: Any): Boolean = {
-    format(f) match {
-      case "SyncMasterSha" => settings.syncMasterSha
-      case "SyncTags" => settings.syncTags
-      case "TagMaster" => settings.tagMaster
-      case other => sys.error(s"Cannot determine project setting for function[$other]")
     }
   }
 

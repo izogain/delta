@@ -63,6 +63,8 @@ package io.flow.common.v0.anorm.conversions {
     implicit val columnToMapCommonHolidayCalendar: Column[Map[String, _root_.io.flow.common.v0.models.HolidayCalendar]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.HolidayCalendar]] }
     implicit val columnToSeqCommonScheduleExceptionStatus: Column[Seq[_root_.io.flow.common.v0.models.ScheduleExceptionStatus]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.ScheduleExceptionStatus]] }
     implicit val columnToMapCommonScheduleExceptionStatus: Column[Map[String, _root_.io.flow.common.v0.models.ScheduleExceptionStatus]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.ScheduleExceptionStatus]] }
+    implicit val columnToSeqCommonSortDirection: Column[Seq[_root_.io.flow.common.v0.models.SortDirection]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.SortDirection]] }
+    implicit val columnToMapCommonSortDirection: Column[Map[String, _root_.io.flow.common.v0.models.SortDirection]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.SortDirection]] }
     implicit val columnToSeqCommonUnitOfMeasurement: Column[Seq[_root_.io.flow.common.v0.models.UnitOfMeasurement]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.UnitOfMeasurement]] }
     implicit val columnToMapCommonUnitOfMeasurement: Column[Map[String, _root_.io.flow.common.v0.models.UnitOfMeasurement]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.UnitOfMeasurement]] }
     implicit val columnToSeqCommonUnitOfTime: Column[Seq[_root_.io.flow.common.v0.models.UnitOfTime]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.UnitOfTime]] }
@@ -71,10 +73,6 @@ package io.flow.common.v0.anorm.conversions {
     implicit val columnToMapCommonValueAddedService: Column[Map[String, _root_.io.flow.common.v0.models.ValueAddedService]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.ValueAddedService]] }
     implicit val columnToSeqCommonVisibility: Column[Seq[_root_.io.flow.common.v0.models.Visibility]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Visibility]] }
     implicit val columnToMapCommonVisibility: Column[Map[String, _root_.io.flow.common.v0.models.Visibility]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Visibility]] }
-    implicit val columnToSeqCommonAddress: Column[Seq[_root_.io.flow.common.v0.models.Address]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Address]] }
-    implicit val columnToMapCommonAddress: Column[Map[String, _root_.io.flow.common.v0.models.Address]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Address]] }
-    implicit val columnToSeqCommonAddressSummary: Column[Seq[_root_.io.flow.common.v0.models.AddressSummary]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.AddressSummary]] }
-    implicit val columnToMapCommonAddressSummary: Column[Map[String, _root_.io.flow.common.v0.models.AddressSummary]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.AddressSummary]] }
     implicit val columnToSeqCommonContact: Column[Seq[_root_.io.flow.common.v0.models.Contact]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Contact]] }
     implicit val columnToMapCommonContact: Column[Map[String, _root_.io.flow.common.v0.models.Contact]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Contact]] }
     implicit val columnToSeqCommonDatetimeRange: Column[Seq[_root_.io.flow.common.v0.models.DatetimeRange]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.DatetimeRange]] }
@@ -89,6 +87,8 @@ package io.flow.common.v0.anorm.conversions {
     implicit val columnToMapCommonHealthcheck: Column[Map[String, _root_.io.flow.common.v0.models.Healthcheck]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Healthcheck]] }
     implicit val columnToSeqCommonLocation: Column[Seq[_root_.io.flow.common.v0.models.Location]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Location]] }
     implicit val columnToMapCommonLocation: Column[Map[String, _root_.io.flow.common.v0.models.Location]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Location]] }
+    implicit val columnToSeqCommonLocationReference: Column[Seq[_root_.io.flow.common.v0.models.LocationReference]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.LocationReference]] }
+    implicit val columnToMapCommonLocationReference: Column[Map[String, _root_.io.flow.common.v0.models.LocationReference]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.LocationReference]] }
     implicit val columnToSeqCommonMeasurement: Column[Seq[_root_.io.flow.common.v0.models.Measurement]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Measurement]] }
     implicit val columnToMapCommonMeasurement: Column[Map[String, _root_.io.flow.common.v0.models.Measurement]] = Util.parser { _.as[Map[String, _root_.io.flow.common.v0.models.Measurement]] }
     implicit val columnToSeqCommonName: Column[Seq[_root_.io.flow.common.v0.models.Name]] = Util.parser { _.as[Seq[_root_.io.flow.common.v0.models.Name]] }

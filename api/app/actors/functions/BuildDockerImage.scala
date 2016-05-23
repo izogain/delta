@@ -2,6 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{EventsDao, ImagesDao, BuildDesiredStatesDao}
 import io.flow.delta.actors.{MainActor, MainActorProvider, BuildSupervisorFunction, SupervisorResult}
+import io.flow.delta.config.v0.models.BuildStage
 import io.flow.delta.v0.models.{Build, EventType}
 import io.flow.delta.lib.Text
 import io.flow.postgresql.Authorization
@@ -18,6 +19,8 @@ import scala.util.{Failure, Success, Try}
   * not found locally.
   */
 object BuildDockerImage extends BuildSupervisorFunction {
+
+  override val stage = BuildStage.BuildDockerImage
 
   override def run(
     build: Build

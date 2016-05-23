@@ -6,7 +6,7 @@ import io.flow.play.actors.{ErrorHandler, Scheduler}
 import io.flow.postgresql.{Authorization, Pager}
 import play.api.libs.concurrent.Akka
 import akka.actor._
-import play.api.{Application, Logger}
+import play.api.{Application, Environment, Logger, Mode}
 import play.api.Play.current
 import play.api.libs.concurrent.InjectedActorSupport
 
@@ -58,7 +58,8 @@ class MainActor @javax.inject.Inject() (
   dockerHubTokenFactory: DockerHubTokenActor.Factory,
   projectFactory: ProjectActor.Factory,
   override val config: io.flow.play.util.Config,
-  system: ActorSystem
+  system: ActorSystem,
+  playEnv: Environment
 ) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
 
   private[this] implicit val ec = system.dispatchers.lookup("main-actor-context")
@@ -75,139 +76,155 @@ class MainActor @javax.inject.Inject() (
   private[this] val projectSupervisorActors = scala.collection.mutable.Map[String, ActorRef]()
   private[this] val userActors = scala.collection.mutable.Map[String, ActorRef]()
 
-  scheduleRecurring(system, "main.actor.update.jwt.token.seconds") {
-    dockerHubTokenActor ! DockerHubTokenActor.Messages.Refresh
-  }
+  playEnv.mode match {
+    case Mode.Test => {
+      Logger.info("[MainActor] Background actors are disabled in Test")
+    }
 
-  scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
-    Pager.create { offset =>
-      BuildsDao.findAll(Authorization.All, offset = offset)
-    }.foreach { build =>
-      self ! MainActor.Messages.UpdateContainerAgent(build.id)
+    case _ => {
+      scheduleRecurring(system, "main.actor.update.jwt.token.seconds") {
+        dockerHubTokenActor ! DockerHubTokenActor.Messages.Refresh
+      }
+
+      scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
+        Pager.create { offset =>
+          BuildsDao.findAll(Authorization.All, offset = offset)
+        }.foreach { build =>
+          self ! MainActor.Messages.UpdateContainerAgent(build.id)
+        }
+      }
+
+      scheduleRecurring(system, "main.actor.remove.old.services.seconds") {
+        Pager.create { offset =>
+          BuildsDao.findAll(Authorization.All, offset = offset)
+        }.foreach { build =>
+          self ! MainActor.Messages.RemoveOldServices(build.id)
+        }
+      }
+
+      scheduleRecurring(system, "main.actor.project.sync.seconds") {
+        Pager.create { offset =>
+          ProjectsDao.findAll(Authorization.All, offset = offset)
+        }.foreach { project =>
+          self ! MainActor.Messages.ProjectSync(project.id)
+        }
+      }
+
+      scheduleRecurring(system, "main.actor.project.inactive.check.seconds") {
+        Pager.create { offset =>
+          ProjectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
+        }.foreach { project =>
+          Logger.info(s"Sending ProjectSync(${project.id}) - no events found in last 15 minutes")
+          self ! MainActor.Messages.ProjectSync(project.id)
+        }
+      }
     }
   }
 
-  scheduleRecurring(system, "main.actor.remove.old.services.seconds") {
-    Pager.create { offset =>
-      BuildsDao.findAll(Authorization.All, offset = offset)
-    }.foreach { build =>
-      self ! MainActor.Messages.RemoveOldServices(build.id)
-    }
-  }
-
-  scheduleRecurring(system, "main.actor.project.sync.seconds") {
-    Pager.create { offset =>
-      ProjectsDao.findAll(Authorization.All, offset = offset)
-    }.foreach { project =>
-      self ! MainActor.Messages.ProjectSync(project.id)
-    }
-  }
-
-  scheduleRecurring(system, "main.actor.project.inactive.check.seconds") {
-    Pager.create { offset =>
-      ProjectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
-    }.foreach { project =>
-      Logger.info(s"Sending ProjectSync(${project.id}) - no events found in last 15 minutes")
-      self ! MainActor.Messages.ProjectSync(project.id)
-    }
-  }
-
-  def receive = akka.event.LoggingReceive {
-    case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
-      (buildActors -= id).map { actor =>
-        // TODO: Terminate actor
+  def receive = playEnv.mode match {
+    case Mode.Test => {
+      case msg => {
+        Logger.info(s"[MainActor TEST] Discarding received message: $msg")
       }
     }
 
-    case msg @ MainActor.Messages.BuildSync(id) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
+    case _ => akka.event.LoggingReceive {
+      case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
+        (buildActors -= id).map { actor =>
+          // TODO: Terminate actor
+        }
+      }
+
+      case msg @ MainActor.Messages.BuildSync(id) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.BuildCheckTag(id, name) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.CheckTag(name)
+      }
+
+      case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
+        upsertUserActor(id) ! UserActor.Messages.Created
+      }
+
+      case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
+        self ! MainActor.Messages.ProjectSync(id)
+      }
+
+      case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
+        searchActor ! SearchActor.Messages.SyncProject(id)
+        upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
+        searchActor ! SearchActor.Messages.SyncProject(id)
+      }
+
+      case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
+        upsertProjectActor(id) ! ProjectActor.Messages.SyncBuilds
+        upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
+        searchActor ! SearchActor.Messages.SyncProject(id)
+      }
+
+      case msg @ MainActor.Messages.Scale(buildId, diffs) => withVerboseErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
+      }
+
+      case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withVerboseErrorHandler(msg) {
+        upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withVerboseErrorHandler(msg) {
+        upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
+      }
+
+      case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withVerboseErrorHandler(msg) {
+        upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
+      }
+
+      case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.CheckTag(version)
+      }
+
+      case msg @ MainActor.Messages.BuildDockerImage(buildId, version) => withVerboseErrorHandler(msg) {
+        upsertDockerHubActor(buildId) ! DockerHubActor.Messages.Build(version)
+      }
+
+      case msg @ MainActor.Messages.CheckLastState(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.CheckLastState
+      }
+
+      case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
+      }
+
+      case msg @ MainActor.Messages.ConfigureAWS(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.ConfigureAWS
+      }
+
+      case msg @ MainActor.Messages.RemoveOldServices(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.RemoveOldServices
+      }
+
+      case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withVerboseErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.UpdateContainerAgent
+      }
+
+      case msg: Any => logUnhandledMessage(msg)
+
     }
-
-    case msg @ MainActor.Messages.BuildCheckTag(id, name) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.CheckTag(name)
-    }
-
-    case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
-      upsertUserActor(id) ! UserActor.Messages.Created
-    }
-
-    case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
-      self ! MainActor.Messages.ProjectSync(id)
-    }
-
-    case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
-      searchActor ! SearchActor.Messages.SyncProject(id)
-      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
-      searchActor ! SearchActor.Messages.SyncProject(id)
-    }
-
-    case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
-      upsertProjectActor(id) ! ProjectActor.Messages.SyncBuilds
-      upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
-      searchActor ! SearchActor.Messages.SyncProject(id)
-    }
-
-    case msg @ MainActor.Messages.Scale(buildId, diffs) => withVerboseErrorHandler(msg) {
-      upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
-    }
-
-    case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
-    }
-
-    case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withVerboseErrorHandler(msg) {
-      upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
-    }
-
-    case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.CheckTag(version)
-    }
-
-    case msg @ MainActor.Messages.BuildDockerImage(buildId, version) => withVerboseErrorHandler(msg) {
-      upsertDockerHubActor(buildId) ! DockerHubActor.Messages.Build(version)
-    }
-
-    case msg @ MainActor.Messages.CheckLastState(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildActor(buildId) ! BuildActor.Messages.CheckLastState
-    }
-
-    case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
-    }
-
-    case msg @ MainActor.Messages.ConfigureAWS(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildActor(buildId) ! BuildActor.Messages.ConfigureAWS
-    }
-
-    case msg @ MainActor.Messages.RemoveOldServices(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildActor(buildId) ! BuildActor.Messages.RemoveOldServices
-    }
-
-    case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withVerboseErrorHandler(msg) {
-      upsertBuildActor(buildId) ! BuildActor.Messages.UpdateContainerAgent
-    }
-
-    case msg: Any => logUnhandledMessage(msg)
-
   }
 
   def upsertDockerHubActor(buildId: String): ActorRef = {

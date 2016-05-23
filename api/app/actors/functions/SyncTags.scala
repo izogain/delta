@@ -3,6 +3,7 @@ package io.flow.delta.actors.functions
 import db.{TagsDao, TagsWriteDao, UsersDao}
 import io.flow.delta.actors.{ProjectSupervisorFunction, SupervisorResult}
 import io.flow.delta.api.lib.GithubUtil
+import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
 import io.flow.delta.v0.models.Project
 import io.flow.postgresql.Authorization
 import play.api.Logger
@@ -15,8 +16,11 @@ object SyncTags extends ProjectSupervisorFunction {
 
   val InitialTag = "0.0.1"
 
+  override val stage = ProjectStage.SyncTags
+
   override def run(
-    project: Project
+    project: Project,
+    config: ConfigProject
   ) (
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {

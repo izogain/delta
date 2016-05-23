@@ -1,10 +1,10 @@
 package db
 
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Build, BuildForm}
+import io.flow.delta.config.v0.models.{Build => BuildConfig}
+import io.flow.delta.v0.models.{Build, Status}
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import io.flow.common.v0.models.UserReference
-import io.flow.play.util.UrlKey
 import anorm._
 import play.api.db._
 import play.api.Play.current
@@ -17,18 +17,19 @@ object BuildsDao {
   private[this] val BaseQuery = Query(s"""
     select builds.id,
            builds.name,
+           builds.status,
            builds.dockerfile_path,
-           projects.id as project_id,
+           builds.project_id,
            projects.name as project_name,
            projects.uri as project_uri,
            projects.organization_id as project_organization_id
       from builds
-      join projects on builds.project_id = projects.id
+      join projects on projects.id = builds.project_id
   """)
 
   def findAllByProjectId(auth: Authorization, projectId: String): Seq[Build] = {
     Pager.create { offset =>
-      BuildsDao.findAll(auth, projectId = Some(projectId), offset = offset)
+      findAll(auth, projectId = Some(projectId), offset = offset)
     }.toSeq
   }
   
@@ -45,7 +46,7 @@ object BuildsDao {
     ids: Option[Seq[String]] = None,
     projectId: Option[String] = None,
     name: Option[String] = None,
-    orderBy: OrderBy = OrderBy("lower(projects.name), builds.position"),
+    orderBy: OrderBy = OrderBy("lower(projects.name), lower(builds.name)"),
     limit: Long = 25,
     offset: Long = 0
   ): Seq[Build] = {
@@ -60,7 +61,7 @@ object BuildsDao {
         limit = limit,
         offset = offset
       ).
-        equals("projects.id", projectId).
+        equals("builds.project_id", projectId).
         optionalText(
           "builds.name",
           name,
@@ -80,17 +81,21 @@ case class BuildsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
-  private[this] val InsertQuery = """
+  private[this] val UpsertQuery = """
     insert into builds
-    (id, project_id, name, dockerfile_path, position, updated_by_user_id)
+    (id, project_id, name, status, dockerfile_path, position, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {dockerfile_path}, {position}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {status}, {dockerfile_path}, {position}, {updated_by_user_id})
+    on conflict(project_id, name)
+    do update
+          set dockerfile_path = {dockerfile_path},
+              position = {position},
+              updated_by_user_id = {updated_by_user_id}
   """
 
   private[this] val UpdateQuery = """
     update builds
-       set project_id = {project_id},
-           name = {name},
+       set name = {name},
            dockerfile_path = {dockerfile_path},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
@@ -100,77 +105,32 @@ case class BuildsWriteDao @javax.inject.Inject() (
     select max(position) as position from builds where project_id = {project_id}
   """
 
-  private[this] val urlKey = UrlKey(minKeyLength = 3)
+  private[this] val idGenerator = io.flow.play.util.IdGenerator("bld")
 
-  private[db] def validate(
-    user: UserReference,
-    form: BuildForm,
-    existing: Option[Build] = None
-  ): Seq[String] = {
-    val dockerfilePathErrors = if (form.dockerfilePath.trim == "") {
-      Seq("Dockerfile path cannot be empty")
-    } else {
-      Nil
+  def upsert(createdBy: UserReference, projectId: String, status: Status, config: BuildConfig): Build = {
+    DB.withConnection { implicit c =>
+      upsert(c, createdBy, projectId, status, config)
     }
 
-    val nameErrors = if (form.name.trim == "") {
-      Seq("Name cannot be empty")
-    } else {
-      BuildsDao.findByProjectIdAndName(Authorization.All, form.projectId, form.name) match {
-        case None => {
-          urlKey.validate(form.name.trim, "Name")
-        }
-        case Some(found) => {
-          existing.map(_.id) == Some(found.id) match {
-            case true => Nil
-            case false => Seq("Project already has a build with this name")
-          }
-        }
-      }
+    val build = BuildsDao.findByProjectIdAndName(Authorization.All, projectId, config.name).getOrElse {
+      sys.error(s"Failed to create build for projectId[$projectId] name[${config.name}]")
     }
 
-    val projectErrors = ProjectsDao.findById(Authorization.All, form.projectId) match {
-      case None => Seq("Project not found")
-      case Some(project) => Nil
-    }
+    mainActor ! MainActor.Messages.BuildCreated(build.id)
 
-    dockerfilePathErrors ++ nameErrors ++ projectErrors
+    build
   }
 
-  def create(createdBy: UserReference, form: BuildForm): Either[Seq[String], Build] = {
-    validate(createdBy, form) match {
-      case Nil => {
-        val id = DB.withConnection { implicit c =>
-          create(c, createdBy, form)
-        }
-
-        mainActor ! MainActor.Messages.BuildCreated(id)
-
-        Right(
-          BuildsDao.findById(Authorization.All, id).getOrElse {
-            sys.error("Failed to create build")
-          }
-        )
-      }
-      case errors => {
-        Left(errors)
-      }
-    }
-  }
-
-  private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, form: BuildForm): String = {
-    val id = io.flow.play.util.IdGenerator("bld").randomId()
-
-    SQL(InsertQuery).on(
-      'id -> id,
-      'project_id -> form.projectId,
-      'name -> form.name.trim,
-      'dockerfile_path -> form.dockerfilePath.trim,
-      'position -> nextPosition(form.projectId),
+  private[db] def upsert(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, status: Status, config: BuildConfig) {
+    SQL(UpsertQuery).on(
+      'id -> idGenerator.randomId(),
+      'project_id -> projectId,
+      'name -> config.name.trim,
+      'status -> status.toString,
+      'dockerfile_path -> config.dockerfile.trim,
+      'position -> nextPosition(projectId),
       'updated_by_user_id -> createdBy.id
     ).execute()
-
-    id
   }
 
   private[this] def nextPosition(projectId: String)(
@@ -184,28 +144,20 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def update(createdBy: UserReference, build: Build, form: BuildForm): Either[Seq[String], Build] = {
-    validate(createdBy, form, Some(build)) match {
-      case Nil => {
-        DB.withConnection { implicit c =>
-          SQL(UpdateQuery).on(
-            'id -> build.id,
-            'project_id -> form.projectId,
-            'name -> form.name.trim,
-            'dockerfile_path -> form.dockerfilePath.trim,
-            'updated_by_user_id -> createdBy.id
-          ).execute()
-        }
+  def update(createdBy: UserReference, build: Build, config: BuildConfig): Build = {
+    DB.withConnection { implicit c =>
+      SQL(UpdateQuery).on(
+        'id -> build.id,
+        'name -> config.name.trim,
+        'dockerfile_path -> config.dockerfile.trim,
+        'updated_by_user_id -> createdBy.id
+      ).execute()
+    }
 
-        mainActor ! MainActor.Messages.BuildUpdated(build.id)
+    mainActor ! MainActor.Messages.BuildUpdated(build.id)
 
-        Right(
-          BuildsDao.findById(Authorization.All, build.id).getOrElse {
-            sys.error("Failed to update build")
-          }
-        )
-      }
-      case errors => Left(errors)
+    BuildsDao.findById(Authorization.All, build.id).getOrElse {
+      sys.error("Failed to update build")
     }
   }
 

@@ -8,7 +8,7 @@ class ImagesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   lazy val imagesWriteDao = app.injector.instanceOf[ImagesWriteDao]
 
   "create" in {
-    val build = createBuild()
+    val build = upsertBuild()
     val form = createImageForm(build)
     val image = rightOrErrors(imagesWriteDao.create(systemUser, form))
     image.build.id must be(build.id)
@@ -20,7 +20,7 @@ class ImagesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "upsert" in {
-    val build = createBuild()
+    val build = upsertBuild()
     val name = "test"
     val version = "0.1.0"
 
@@ -62,7 +62,7 @@ class ImagesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "findByBuildIdAndVersion" in {
-    val build = createBuild()
+    val build = upsertBuild()
 
     val form1 = createImageForm(build).copy(version = "0.0.2")
     val tag1 = rightOrErrors(imagesWriteDao.create(systemUser, form1))
@@ -98,8 +98,8 @@ class ImagesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "findAll by buildId" in {
-    val build1 = createBuild()
-    val build2 = createBuild()
+    val build1 = upsertBuild()
+    val build2 = upsertBuild()
 
     val image1 = createImage(createImageForm(build1))
     val image2 = createImage(createImageForm(build2))

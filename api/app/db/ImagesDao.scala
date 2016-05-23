@@ -18,6 +18,7 @@ object ImagesDao {
            images.version,
            builds.id as build_id,
            builds.name as build_name,
+           builds.status as build_status,
            builds.dockerfile_path as build_dockerfile_path,
            projects.id as build_project_id,
            projects.name as build_project_name,
@@ -70,11 +71,16 @@ case class ImagesWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
-  private[this] val InsertQuery = """
+  private[this] val UpsertQuery = """
     insert into images
     (id, build_id, name, version, sort_key, updated_by_user_id)
     values
     ({id}, {build_id}, {name}, {version}, {sort_key}, {updated_by_user_id})
+    on conflict(build_id, version)
+    do update
+          set name = {name},
+              sort_key = {sort_key},
+              updated_by_user_id = {updated_by_user_id}
   """
 
   private[this] val UpdateQuery = """
@@ -147,11 +153,10 @@ case class ImagesWriteDao @javax.inject.Inject() (
   def create(createdBy: UserReference, form: ImageForm): Either[Seq[String], Image] = {
     validate(createdBy, form) match {
       case Nil => {
-       val id = io.flow.play.util.IdGenerator("img").randomId()
 
         DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
-            'id -> id,
+          SQL(UpsertQuery).on(
+            'id -> io.flow.play.util.IdGenerator("img").randomId(),
             'build_id -> form.buildId,
             'name -> form.name.trim,
             'version -> form.version.trim,
@@ -160,13 +165,13 @@ case class ImagesWriteDao @javax.inject.Inject() (
           ).execute()
         }
 
-        mainActor ! MainActor.Messages.ImageCreated(form.buildId, id, form.version.trim)
+        val image = ImagesDao.findByBuildIdAndVersion(form.buildId, form.version).getOrElse {
+          sys.error(s"Failed to create image for buildId[${form.buildId}] version[${form.version}]")
+        }
 
-        Right(
-          ImagesDao.findById(id).getOrElse {
-            sys.error("Failed to create image")
-          }
-        )
+        mainActor ! MainActor.Messages.ImageCreated(form.buildId, image.id, form.version.trim)
+
+        Right(image)
       }
       case errors => Left(errors)
     }

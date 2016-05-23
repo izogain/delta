@@ -1,9 +1,10 @@
 package io.flow.delta.actors
 
 import akka.actor.Actor
-import db.{BuildsDao, BuildDesiredStatesDao, SettingsDao}
+import db.{BuildsDao, BuildDesiredStatesDao, ConfigsDao}
 import io.flow.delta.api.lib.StateDiff
-import io.flow.delta.v0.models.{Build, Settings, Version}
+import io.flow.delta.v0.models.{Build, Version}
+import io.flow.delta.config.v0.{models => config}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import play.libs.Akka
@@ -29,6 +30,7 @@ object BuildSupervisorActor {
 class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
   private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  override lazy val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
 
   def receive = {
 
@@ -37,10 +39,10 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
     }
 
     case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
-      withBuild { build =>
-        withSettings { settings =>
+      withEnabledBuild { build =>
+        withBuildConfig { buildConfig =>
           log.runSync("PursueDesiredState") {
-            run(build, settings, BuildSupervisorActor.Functions)
+            run(build, buildConfig.stages, BuildSupervisorActor.Functions)
           }
         }
       }
@@ -53,7 +55,7 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
       * PursueDesiredState. Otherwise a no-op.
       */
     case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withVerboseErrorHandler(msg) {  
-      withBuild { build =>
+      withEnabledBuild { build =>
         BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
             // Might be first tag
@@ -82,16 +84,16 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Ready at the end of all the functions.
     */
-  private[this] def run(build: Build, settings: Settings, functions: Seq[BuildSupervisorFunction]) {
+  private[this] def run(build: Build, stages: Seq[config.BuildStage], functions: Seq[BuildSupervisorFunction]) {
     functions.headOption match {
       case None => {
         SupervisorResult.Ready("All functions returned without modification")
       }
       case Some(f) => {
-        isEnabled(settings, f) match {
+        stages.contains(f.stage) match {
           case false => {
-            log.skipped(format(f, "is disabled in the build settings"))
-            run(build, settings, functions.drop(1))
+            log.skipped(s"Stage ${f.stage} is disabled")
+            run(build, stages, functions.drop(1))
           }
           case true => {
             log.started(format(f))
@@ -111,7 +113,7 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
                 }
                case SupervisorResult.Ready(desc)=> {
                   log.completed(format(f, desc))
-                  run(build, settings, functions.drop(1))
+                  run(build, stages, functions.drop(1))
                 }
               }
 
@@ -121,15 +123,6 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
           }
         }
       }
-    }
-  }
-
-  private[this] def isEnabled(settings: Settings, f: Any): Boolean = {
-    format(f) match {
-      case "SetDesiredState" => settings.setDesiredState
-      case "BuildDockerImage" => settings.buildDockerImage
-      case "Scale" => settings.scale
-      case other => sys.error(s"Cannot determine build setting for function[$other]")
     }
   }
 

@@ -2,7 +2,8 @@
   "name": "delta",
 
   "imports": [
-    { "uri": "http://www.apidoc.me/flow/common/0.0.9/service.json" },
+    { "uri": "http://www.apidoc.me/flow/common/0.0.12/service.json" },
+    { "uri": "http://www.apidoc.me/flow/delta-config/0.1.68/service.json" },
     { "uri": "http://www.apidoc.me/flow/github/0.0.3/service.json" }
   ],
 
@@ -16,6 +17,12 @@
   },
 
   "enums": {
+    "docker_provider": {
+      "values": [
+	{ "name": "docker_hub" }
+      ]
+    },
+
     "role": {
       "values": [
 	{ "name": "member" },
@@ -29,9 +36,10 @@
       ]
     },
 
-    "docker_provider": {
+    "status": {
       "values": [
-	{ "name": "docker_hub" }
+	{ "name": "enabled" },
+	{ "name": "paused" }
       ]
     },
 
@@ -109,7 +117,8 @@
 	{ "name": "visibility", "type": "visibility" },
 	{ "name": "scms", "type": "scms" },
 	{ "name": "name", "type": "string" },
-	{ "name": "uri", "type": "string" }
+	{ "name": "uri", "type": "string" },
+	{ "name": "config", "type": "io.flow.delta.config.v0.unions.config" }
       ]
     },
 
@@ -129,7 +138,7 @@
 	{ "name": "visibility", "type": "visibility" },
 	{ "name": "scms", "type": "scms" },
 	{ "name": "uri", "type": "string" },
-	{ "name": "settings", "type": "settings_form" }
+	{ "name": "config", "type": "io.flow.delta.config.v0.models.config_project", "required": false, "description": "Project configuration. If not provided, we use the global default" }
       ]
     },
 
@@ -140,29 +149,6 @@
         { "name": "desired", "type": "state", "required": false },
         { "name": "last", "type": "state", "required": false },
         { "name": "latest_image", "type": "string", "required": false, "description": "If available, the full name of the latest image for this build" }
-      ]
-    },
-
-    "settings": {
-      "description": "Project level settings / configuration",
-      "fields": [
-	{ "name": "sync_master_sha", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
-	{ "name": "sync_tags", "type": "boolean", "default": true, "description": "If enabled, we will automatically persist all tags from github in delta" },
-	{ "name": "tag_master", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
-	{ "name": "set_desired_state", "type": "boolean", "default": true, "description": "If enabled, we will automatically create a new tag anytime we see a new commit on master" },
-	{ "name": "build_docker_image", "type": "boolean", "default": true, "description": "If enabled, we will automatically monitor building a docker image for each new tag" },
-	{ "name": "scale", "type": "boolean", "default": true, "description": "If enabled, we will automatically scale instances up or down to match current desired state" }
-      ]
-    },
-
-    "settings_form": {
-      "fields": [
-	{ "name": "sync_master_sha", "type": "boolean", "required": false },
-	{ "name": "sync_tags", "type": "boolean", "required": false },
-	{ "name": "tag_master", "type": "boolean", "required": false },
-	{ "name": "set_desired_state", "type": "boolean", "required": false },
-	{ "name": "build_docker_image", "type": "boolean", "required": false },
-	{ "name": "scale", "type": "boolean", "required": false }
       ]
     },
 
@@ -330,16 +316,8 @@
       "fields": [
         { "name": "id", "type": "string" },
         { "name": "project", "type": "project_summary" },
-        { "name": "name", "type": "string", "description": "This is the full name of the application that this build represents and is used to lookup information in the registry, in docker hub, in AWS, etc.", "example": "delta-api" },
-        { "name": "dockerfile_path", "type": "string", "example": "./Dockerfile" }
-      ]
-    },
-
-    "build_form" : {
-      "fields": [
-        { "name": "project_id", "type": "string" },
-        { "name": "name", "type": "string" },
-        { "name": "dockerfile_path", "type": "string" }
+        { "name": "status", "type": "status" },
+        { "name": "name", "type": "string", "description": "This is the full name of the application that this build represents and is used to lookup information in the registry, in docker hub, in AWS, etc.", "example": "delta-api" }
       ]
     },
 
@@ -422,19 +400,6 @@
   },
 
   "resources": {
-
-    "io.flow.common.v0.models.healthcheck": {
-      "path": "/_internal_",
-      "operations": [
-        {
-          "method": "GET",
-	  "path": "/healthcheck",
-          "responses": {
-            "200": { "type": "io.flow.common.v0.models.healthcheck" }
-          }
-        }
-      ]
-    },
 
     "github_user": {
       "path": "/authentications",
@@ -573,27 +538,6 @@
 	  "path": "/:id",
           "responses": {
             "204": { "type": "unit" },
-            "401": { "type": "unit" },
-            "404": { "type": "unit" }
-          }
-        },
-
-        {
-          "method": "GET",
-          "path": "/:id/settings",
-          "responses": {
-            "200": { "type": "settings" },
-            "401": { "type": "unit" },
-            "404": { "type": "unit" }
-          }
-        },
-
-        {
-          "method": "PUT",
-          "path": "/:id/settings",
-          "body": { "type": "settings_form" },
-          "responses": {
-            "200": { "type": "settings" },
             "401": { "type": "unit" },
             "404": { "type": "unit" }
           }
@@ -760,10 +704,11 @@
     },
 
     "repository": {
+      "path": "/github",
+
       "operations": [
 	{
           "method": "GET",
-	  "path": "/github",
           "description": "Returns a list of repositories from github",
           "parameters": [
 	    { "name": "owner", "type": "string", "required": false, "description": "Optionally filter by owner name. Case in-sensitive. Exact match" },
@@ -778,7 +723,23 @@
 	    "401": { "type": "unit" },
             "422": { "type": "[io.flow.common.v0.models.error]" }
           }
-	}
+	},
+
+	{
+          "method": "GET",
+	  "path": "/:owner/:repo/config",
+          "description": "Returns the delta configuration for the specified github repo, if the repo has a .delta file in its root",
+          "parameters": [
+	    { "name": "owner", "type": "string" },
+	    { "name": "repo", "type": "string" }
+          ],
+          "responses": {
+	    "200": { "type": "io.flow.delta.config.v0.unions.config" },
+	    "401": { "type": "unit" },
+            "422": { "type": "[io.flow.common.v0.models.error]" }
+          }
+        }
+        
       ]
     },
 
@@ -1110,7 +1071,8 @@
             { "name": "offset", "type": "long", "default": 0, "description": "Used to paginate. First page of results is 0.", "minimum": 0 }
 	  ],
           "responses": {
-            "200": { "type": "[dashboard_build]" }
+            "200": { "type": "[dashboard_build]" },
+            "401": { "type": "unit" }
           }
 	}
       ]

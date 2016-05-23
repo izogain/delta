@@ -23,19 +23,19 @@ class ShasDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
     sha.hash must be(hash)
   }
 
-  "upsertMaster" in {
+  "upsertBranch" in {
     val project = createProject()
 
     val hash = createTestKey()
 
-    val sha = shasWriteDao.upsertMaster(systemUser, project.id, hash)
+    val sha = shasWriteDao.upsertBranch(systemUser, project.id, "master", hash)
     sha.hash must be(hash)
 
-    val sha2 = shasWriteDao.upsertMaster(systemUser, project.id, hash)
+    val sha2 = shasWriteDao.upsertBranch(systemUser, project.id, "master", hash)
     sha2.hash must be(hash)
 
     val other = createTestKey()
-    val sha3 = shasWriteDao.upsertMaster(systemUser, project.id, other)
+    val sha3 = shasWriteDao.upsertBranch(systemUser, project.id, "master", other)
     sha3.hash must be(other)
   }
 

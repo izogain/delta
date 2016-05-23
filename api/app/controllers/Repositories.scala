@@ -2,21 +2,25 @@ package controllers
 
 import db.{OrganizationsDao, ProjectsDao}
 import io.flow.common.v0.models.json._
+import io.flow.delta.config.v0.models.json._
 import io.flow.delta.api.lib.Github
+import io.flow.delta.lib.config.{Defaults, Parser}
 import io.flow.github.v0.models.json._
 import io.flow.play.util.Validation
 import play.api.mvc._
 import play.api.libs.json._
 import scala.concurrent.Future
 
+@javax.inject.Singleton
 class Repositories @javax.inject.Inject() (
   val tokenClient: io.flow.token.v0.interfaces.Client,
-  val github: Github
+  val github: Github,
+  parser: Parser
 ) extends Controller with BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def getGithub(
+  def get(
     owner: Option[String] = None, // Ex: flowcommerce
     name: Option[String] = None,  // Ex: user
     organizationId: Option[String] = None,
@@ -56,6 +60,23 @@ class Repositories @javax.inject.Inject() (
       }.map { results =>
         Ok(Json.toJson(results))
       }
+    }
+  }
+
+  /**
+    * Fetches the delta configuration for this github repo, using the
+    * .delta file if available or the default for delta.
+    */
+  def getConfigByOwnerAndRepo(
+    owner: String,
+    repo: String
+  ) = Identified.async { request =>
+    github.file(request.user, owner, repo, ".delta").map { result =>
+      Ok(
+        Json.toJson(
+          result.map { parser.parse(_) }.getOrElse { Defaults.Config }
+        )
+      )
     }
   }
 

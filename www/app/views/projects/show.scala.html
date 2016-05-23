@@ -2,7 +2,6 @@
   data: io.flow.delta.www.lib.UiData,
   project: io.flow.delta.v0.models.Project,
   buildStates: Seq[io.flow.delta.v0.models.BuildState],
-  settings: io.flow.delta.v0.models.Settings,
   masterHash: Option[String],
   latestTag: Option[io.flow.delta.v0.models.Tag],
   changeEvents: Seq[io.flow.delta.v0.models.Event],
@@ -149,34 +148,16 @@
 </section>
 
 <section class="col-xs-12 col-md-6">
-  <h3 class="p2">Project Settings</h3>
+  <h3 class="p2">Project Stages</h3>
   <div class="table-responsive">
     <table class="table table-striped">
       <tbody>
-        <tr>
-          <td><strong>syncMasterSha</strong></td>
-          <td>@settingToggle("syncMasterSha", settings.syncMasterSha)</td>
-        </tr>
-        <tr>
-          <td><strong>syncTags</strong></td>
-          <td>@settingToggle("syncTags", settings.syncTags)</td>
-        </tr>
-        <tr>
-          <td><strong>tagMaster</strong></td>
-          <td>@settingToggle("tagMaster", settings.tagMaster)</td>
-        </tr>
-        <tr>
-          <td><strong>setDesiredState</strong></td>
-          <td>@settingToggle("setDesiredState", settings.setDesiredState)</td>
-       </tr>
-        <tr>
-          <td><strong>buildDockerImage</strong></td>
-          <td>@settingToggle("buildDockerImage", settings.buildDockerImage)</td>
-        </tr>
-        <tr>
-          <td><strong>scale</strong></td>
-          <td>@settingToggle("scale", settings.scale)</td>
-        </tr>
+        @io.flow.delta.config.v0.models.ProjectStage.all.map { stage =>
+          <tr>
+            <td><strong>@stage</strong></td>
+            <td>TODO</td>
+          </tr>
+        }
       </tbody>
     </table>
   </div>

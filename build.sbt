@@ -27,6 +27,11 @@ lazy val lib = project
   .dependsOn(generated)
   .aggregate(generated)
   .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.yaml" % "snakeyaml" % "1.16"
+    )
+  )
 
 lazy val api = project
   .in(file("api"))

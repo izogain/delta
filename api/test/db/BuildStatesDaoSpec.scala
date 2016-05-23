@@ -15,8 +15,8 @@ class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   private[this] lazy val buildDesiredStatesWriteDao = app.injector.instanceOf[BuildDesiredStatesWriteDao]
   private[this] lazy val buildLastStatesWriteDao = app.injector.instanceOf[BuildLastStatesWriteDao]
 
-  def createBuildDesiredState(
-    build: Build = createBuild(),
+  def upsertBuildDesiredState(
+    build: Build = upsertBuild(),
     form: StateForm = createStateForm()
   ): State = {
     rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, form))
@@ -32,21 +32,21 @@ class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "create desired" in {
-    val build = createBuild()
+    val build = upsertBuild()
     val state = rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "create actual" in {
-    val build = createBuild()
+    val build = upsertBuild()
     val state = rightOrErrors(buildLastStatesWriteDao.create(systemUser, build, createStateForm()))
     state.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
     state.versions.map(_.instances) must be(Seq(3, 2))
   }
 
   "upsert" in {
-    val build = createBuild()
+    val build = upsertBuild()
     val state = rightOrErrors(buildDesiredStatesWriteDao.upsert(systemUser, build, createStateForm()))
     val second = rightOrErrors(buildDesiredStatesWriteDao.upsert(systemUser, build, createStateForm()))
     second.versions.map(_.name) must be(Seq("0.0.1", "0.0.2"))
@@ -54,8 +54,8 @@ class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
   }
 
   "delete" in {
-    val build = createBuild()
-    val state = createBuildDesiredState(build)
+    val build = upsertBuild()
+    val state = upsertBuildDesiredState(build)
     buildDesiredStatesWriteDao.delete(systemUser, build)
     BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) must be(None)
   }
@@ -68,7 +68,7 @@ class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
       )
     )
     
-    val build = createBuild()
+    val build = upsertBuild()
     val state = rightOrErrors(buildDesiredStatesWriteDao.create(systemUser, build, form))
     state.versions.map(_.name) must be(Seq("0.0.2"))
     state.versions.map(_.instances) must be(Seq(2))

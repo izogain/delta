@@ -12,13 +12,13 @@ class SetDesiredStateSpec extends PlaySpec with OneAppPerSuite with db.Helpers {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   "no-op if no tags" in {
-    val build = createBuild()
+    val build = upsertBuild()
     SetDesiredState(build).run() must be(SupervisorResult.Checkpoint("Project does not have any tags"))
   }
 
   "sets desired state to latest tag" in {
     val project = createProject()
-    val build = createBuild(createBuildForm(project))
+    val build = upsertBuild(project)
 
     val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
     SetDesiredState(build).run() must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances"))

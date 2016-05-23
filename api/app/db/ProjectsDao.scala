@@ -3,9 +3,12 @@ package db
 import anorm._
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
+import io.flow.delta.lib.config.Defaults
 import io.flow.delta.api.lib.GithubUtil
 import io.flow.delta.lib.BuildNames
-import io.flow.delta.v0.models.{Scms, Project, ProjectForm, ProjectSummary, OrganizationSummary, Visibility}
+import io.flow.delta.v0.models.{OrganizationSummary, Project, ProjectForm, ProjectSummary, Scms, Status, Visibility}
+import io.flow.delta.config.v0.models.Config
+import io.flow.delta.config.v0.models.json._
 import io.flow.play.util.UrlKey
 import io.flow.postgresql.{Authorization, Query, OrderBy, Pager}
 import play.api.db._
@@ -21,9 +24,11 @@ object ProjectsDao {
            projects.scms,
            projects.name,
            projects.uri,
-           organizations.id as organization_id
+           organizations.id as organization_id,
+           configs.data::varchar as config_data
       from projects
       left join organizations on organizations.id = projects.organization_id
+      left join configs on configs.project_id = projects.id
   """)
   
   def findByOrganizationIdAndName(auth: Authorization, organizationId: String, name: String): Option[Project] = {
@@ -74,16 +79,45 @@ object ProjectsDao {
           }
         ).bind("minutes_since_last_event", minutesSinceLastEvent).
         as(
-          io.flow.delta.v0.anorm.parsers.Project.parser().*
+          parser().*
         )
     }
   }
-  
+
+  private[this] def parser(): RowParser[Project] = {
+    SqlParser.str("id") ~
+    io.flow.delta.v0.anorm.parsers.OrganizationSummary.parserWithPrefix("organization") ~
+    io.flow.delta.v0.anorm.parsers.Reference.parserWithPrefix("user") ~
+    io.flow.delta.v0.anorm.parsers.Visibility.parser("visibility") ~
+    io.flow.delta.v0.anorm.parsers.Scms.parser("scms") ~
+    SqlParser.str("name") ~
+    SqlParser.str("uri") ~
+    SqlParser.str("config_data").? map {
+      case id ~ organization ~ user ~ visibility ~ scms ~ name ~ uri ~ configData => {
+        Project(
+          id = id,
+          organization = organization,
+          user = user,
+          visibility = visibility,
+          scms = scms,
+          name = name,
+          uri = uri,
+          config = configData match {
+            case None => Defaults.Config
+            case Some(text) => Json.parse(text).as[Config]
+          }
+        )
+      }
+    }
+  }
+
+
 }
 
 case class ProjectsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   buildsWriteDao: BuildsWriteDao,
+  configsDao: ConfigsDao,
   shasWriteDao: ShasWriteDao,
   tagsWriteDao: TagsWriteDao
 ) {
@@ -163,7 +197,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     nameErrors ++ visibilityErrors ++ uriErrors ++ organizationErrors
   }
 
-  def create(createdBy: UserReference, form: ProjectForm, dockerfilePaths: Seq[String] = Nil): Either[Seq[String], Project] = {
+  def create(createdBy: UserReference, form: ProjectForm): Either[Seq[String], Project] = {
     validate(createdBy, form) match {
       case Nil => {
 
@@ -173,7 +207,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         
         val id = urlKey.generate(form.name.trim)
 
-        val buildIds: Seq[String] = DB.withTransaction { implicit c =>
+        DB.withTransaction { implicit c =>
           SQL(InsertQuery).on(
             'id -> id,
             'organization_id -> org.id,
@@ -185,17 +219,19 @@ case class ProjectsWriteDao @javax.inject.Inject() (
             'updated_by_user_id -> createdBy.id
           ).execute()
 
-          SettingsDao.create(c, createdBy, id, form.settings)
+          form.config.map { cfg =>
+            configsDao.upsertWithConnection(c, createdBy, id, cfg)
+          }
 
-          dockerfilePaths.map { path =>
-            buildsWriteDao.create(c, createdBy, BuildNames.dockerfilePathToBuildForm(id, path))
+          form.config.getOrElse(Defaults.Config).builds.foreach { buildConfig =>
+            buildsWriteDao.upsert(c, createdBy, id, Status.Enabled, buildConfig)
           }
         }
 
         mainActor ! MainActor.Messages.ProjectCreated(id)
 
-        buildIds.foreach { buildId =>
-          mainActor ! MainActor.Messages.BuildCreated(buildId)
+        BuildsDao.findAll(Authorization.All, projectId = Some(id)).foreach { build =>
+          mainActor ! MainActor.Messages.BuildCreated(build.id)
         }
 
         Right(
@@ -218,7 +254,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
           "Changing organization ID not currently supported"
         )
 
-        DB.withTransaction { implicit c =>
+        DB.withConnection { implicit c =>
           SQL(UpdateQuery).on(
             'id -> project.id,
             'visibility -> form.visibility.toString,
@@ -227,8 +263,6 @@ case class ProjectsWriteDao @javax.inject.Inject() (
             'uri -> form.uri.trim,
             'updated_by_user_id -> createdBy.id
           ).execute()
-
-          SettingsDao.upsert(c, createdBy, project.id, form.settings)
         }
 
         mainActor ! MainActor.Messages.ProjectUpdated(project.id)
@@ -268,7 +302,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
       buildsWriteDao.delete(deletedBy, build)
     }
 
-    SettingsDao.deleteByProjectId(deletedBy, project.id)
+    configsDao.deleteByProjectId(deletedBy, project.id)
 
     Delete.delete("projects", deletedBy.id, project.id)
 

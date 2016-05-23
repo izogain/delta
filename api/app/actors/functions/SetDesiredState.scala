@@ -2,6 +2,7 @@ package io.flow.delta.actors.functions
 
 import db.{BuildDesiredStatesDao, BuildDesiredStatesWriteDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{BuildSupervisorFunction, SupervisorResult}
+import io.flow.delta.config.v0.models.BuildStage
 import io.flow.delta.lib.StateFormatter
 import io.flow.delta.v0.models.{Build, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
@@ -14,6 +15,8 @@ import scala.concurrent.Future
 object SetDesiredState extends BuildSupervisorFunction {
 
   val DefaultNumberInstances = 2
+
+  override val stage = BuildStage.SetDesiredState
 
   override def run(
     build: Build

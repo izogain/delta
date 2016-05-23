@@ -1,10 +1,10 @@
 package controllers
 
-import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao, SettingsDao}
+import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao}
 import io.flow.postgresql.Authorization
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Build, ProjectForm, BuildState, SettingsForm}
+import io.flow.delta.v0.models.{Build, ProjectForm, BuildState}
 import io.flow.delta.v0.models.json._
 import io.flow.play.util.Validation
 import io.flow.common.v0.models.json._
@@ -56,14 +56,8 @@ class Projects @javax.inject.Inject() (
           UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
         }
         case s: JsSuccess[ProjectForm] => {
-          // TODO: val dockerfiles = getDockerfilesFromScms(request.user, form.scms, form.uri)
-          val dockerfiles = if (s.get.name == "apidoc" || s.get.name == "delta" || s.get.name == "dependency") {
-            Seq("/api/Dockerfile", "/www/Dockerfile")
-          } else {
-            Seq("/Dockerfile")
-          }
-
-          projectsWriteDao.create(request.user, s.get, dockerfiles) match {
+          println(s.get)
+          projectsWriteDao.create(request.user, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(project) => Created(Json.toJson(project))
           }
@@ -97,35 +91,6 @@ class Projects @javax.inject.Inject() (
     }
   }
  
-  def getSettingsById(id: String) = Identified { request =>
-    withProject(request.user, id) { project =>
-      Ok(
-        Json.toJson(
-          SettingsDao.findByProjectIdOrDefault(Authorization.User(request.user.id), project.id)
-        )
-      )
-    }
-  }
-
-  def putSettingsById(id: String) = Identified { request =>
-    withProject(request.user, id) { project =>
-      JsValue.sync(request.contentType, request.body) { js =>
-        js.validate[SettingsForm] match {
-          case e: JsError => {
-            UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
-          }
-          case s: JsSuccess[SettingsForm] => {
-            Ok(
-              Json.toJson(
-                SettingsDao.upsert(request.user, project.id, s.get)
-              )
-            )
-          }
-        }
-      }
-    }
-  }
-
   def getBuildsAndStatesById(id: String) = Identified { request =>
     withProject(request.user, id) { project =>
       Ok(

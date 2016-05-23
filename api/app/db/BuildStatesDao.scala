@@ -111,11 +111,16 @@ private[db] class BuildStatesWriteDao(
   
   private[this] val LookupIdQuery = s"select id from $table where build_id = {build_id}"
 
-  private[this] val InsertQuery = s"""
+  private[this] val UpsertQuery = s"""
     insert into $table
     (id, build_id, versions, timestamp, updated_by_user_id)
     values
     ({id}, {build_id}, {versions}::json, now(), {updated_by_user_id})
+    on conflict(build_id)
+    do update
+          set versions = {versions}::json,
+          timestamp = now(),
+          updated_by_user_id = {updated_by_user_id}
   """
 
   private[this] val UpdateQuery = s"""
@@ -146,7 +151,7 @@ private[db] class BuildStatesWriteDao(
         val id = idGenerator.randomId()
 
         DB.withConnection { implicit c =>
-          SQL(InsertQuery).on(
+          SQL(UpsertQuery).on(
             'id -> id,
             'build_id -> build.id,
             'versions -> Json.toJson(normalize(form.versions)).toString,
@@ -157,8 +162,8 @@ private[db] class BuildStatesWriteDao(
         onChange(mainActor, build.id)
 
         Right(
-          reader.findById(Authorization.All, id).getOrElse {
-            sys.error(s"Failed to create $table")
+          reader.findByBuildId(Authorization.All, build.id).getOrElse {
+            sys.error(s"Failed to create $table for buildId[${build.id}]")
           }
         )
       }

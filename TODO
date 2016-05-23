@@ -1,0 +1,6 @@
+database:
+  - remove builds.dockerfile_path
+  - remove builds.position
+  - drop table settings
+
+Implement build dependencies
