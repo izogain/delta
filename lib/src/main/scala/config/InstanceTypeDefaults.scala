@@ -1,11 +1,11 @@
-package io.flow.delta.aws
+package io.flow.delta.lib.config
 
 import io.flow.delta.config.v0.models.InstanceType
 import play.api.Logger
 
 object InstanceTypeDefaults {
 
-  def containerMemory(typ: InstanceType): Int = {
+  def memory(typ: InstanceType): Int = {
     typ match {
       case InstanceType.M4Large => 7500
 

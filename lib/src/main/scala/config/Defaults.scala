@@ -9,13 +9,18 @@ object Defaults {
     name = "master"
   )
 
+  private[this] val instanceType = models.InstanceType.fromString("t2.micro").getOrElse {
+    sys.error("Default instance type[t2.micro] not found")
+  }
+
   val Build = models.Build(
     name = BuildNames.DefaultBuildName,
     dockerfile = "./Dockerfile",
     initialNumberInstances = 2,
-    instanceType = models.InstanceType.fromString("t2.micro").getOrElse {
-      sys.error("Default instance type[t2.micro] not found")
-    },
+    instanceType = instanceType,
+    memory = InstanceTypeDefaults.memory(instanceType),
+    portContainer = 80,
+    portHost = 80,
     stages = models.BuildStage.all,
     dependencies = Nil
   )

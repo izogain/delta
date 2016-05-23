@@ -4,7 +4,9 @@ import io.flow.delta.config.v0.models.InstanceType
 
 case class DefaultSettings(
   instanceType: InstanceType,
-  override val containerMemory: Int
+  override val containerMemory: Int,  // in MB
+  override val portContainer: Int,
+  override val portHost: Int
 ) extends Settings {
 
   override val launchConfigInstanceType = instanceType.toString
@@ -72,4 +74,8 @@ trait Settings {
 
   // MB of memory
   val containerMemory: Int
+
+  val portContainer: Int
+
+  val portHost: Int
 }

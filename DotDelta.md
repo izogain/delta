@@ -40,7 +40,10 @@ does not need to be specified.
       - api:
           dockerfile: api/Dockerfile
           instance.type: t2.micro
-          initial_number_instances: 1
+          memory: 3500
+          initial.number.instances: 1
+          port.container: 9000
+          port.host: 6021
           disable:
             - scale
       - www:

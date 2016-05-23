@@ -96,16 +96,21 @@ case class Parser() {
     val all = data.map { case (name, attributes) =>
       val map = toMapString(attributes)
       val obj = toMap(attributes)
+      val instanceType = map.get("instance.type") match {
+        case None => Defaults.Build.instanceType
+        case Some(typ) => InstanceType.fromString(typ).getOrElse {
+          sys.error(s"Invalid instance type[$typ]. Must be one of: " + InstanceType.all.map(_.toString).mkString(", "))
+        }
+      }
+
       Build(
         name = name.toString,
         dockerfile = map.get("dockerfile").getOrElse(Defaults.Build.dockerfile),
-        initialNumberInstances = map.get("initial_number_instances").map(_.toLong).getOrElse(Defaults.Build.initialNumberInstances),
-        instanceType = map.get("instance.type") match {
-          case None => Defaults.Build.instanceType
-          case Some(typ) => InstanceType.fromString(typ).getOrElse {
-            sys.error(s"Invalid instance type[$typ]. Must be one of: " + InstanceType.all.map(_.toString).mkString(", "))
-          }
-        },
+        initialNumberInstances = map.get("initial.number.instances").map(_.toLong).getOrElse(Defaults.Build.initialNumberInstances),
+        instanceType = instanceType,
+        memory = map.get("memory").map(_.toLong).getOrElse(InstanceTypeDefaults.memory(instanceType)),
+        portContainer = map.get("port.container").map(_.toInt).getOrElse(Defaults.Build.portContainer),
+        portHost = map.get("port.host").map(_.toInt).getOrElse(Defaults.Build.portHost),
         stages = toBuildStages(
           disable = obj.get("disable").map(toStringArray(_)).getOrElse(Nil),
           enable = obj.get("enable").map(toStringArray(_)).getOrElse(Nil)

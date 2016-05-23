@@ -2,8 +2,9 @@ package db
 
 import io.flow.postgresql.Authorization
 import io.flow.play.util.Random
-import io.flow.delta.v0.models._
 import io.flow.delta.config.v0.{models => config}
+import io.flow.delta.lib.config.Defaults
+import io.flow.delta.v0.models._
 import io.flow.common.v0.models.{Name, User, UserReference}
 import java.util.UUID
 
@@ -259,15 +260,8 @@ trait Helpers {
   def createBuildConfig(
     project: Project = createProject()
   ) = {
-    config.Build(
-      name = createTestKey(),
-      dockerfile = "./Dockerfile",
-      initialNumberInstances = 2,
-      instanceType = config.InstanceType.fromString("t2.micro").getOrElse {
-        sys.error("Default instance type[t2.micro] not found")
-      },
-      stages = config.BuildStage.all,
-      dependencies = Nil
+    Defaults.Build.copy(
+      name = createTestKey()
     )
   }
 

@@ -66,8 +66,8 @@ builds:
   - www
     """).builds.toList match {
       case api :: www :: Nil => {
-        api must beEqualTo(Build("api", "./Dockerfile", 2, InstanceType.T2Micro, BuildStage.all, Nil))
-        www must beEqualTo(Build("www", "./Dockerfile", 2, InstanceType.T2Micro, BuildStage.all, Nil))
+        api must beEqualTo(Defaults.Build.copy(name = "api"))
+        www must beEqualTo(Defaults.Build.copy(name = "www"))
       }
 
       case _ => sys.error("Expected two branches")
@@ -78,12 +78,12 @@ builds:
   - api:
       dockerfile: api/Dockerfile    
       instance.type: t2.medium
-      initial_number_instances: 5
+      initial.number.instances: 5
       disable:
         - scale
   - www:
       dockerfile: www/Dockerfile
-      initial_number_instances: 10
+      initial.number.instances: 10
       enable:
         - set_desired_state
         - build_docker_image
@@ -92,10 +92,53 @@ builds:
     """).builds.toList match {
       case api :: www :: Nil => {
         api must beEqualTo(
-          Build("api", "api/Dockerfile", 5, InstanceType.T2Medium, Seq(BuildStage.SetDesiredState, BuildStage.BuildDockerImage), Nil)
+          Defaults.Build.copy(
+            name = "api",
+            dockerfile = "api/Dockerfile",
+            initialNumberInstances = 5,
+            instanceType = InstanceType.T2Medium,
+            memory = 3500,
+            stages = Seq(BuildStage.SetDesiredState, BuildStage.BuildDockerImage)
+          )
         )
         www must beEqualTo(
-          Build("www", "www/Dockerfile", 10, InstanceType.T2Micro, Seq(BuildStage.SetDesiredState, BuildStage.BuildDockerImage), Seq("api"))
+          Defaults.Build.copy(
+            name = "www",
+            dockerfile = "www/Dockerfile",
+            initialNumberInstances = 10,
+            stages = Seq(BuildStage.SetDesiredState, BuildStage.BuildDockerImage),
+            dependencies = Seq("api")
+          )
+        )
+      }
+
+      case _ => sys.error("Expected two branches")
+    }
+
+    configProject("""
+builds:
+  - root:
+      instance.type: t2.medium
+      memory: 1000
+    """).builds.toList match {
+      case build :: Nil => {
+        build must beEqualTo(
+          Defaults.Build.copy(instanceType = InstanceType.T2Medium, memory = 1000)
+        )
+      }
+
+      case _ => sys.error("Expected two branches")
+    }
+
+    configProject("""
+builds:
+  - root:
+      port.container: 9000
+      port.host: 6021
+    """).builds.toList match {
+      case build :: Nil => {
+        build must beEqualTo(
+          Defaults.Build.copy(portContainer = 9000, portHost = 6021)
         )
       }
 

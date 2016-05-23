@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import com.amazonaws.services.ecs.model.Service
 import db.{ConfigsDao, OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.postgresql.Authorization
-import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer, InstanceTypeDefaults}
+import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer}
 import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
 import io.flow.delta.lib.{BuildNames, Semver, StateFormatter, Text}
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
@@ -62,7 +62,9 @@ class BuildActor @javax.inject.Inject() (
   private[this] lazy val awsSettings = withBuildConfig { bc =>
     DefaultSettings(
       instanceType = bc.instanceType,
-      containerMemory = InstanceTypeDefaults.containerMemory(bc.instanceType)
+      containerMemory = bc.memory.asInstanceOf[Int],
+      portContainer = bc.portContainer,
+      portHost = bc.portHost
     )
   }.getOrElse {
     sys.error("Must have build configuration before getting settings for auto scaling group")
@@ -176,15 +178,13 @@ class BuildActor @javax.inject.Inject() (
 
   def captureLastState(build: Build): Future[String] = {
     Logger.info(s"BuildActor[$buildId] captureLastState this.id[$this]")
-    log.runAsync("captureLastState") {
-      ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
-        buildLastStatesWriteDao.upsert(
-          UsersDao.systemUser,
-          build,
-          StateForm(versions = versions)
-        )
-        StateFormatter.label(versions)
-      }
+    ecs.getClusterInfo(BuildNames.projectName(build)).map { versions =>
+      buildLastStatesWriteDao.upsert(
+        UsersDao.systemUser,
+        build,
+        StateForm(versions = versions)
+      )
+      StateFormatter.label(versions)
     }
   }
 

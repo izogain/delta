@@ -1,5 +1,6 @@
 builds:
   - api:
       dockerfile: api/Dockerfile
+      initial.number.instance: 1
   - www:
       dockerfile: api/Dockerfile
