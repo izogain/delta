@@ -18,7 +18,6 @@ object BuildsDao {
     select builds.id,
            builds.name,
            builds.status,
-           builds.dockerfile_path,
            builds.project_id,
            projects.name as project_name,
            projects.uri as project_uri,
@@ -85,26 +84,20 @@ case class BuildsWriteDao @javax.inject.Inject() (
 
   private[this] val UpsertQuery = """
     insert into builds
-    (id, project_id, name, status, dockerfile_path, position, updated_by_user_id)
+    (id, project_id, name, status, updated_by_user_id)
     values
-    ({id}, {project_id}, {name}, {status}, {dockerfile_path}, {position}, {updated_by_user_id})
+    ({id}, {project_id}, {name}, {status}, {updated_by_user_id})
     on conflict(project_id, name)
     do update
-          set dockerfile_path = {dockerfile_path},
-              position = {position},
+          set status = {status},
               updated_by_user_id = {updated_by_user_id}
   """
 
-  private[this] val UpdateQuery = """
+  private[this] val UpdateStatusQuery = """
     update builds
-       set name = {name},
-           dockerfile_path = {dockerfile_path},
+       set status = {status},
            updated_by_user_id = {updated_by_user_id}
      where id = {id}
-  """
-
-  private[this] val MaxPositionQuery = """
-    select max(position) as position from builds where project_id = {project_id}
   """
 
   private[this] val idGenerator = io.flow.play.util.IdGenerator("bld")
@@ -129,29 +122,15 @@ case class BuildsWriteDao @javax.inject.Inject() (
       'project_id -> projectId,
       'name -> config.name.trim,
       'status -> status.toString,
-      'dockerfile_path -> config.dockerfile.trim,
-      'position -> nextPosition(projectId),
       'updated_by_user_id -> createdBy.id
     ).execute()
   }
 
-  private[this] def nextPosition(projectId: String)(
-    implicit c: java.sql.Connection
-  ): Long = {
-    SQL(MaxPositionQuery).on(
-      'project_id -> projectId
-    ).as(SqlParser.get[Option[Long]]("position").single).headOption match {
-      case None => 0
-      case Some(n) => n + 1
-    }
-  }
-
-  def update(createdBy: UserReference, build: Build, config: BuildConfig): Build = {
+  def updateStatus(createdBy: UserReference, build: Build, status: Status): Build = {
     DB.withConnection { implicit c =>
-      SQL(UpdateQuery).on(
+      SQL(UpdateStatusQuery).on(
         'id -> build.id,
-        'name -> config.name.trim,
-        'dockerfile_path -> config.dockerfile.trim,
+        'status -> status.toString,
         'updated_by_user_id -> createdBy.id
       ).execute()
     }
@@ -171,9 +150,11 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
 
     buildDesiredStatesDao.delete(deletedBy, build)
+
     buildLastStatesDao.delete(deletedBy, build)
 
     Delete.delete("builds", deletedBy.id, build.id)
+
     mainActor ! MainActor.Messages.BuildDeleted(build.id)
   }
 

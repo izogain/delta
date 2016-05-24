@@ -109,7 +109,7 @@ private[db] class BuildStatesWriteDao(
     // No-op
   }
   
-  private[this] val LookupIdQuery = s"select id from $table where build_id = {build_id}"
+  private[this] val LookupIdQuery = s"select id from $table where build_id = {build_id} limit 1"
 
   private[this] val UpsertQuery = s"""
     insert into $table
@@ -230,7 +230,7 @@ private[db] class BuildStatesWriteDao(
     DB.withConnection { implicit c =>
       SQL(LookupIdQuery).on(
         'build_id -> buildId
-      ).as(SqlParser.get[Option[String]]("id").single).headOption
+      ).as(SqlParser.get[String]("id").*).headOption
     }
   }
 

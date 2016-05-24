@@ -1,7 +1,3 @@
-database:
-  - remove builds.dockerfile_path
-  - remove builds.position
-
 Implement build dependencies
 
 Build.status
