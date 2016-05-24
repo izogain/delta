@@ -3,7 +3,11 @@
 <section class="col-xs-12 col-md-6">
   <div class="table-responsive">
     @config.builds.map { buildConfig =>
-      <h3 class="p2">@buildConfig.name</h3>
+
+      <h3 class="p2">
+        @if(buildConfig.name == io.flow.delta.lib.BuildNames.DefaultBuildName) { Build } else { @buildConfig.name }
+      </h3>
+
       <table class="table table-striped">
         <tbody>
           <tr>
@@ -15,12 +19,20 @@
             <td>@buildConfig.initialNumberInstances</td>
           </tr>
           <tr>
-            <td><strong>Instance Type</strong></td>
-            <td>@buildConfig.instanceType</td>
+            <td><strong>Instance</strong></td>
+            <td>@buildConfig.instanceType @buildConfig.memory MB</td>
+          </tr>
+          <tr>
+            <td><strong>Port Mappings</strong></td>
+            <td>@buildConfig.portHost:@buildConfig.portContainer</td>
           </tr>
           <tr>
             <td><strong>Stages</strong></td>
-            <td>@buildConfig.stages.map(_.toString).mkString(", ")</td>
+            <td>@{buildConfig.stages.toList match {
+                   case Nil => Html("<em>none</em>")
+                   case stages => stages.mkString(", ")
+                 }}
+            </td>
           </tr>
           <tr>
             <td><strong>Dependencies</strong></td>
