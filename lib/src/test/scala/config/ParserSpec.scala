@@ -1,18 +1,95 @@
 package io.flow.delta.lib.config
 
 import io.flow.delta.config.v0.models.{Branch, Build, BuildStage, ConfigError, ConfigProject, ConfigUndefinedType, InstanceType, ProjectStage}
+import java.io.File
 import org.specs2.mutable._
 
 class ParserSpec extends Specification {
 
   private[this] lazy val parser = new Parser()
+  private[this] val ConfigSampleDir = new File("lib/src/test/resources/config")
 
   def configProject(value: String): ConfigProject = {
     parser.parse(value) match {
       case c: ConfigProject => c
-      case c: ConfigError => sys.error(s"Failed to parse config[${c.errors}]")
+      case c: ConfigError => sys.error(s"Failed to parse config[${c.errors}]\n$value")
       case ConfigUndefinedType(other) => sys.error(s"Invalid project config[$other]")
     }
+  }
+
+  def read(name: String): String = {
+    read(new File(ConfigSampleDir, name))
+  }
+
+  def read(path: File): String = {
+    scala.io.Source.fromFile(path).getLines.toSeq.mkString("\n")
+  }
+
+  "Samples" in {
+    configProject(read("empty.txt")) must beEqualTo(Defaults.Config)
+
+    configProject(read("location.txt")) must beEqualTo(
+      Defaults.Config.copy(
+        builds = Seq(
+          Defaults.Build.copy(
+            portContainer = 9000,
+            portHost = 6191
+          )
+        )
+      )
+    )
+
+    configProject(read("delta.txt")) must beEqualTo(
+      Defaults.Config.copy(
+        builds = Seq(
+          Defaults.Build.copy(
+            name = "api",
+            dockerfile = "api/Dockerfile",
+            portContainer = 9000,
+            portHost = 6091,
+            initialNumberInstances = 1
+          ),
+          Defaults.Build.copy(
+            name = "www",
+            dockerfile = "www/Dockerfile",
+            portContainer = 9000,
+            portHost = 6090
+          )
+        )
+      )
+    )
+
+    configProject(read("complete.txt")) must beEqualTo(
+      Defaults.Config.copy(
+        branches = Seq(Branch(name = "master"), Branch(name = "release")),
+        stages = Seq(ProjectStage.SyncShas, ProjectStage.SyncTags),
+        builds = Seq(
+          Defaults.Build.copy(name = "api"),
+          Build(
+            name = "www",
+            dockerfile = "www/Dockerfile",
+            instanceType = InstanceType.T2Medium,
+            memory = 8150,
+            initialNumberInstances = 10,
+            portContainer = 7050,
+            portHost = 8000,
+            stages = Seq(BuildStage.SetDesiredState, BuildStage.BuildDockerImage),
+            dependencies = Seq("api")
+          )
+        )
+      )
+    )
+  }
+
+  "Sample configuration files can all parse" in {
+    for ( file <- ConfigSampleDir.listFiles if file.getName.endsWith(".txt") ) {
+      parser.parse(read(file)) match {
+        case c: ConfigProject => {}
+        case c: ConfigError => sys.error(s"Failed to parse file[$file]: ${c.errors}")
+        case ConfigUndefinedType(other) => sys.error(s"Invalid project config[$other]")
+      }
+    }
+    true must beTrue
   }
 
   "Empty file" in {
@@ -31,13 +108,15 @@ class ParserSpec extends Specification {
     configProject("").stages must be(ProjectStage.all)
 
     configProject("""
-enable:
-  - tag
+stages:
+  enable:
+    - tag
     """).stages must beEqualTo(Seq(ProjectStage.Tag))
 
     configProject("""
-disable:
-  - tag
+stages:
+  disable:
+    - tag
     """).stages must beEqualTo(Seq(ProjectStage.SyncShas, ProjectStage.SyncTags))
   }
 

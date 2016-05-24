@@ -1,0 +1,1 @@
+# Empty configuration files are okay as global defaults will be used.

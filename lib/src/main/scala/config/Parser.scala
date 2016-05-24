@@ -24,17 +24,24 @@ case class Parser() {
         val yaml = new Yaml()
 
         Try {
-          val obj = yaml.load(contents).asInstanceOf[java.util.Map[String, Object]].asScala
+          val y = Option(yaml.load(contents))
+
+          val obj = y match {
+            case None => Map[String, Object]()
+            case Some(data) => data.asInstanceOf[java.util.Map[String, Object]].asScala
+          }
+          val stagesMap: Map[String, Object] = obj.get("stages") match {
+            case None => Map[String, Object]()
+            case Some(data) => data.asInstanceOf[java.util.Map[String, Object]].asScala.toMap
+          }
 
           val config = ConfigProject(
             stages = toProjectStages(
-              disable = obj.get("disable").map(toStringArray(_)).getOrElse(Nil),
-              enable = obj.get("enable").map(toStringArray(_)).getOrElse(Nil)
+              disable = stagesMap.get("disable").map(toStringArray(_)).getOrElse(Nil),
+              enable = stagesMap.get("enable").map(toStringArray(_)).getOrElse(Nil)
             ),
-            branches = obj.get("branches").map(toStringArray(_)).getOrElse(Nil).map { name =>
-              Branch(
-                name = name
-              )
+            branches = obj.get("branches").map(toStringArray(_).map(n => Branch(name = n))).getOrElse {
+              Seq(Defaults.Branch)
             },
             builds = obj.get("builds").map(toBuild(_)).getOrElse {
               Seq(Defaults.Build)

@@ -1,0 +1,6 @@
+# example of an application with a single build
+
+builds:
+  - root:
+      port.container: 9000
+      port.host: 6191

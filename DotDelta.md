@@ -28,6 +28,10 @@ does not need to be specified.
 
 # Example File
 
+Note a collection of valid configuration files is stored in
+```lib/src/test/resources/config```
+
+
     stages:
       enable:
         - tag
