@@ -90,7 +90,8 @@ class BuildActor @javax.inject.Inject() (
 
     case msg @ BuildActor.Messages.Delete => withVerboseErrorHandler(msg) {
       withBuild { build =>
-        removeAwsResources(build)
+        //removeAwsResources(build)
+        Logger.info(s"Called BuildActor.Messages.Delete for build id - ${build.id}, name - ${build.name}")
       }
     }
 
