@@ -1,7 +1,5 @@
 package io.flow.delta.aws
 
-import io.flow.delta.api.lib.RegistryClient
-
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model._
 
@@ -21,8 +19,7 @@ object ElasticLoadBalancer {
 @javax.inject.Singleton
 case class ElasticLoadBalancer @javax.inject.Inject() (
   credentials: Credentials,
-  configuration: Configuration,
-  registryClient: RegistryClient
+  configuration: Configuration
 ) {
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
@@ -40,30 +37,20 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
   def createLoadBalancerAndHealthCheck(settings: Settings, projectId: String): Future[String] = {
     // create the load balancer first, then configure healthcheck
     // they do not allow this in a single API call
-    val name = ElasticLoadBalancer.getLoadBalancerName(projectId)
-
-    registryClient.getById(projectId).map {
-      case None => sys.error(s"project[$projectId] was not found in the registry")
-      case Some(application) => {
-        val registryPorts = application.ports.headOption.getOrElse {
-          sys.error(s"project[$projectId] does not have any ports in the registry")
-        }
-        val externalPort: Long = registryPorts.external
-
-        createLoadBalancer(settings, name, externalPort)
-        configureHealthCheck(name, externalPort)
-
-        name
-      }
+    Future {
+      val name = ElasticLoadBalancer.getLoadBalancerName(projectId)
+      createLoadBalancer(settings, name, settings.portHost)
+      configureHealthCheck(name, settings.portHost)
+      name
     }
   }
 
-  def createLoadBalancer(settings: Settings, name: String, externalPort: Long) {
+  def createLoadBalancer(settings: Settings, name: String, externalPort: Int) {
     val http = new Listener()
       .withProtocol("HTTP")
       .withInstanceProtocol("HTTP")
       .withLoadBalancerPort(80)
-      .withInstancePort(externalPort.toInt)
+      .withInstancePort(externalPort)
 
     val https = new Listener()
       .withProtocol("HTTPS")

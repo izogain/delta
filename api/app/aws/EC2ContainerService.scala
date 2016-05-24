@@ -1,6 +1,5 @@
 package io.flow.delta.aws
 
-import io.flow.delta.api.lib.RegistryClient
 import io.flow.delta.v0.models.Version
 import com.amazonaws.services.ecs.AmazonECSClient
 import com.amazonaws.services.ecs.model._
@@ -29,7 +28,6 @@ object EC2ContainerService {
 case class EC2ContainerService @javax.inject.Inject() (
   credentials: Credentials,
   configuration: Configuration,
-  registryClient: RegistryClient,
   elb: ElasticLoadBalancer
 ) {
 
@@ -317,40 +315,32 @@ case class EC2ContainerService @javax.inject.Inject() (
   ): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
     val containerName = getContainerName(imageName, imageVersion)
-    registryClient.getById(projectId).map {
-      case None => {
-        sys.error(s"project[$projectId] was not found in the registry")
-      }
 
-      case Some(application) => {
-        val registryPorts = application.ports.headOption.getOrElse {
-          sys.error(s"project[$projectId] does not have any ports in the registry")
-        }
+    Logger.info(s"AWS EC2ContainerService registerTaskDefinition projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
 
-        Logger.info(s"AWS EC2ContainerService registerTaskDefinition projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
-        client.registerTaskDefinition(
-          new RegisterTaskDefinitionRequest()
+    Future {
+      client.registerTaskDefinition(
+        new RegisterTaskDefinitionRequest()
           .withFamily(taskName)
           .withContainerDefinitions(
-            Seq(
-              new ContainerDefinition()
+          Seq(
+            new ContainerDefinition()
               .withName(containerName)
               .withImage(imageName + ":" + imageVersion)
               .withMemory(settings.containerMemory)
               .withPortMappings(
-                Seq(
-                  new PortMapping()
-                  .withContainerPort(registryPorts.internal.toInt)
-                  .withHostPort(registryPorts.external.toInt)
-                ).asJava
-              )
+              Seq(
+                new PortMapping()
+                  .withContainerPort(settings.portContainer)
+                  .withHostPort(settings.portHost)
+              ).asJava
+            )
               .withCommand(Seq("production").asJava)
-            ).asJava
-          )
+          ).asJava
         )
+      )
 
-        taskName
-      }
+      taskName
     }
   }
 
@@ -384,56 +374,46 @@ case class EC2ContainerService @javax.inject.Inject() (
     projectId: String,
     taskDefinition: String
   ): Future[String] = {
-    val clusterName = EC2ContainerService.getClusterName(projectId)
-    val serviceName = getServiceName(imageName, imageVersion)
-    val containerName = getContainerName(imageName, imageVersion)
-    val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
+    Future {
+      val clusterName = EC2ContainerService.getClusterName(projectId)
+      val serviceName = getServiceName(imageName, imageVersion)
+      val containerName = getContainerName(imageName, imageVersion)
+      val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
 
-    registryClient.getById(projectId).map {
-      case None => {
-        sys.error(s"project[$projectId] was not found in the registry")
-      }
+      Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
+      val resp = client.describeServices(
+        new DescribeServicesRequest()
+          .withCluster(clusterName)
+          .withServices(Seq(serviceName).asJava)
+      )
 
-      case Some(application) => {
-        val registryPorts = application.ports.headOption.getOrElse {
-          sys.error(s"project[$projectId] does not have any ports in the registry")
-        }
-
-        Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
-        val resp = client.describeServices(
-          new DescribeServicesRequest()
-            .withCluster(clusterName)
-            .withServices(Seq(serviceName).asJava)
-        )
-
-        // if service doesn't exist in the cluster
-        if (!resp.getFailures().isEmpty()) {
-          Logger.info(s"AWS EC2ContainerService createService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
-          client.createService(
-            new CreateServiceRequest()
+      // if service doesn't exist in the cluster
+      if (!resp.getFailures().isEmpty()) {
+        Logger.info(s"AWS EC2ContainerService createService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
+        client.createService(
+          new CreateServiceRequest()
             .withServiceName(serviceName)
             .withCluster(clusterName)
             .withDesiredCount(settings.createServiceDesiredCount)
             .withRole(settings.serviceRole)
             .withTaskDefinition(taskDefinition)
             .withDeploymentConfiguration(
-              new DeploymentConfiguration()
+            new DeploymentConfiguration()
               .withMinimumHealthyPercent(99)
               .withMaximumPercent(100)
-            )
+          )
             .withLoadBalancers(
-              Seq(
-                new LoadBalancer()
+            Seq(
+              new LoadBalancer()
                 .withContainerName(containerName)
                 .withLoadBalancerName(loadBalancerName)
-                .withContainerPort(registryPorts.internal.toInt)
-              ).asJava
-            )
+                .withContainerPort(settings.portContainer)
+            ).asJava
           )
-        }
-
-        serviceName
+        )
       }
+
+      serviceName
     }
   }
 

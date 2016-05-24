@@ -23,10 +23,6 @@ code:
       version: latest
       generators:
         play_2_4_client: generated/app
-    registry:
-      version: latest
-      generators:
-        play_2_4_client: generated/app
     delta:
       version: latest
       generators:

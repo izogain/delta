@@ -4,7 +4,7 @@ import com.amazonaws.services.ecs.model.Service
 import db.{ConfigsDao, OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.postgresql.Authorization
 import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer}
-import io.flow.delta.api.lib.{GithubHelper, RegistryClient, Repo, StateDiff}
+import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
 import io.flow.delta.lib.{BuildNames, Semver, StateFormatter, Text}
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
 import io.flow.delta.config.v0.models.BuildStage
@@ -45,7 +45,6 @@ object BuildActor {
 }
 
 class BuildActor @javax.inject.Inject() (
-  registryClient: RegistryClient,
   config: Config,
   system: ActorSystem,
   buildLastStatesWriteDao: BuildLastStatesWriteDao,

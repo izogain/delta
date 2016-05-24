@@ -3,6 +3,7 @@ package controllers
 import db.HealthchecksDao
 import io.flow.common.v0.models.Healthcheck
 import io.flow.common.v0.models.json._
+import io.flow.delta.aws.Credentials
 import io.flow.play.util.Validation
 
 import play.api._
@@ -11,6 +12,7 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Healthchecks @javax.inject.Inject() (
+  credentials: Credentials,
   healthchecksDao: HealthchecksDao,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) extends Controller {
