@@ -36,6 +36,8 @@ object BuildActor {
     case object UpdateContainerAgent extends Message
 
     case object RemoveOldServices extends Message
+
+    case object Delete extends Message
   }
 
   trait Factory {
@@ -86,6 +88,12 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
+    case msg @ BuildActor.Messages.Delete => withVerboseErrorHandler(msg) {
+      withBuild { build =>
+        removeAwsResources(build)
+      }
+    }
+
     case msg @ BuildActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
       withEnabledBuild { build =>
         captureLastState(build)
@@ -129,6 +137,43 @@ class BuildActor @javax.inject.Inject() (
     withBuildConfig { buildConfig =>
       buildConfig.stages.contains(BuildStage.Scale)
     }.getOrElse(false)
+  }
+
+  def removeAwsResources(build: Build): Future[Unit] = {
+    log.runAsync(s"removeAwsResources(${BuildNames.projectName(build)})") {
+      for {
+        cluster <- deleteCluster(build)
+        asg <- deleteAutoScalingGroup(build)
+        elb <- deleteLoadBalancer(build)
+        lc <- deleteLaunchConfiguration(build)
+      } yield {
+        Logger.info(s"Deleted cluster $cluster, autoscaling group $asg, elb $elb, launch config $lc")
+      }
+    }
+  }
+
+  def deleteCluster(build: Build): Future[String] = {
+    log.runSync("Deleting cluster") {
+      ecs.deleteCluster(BuildNames.projectName(build))
+    }
+  }
+
+  def deleteAutoScalingGroup(build: Build): Future[String] = {
+    log.runSync("Deleting ASG") {
+      asg.deleteAutoScalingGroup(BuildNames.projectName(build))
+    }
+  }
+
+  def deleteLoadBalancer(build: Build): Future[String] = {
+    log.runSync("Deleting ELB") {
+      elb.deleteLoadBalancer(BuildNames.projectName(build))
+    }
+  }
+
+  def deleteLaunchConfiguration(build: Build): Future[String] = {
+    log.runSync("Deleting launch configuration") {
+      asg.deleteLaunchConfiguration(awsSettings, BuildNames.projectName(build))
+    }
   }
 
   def configureAWS(build: Build): Future[Unit] = {

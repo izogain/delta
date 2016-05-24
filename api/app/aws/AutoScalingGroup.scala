@@ -70,6 +70,36 @@ class AutoScalingGroup @javax.inject.Inject() (
     return name
   }
 
+  def deleteAutoScalingGroup(id: String): String = {
+    val name = getAutoScalingGroupName(id)
+    Logger.info(s"AWS delete ASG projectId[$id]")
+
+    try {
+      client.deleteAutoScalingGroup(
+        new DeleteAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withForceDelete(true)
+      )
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting autoscaling group $name - Error: ${e.getMessage}")
+    }
+
+    name
+  }
+
+  def deleteLaunchConfiguration(settings: Settings, id: String): String = {
+    val name = getLaunchConfigurationName(settings, id)
+    Logger.info(s"AWS delete launch config projectId[$id]")
+
+    try {
+      client.deleteLaunchConfiguration(new DeleteLaunchConfigurationRequest().withLaunchConfigurationName(name))
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting launch configuration $name - Error: ${e.getMessage}")
+    }
+
+    name
+  }
+
   def createAutoScalingGroup(settings: Settings, id: String, launchConfigName: String, loadBalancerName: String): String = {
     val name = getAutoScalingGroupName(id)
     try {

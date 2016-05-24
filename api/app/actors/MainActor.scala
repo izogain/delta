@@ -138,8 +138,9 @@ class MainActor @javax.inject.Inject() (
       }
 
       case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
-        (buildActors -= id).map { actor =>
-          // TODO: Terminate actor
+        (buildActors -= id).map { case (id, actor) =>
+          actor ! BuildActor.Messages.Delete
+          actor ! PoisonPill
         }
       }
 
@@ -166,6 +167,14 @@ class MainActor @javax.inject.Inject() (
 
       case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
         searchActor ! SearchActor.Messages.SyncProject(id)
+
+        (projectActors -= id).map { case (id, actor) =>
+          actor ! PoisonPill
+        }
+
+        (projectSupervisorActors -= id).map { case (id, actor) =>
+          actor ! PoisonPill
+        }
       }
 
       case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {

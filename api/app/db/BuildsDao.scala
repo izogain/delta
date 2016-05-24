@@ -78,6 +78,8 @@ object BuildsDao {
 
 case class BuildsWriteDao @javax.inject.Inject() (
   imagesWriteDao: ImagesWriteDao,
+  buildDesiredStatesDao: BuildDesiredStatesWriteDao,
+  buildLastStatesDao: BuildLastStatesWriteDao,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
@@ -167,6 +169,9 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }.foreach { image =>
       imagesWriteDao.delete(deletedBy, image)
     }
+
+    buildDesiredStatesDao.delete(deletedBy, build)
+    buildLastStatesDao.delete(deletedBy, build)
 
     Delete.delete("builds", deletedBy.id, build.id)
     mainActor ! MainActor.Messages.BuildDeleted(build.id)

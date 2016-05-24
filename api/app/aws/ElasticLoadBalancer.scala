@@ -45,6 +45,18 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
     }
   }
 
+  def deleteLoadBalancer(projectId: String): String = {
+    val name = ElasticLoadBalancer.getLoadBalancerName(projectId)
+    Logger.info(s"AWS delete load balancer projectId[$projectId]")
+
+    try {
+      client.deleteLoadBalancer(new DeleteLoadBalancerRequest().withLoadBalancerName(name))
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting load balancer $name - Error: ${e.getMessage}")
+    }
+    name
+  }
+
   def createLoadBalancer(settings: Settings, name: String, externalPort: Int) {
     val http = new Listener()
       .withProtocol("HTTP")

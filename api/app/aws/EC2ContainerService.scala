@@ -123,11 +123,29 @@ case class EC2ContainerService @javax.inject.Inject() (
     }
   }
 
+  def deleteCluster(projectId: String): String = {
+    val name = EC2ContainerService.getClusterName(projectId)
+    Logger.info(s"AWS EC2ContainerService deleteCluster projectId[$projectId]")
+
+    try {
+      client.deleteCluster(new DeleteClusterRequest().withCluster(name))
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting cluster $name - Error ${e.getMessage}")
+    }
+    name
+  }
+
   def createCluster(projectId: String): String = {
     val name = EC2ContainerService.getClusterName(projectId)
     Logger.info(s"AWS EC2ContainerService createCluster projectId[$projectId]")
-    client.createCluster(new CreateClusterRequest().withClusterName(name))
-    return name
+
+    try {
+      client.createCluster(new CreateClusterRequest().withClusterName(name))
+    } catch {
+      case e: Throwable => Logger.error(s"Error creating cluster $name - Error ${e.getMessage}")
+    }
+
+    name
   }
 
   // scale to the desired count - can be up or down
