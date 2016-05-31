@@ -19,7 +19,6 @@ object ImagesDao {
            builds.id as build_id,
            builds.name as build_name,
            builds.status as build_status,
-           builds.dockerfile_path as build_dockerfile_path,
            projects.id as build_project_id,
            projects.name as build_project_name,
            projects.uri as build_project_uri,

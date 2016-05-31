@@ -12,7 +12,6 @@ object DashboardBuildsDao {
   private[this] val BaseQuery = Query(s"""
     select builds.id,
            builds.name,
-           builds.dockerfile_path,
            projects.id as project_id,
            projects.name as project_name,
            projects.uri as project_uri,
