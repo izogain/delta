@@ -1,19 +1,15 @@
 package io.flow.delta.actors
 
-import com.amazonaws.services.ecs.model.Service
-import db.{ConfigsDao, OrganizationsDao, TokensDao, UsersDao, BuildLastStatesWriteDao}
-import io.flow.postgresql.Authorization
+import db.{ConfigsDao, UsersDao, BuildLastStatesWriteDao}
 import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer}
-import io.flow.delta.api.lib.{GithubHelper, Repo, StateDiff}
-import io.flow.delta.lib.{BuildNames, Semver, StateFormatter, Text}
+import io.flow.delta.api.lib.StateDiff
+import io.flow.delta.lib.{BuildNames, StateFormatter, Text}
 import io.flow.delta.v0.models.{Build, Docker, StateForm}
 import io.flow.delta.config.v0.models.BuildStage
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
-import org.joda.time.DateTime
 import play.api.Logger
 import akka.actor.{Actor, ActorSystem}
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
@@ -62,6 +58,19 @@ class BuildActor @javax.inject.Inject() (
   private[this] val TimeoutSeconds = 450
   private[this] lazy val awsSettings = withBuildConfig { bc =>
     DefaultSettings(
+      asgHealthCheckGracePeriod = config.requiredInt("aws.asg.healthcheck.grace.period"),
+      asgMinSize = config.requiredInt("aws.asg.min.size"),
+      asgMaxSize = config.requiredInt("aws.asg.max.size"),
+      asgDesiredSize = config.requiredInt("aws.asg.desired.size"),
+      elbSslCertificateId = config.requiredString("aws.elb.ssl.certificate"),
+      elbSubnets = config.requiredString("aws.elb.subnets").split(","),
+      asgSubnets = config.requiredString("aws.autoscaling.subnets").split(","),
+      lcSecurityGroup = config.requiredString("aws.launch.configuration.security.group"),
+      elbSecurityGroup = config.requiredString("aws.service.security.group"),
+      ec2KeyName = config.requiredString("aws.service.key"),
+      launchConfigImageId = config.requiredString("aws.launch.configuration.ami"),
+      launchConfigIamInstanceProfile = config.requiredString("aws.launch.configuration.role"),
+      serviceRole = config.requiredString("aws.service.role"),
       instanceType = bc.instanceType,
       containerMemory = bc.memory.asInstanceOf[Int],
       portContainer = bc.portContainer,

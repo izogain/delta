@@ -57,7 +57,7 @@ class AutoScalingGroup @javax.inject.Inject() (
           .withAssociatePublicIpAddress(false)
           .withIamInstanceProfile(settings.launchConfigIamInstanceProfile)
           .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
-          .withSecurityGroups(settings.lcSecurityGroups.asJava)
+          .withSecurityGroups(Seq(settings.lcSecurityGroup).asJava)
           .withKeyName(settings.ec2KeyName)
           .withImageId(settings.launchConfigImageId)
           .withInstanceType(settings.launchConfigInstanceType)

@@ -412,7 +412,7 @@ case class EC2ContainerService @javax.inject.Inject() (
           new CreateServiceRequest()
             .withServiceName(serviceName)
             .withCluster(clusterName)
-            .withDesiredCount(settings.createServiceDesiredCount)
+            .withDesiredCount(0) // initialize service with desired count of 0, scale up will come later
             .withRole(settings.serviceRole)
             .withTaskDefinition(taskDefinition)
             .withDeploymentConfiguration(

@@ -80,7 +80,7 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
           .withLoadBalancerName(name)
           .withListeners(elbListeners.asJava)
           .withSubnets(settings.elbSubnets.asJava)
-          .withSecurityGroups(settings.elbSecurityGroups.asJava)
+          .withSecurityGroups(Seq(settings.elbSecurityGroup).asJava)
       )
       println(s"Created Load Balancer: ${result.getDNSName}")
     } catch {
