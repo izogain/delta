@@ -72,7 +72,7 @@ lazy val www = project
       "org.webjars" %% "webjars-play" % "2.5.0",
       "org.webjars" % "bootstrap" % "3.3.6",
       "org.webjars.bower" % "bootstrap-social" % "5.0.0",
-      "org.webjars" % "font-awesome" % "4.6.2",
+      "org.webjars" % "font-awesome" % "4.6.3",
       "org.webjars" % "jquery" % "2.1.4"
     )
   )
