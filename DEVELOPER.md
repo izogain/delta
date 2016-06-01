@@ -43,3 +43,63 @@ In another screen:
     sbt> run 6090
 
 Goto http://localhost:6090 in your browser
+
+Environment Variables
+=====================
+
+- Docker Hub
+    - CONF_DOCKERHUB_DELTA_AUTH_EMAIL
+        - Email for docker hub login
+    - CONF_DOCKERHUB_DELTA_AUTH_TOKEN
+        - Docker hub auth token provided in ~/.docker configuration
+    - CONF_DOCKER_JWT_TOKEN
+        - JWT Token provided by Docker Hub
+    - CONF_DOCKER_USERNAME
+        - Username for dockerhub login
+    - CONF_DOCKER_PASSWORD
+        - Password for dockerhub login
+- GitHub
+    - CONF_GITHUB_DELTA_LOCALHOST_CLIENT_ID
+    - CONF_GITHUB_DELTA_CLIENT_SECRET
+    - CONF_GITHUB_DELTA_CLIENT_ID
+    - CONF_GITHUB_DELTA_LOCALHOST_CLIENT_SECRET
+    - CONF_GITHUB_CLIENT_ID
+- AWS
+    - CONF_AWS_ELB_SUBNETS
+        - Comma-separated list of subnet IDs to be used by ELB
+    - CONF_AWS_LAUNCH_CONFIGURATION_ROLE
+        - Launch configuration IAM role
+    - CONF_AWS_ASG_HEALTHCHECK_GRACE_PERIOD
+        - Number of seconds for autoscaling health checks
+    - CONF_AWS_SERVICE_KEY
+        - Keypair used by launch configuration
+    - CONF_AWS_SERVICE_ROLE
+        - AWS ECS service role
+    - CONF_AWS_ASG_MAX_SIZE
+        - Maximum size of auto-scaling group
+    - CONF_AWS_ELB_CERTIFICATE
+        - SSL ARN certificate to be used if HTTPS listeners are desired
+    - CONF_AWS_DELTA_ACCESS_KEY
+        - AWS IAM Access Key
+    - CONF_AWS_DELTA_SECRET_KEY
+        - AWS IAM Secret Key
+    - CONF_AWS_LAUNCH_CONFIGURATION_AMI
+        - AWS Marketplace AMI to be used to launch new EC2 instances
+        - We recommend using ami-1d48ab70
+    - CONF_AWS_LAUNCH_CONFIGURATION_SECURITY_GROUP
+        - Security group used by launch configuration to create new EC2 instances
+    - CONF_AWS_ASG_MIN_SIZE
+    - CONF_AWS_ASG_DESIRED_SIZE
+    - CONF_AWS_AUTOSCALING_SUBNETS
+        - Comma-separated list of subnet IDs to be used by Auto-scaling group
+    - CONF_AWS_SERVICE_SECURITY_GROUP: sg-55bb682d
+- RDS/Postgresql
+    - CONF_DB_DEFAULT_PASS
+        - Database password
+    - CONF_DB_DEFAULT_URL
+        - Database JDBC connection string
+- Miscellaneous
+    - CONF_DELTA_API_HOST
+        - Host for the Delta API service
+    - CONF_DELTA_WWW_HOST
+        - Host for Delta Web Front-end
