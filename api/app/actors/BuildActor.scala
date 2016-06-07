@@ -56,29 +56,6 @@ class BuildActor @javax.inject.Inject() (
   implicit private[this] val ec = system.dispatchers.lookup("build-actor-context")
 
   private[this] val TimeoutSeconds = 450
-  private[this] lazy val awsSettings = withBuildConfig { bc =>
-    DefaultSettings(
-      asgHealthCheckGracePeriod = config.requiredInt("aws.asg.healthcheck.grace.period"),
-      asgMinSize = config.requiredInt("aws.asg.min.size"),
-      asgMaxSize = config.requiredInt("aws.asg.max.size"),
-      asgDesiredSize = config.requiredInt("aws.asg.desired.size"),
-      elbSslCertificateId = config.requiredString("aws.elb.ssl.certificate"),
-      elbSubnets = config.requiredString("aws.elb.subnets").split(","),
-      asgSubnets = config.requiredString("aws.autoscaling.subnets").split(","),
-      lcSecurityGroup = config.requiredString("aws.launch.configuration.security.group"),
-      elbSecurityGroup = config.requiredString("aws.service.security.group"),
-      ec2KeyName = config.requiredString("aws.service.key"),
-      launchConfigImageId = config.requiredString("aws.launch.configuration.ami"),
-      launchConfigIamInstanceProfile = config.requiredString("aws.launch.configuration.role"),
-      serviceRole = config.requiredString("aws.service.role"),
-      instanceType = bc.instanceType,
-      containerMemory = bc.memory.asInstanceOf[Int],
-      portContainer = bc.portContainer,
-      portHost = bc.portHost
-    )
-  }.getOrElse {
-    sys.error("Must have build configuration before getting settings for auto scaling group")
-  }
 
   def receive = {
 
@@ -264,6 +241,30 @@ class BuildActor @javax.inject.Inject() (
     log.runSync("Create cluster") {
        ecs.createCluster(BuildNames.projectName(build))
     }
+  }
+
+  private[this] def awsSettings() = withBuildConfig { bc =>
+    DefaultSettings(
+      asgHealthCheckGracePeriod = config.requiredInt("aws.asg.healthcheck.grace.period"),
+      asgMinSize = config.requiredInt("aws.asg.min.size"),
+      asgMaxSize = config.requiredInt("aws.asg.max.size"),
+      asgDesiredSize = config.requiredInt("aws.asg.desired.size"),
+      elbSslCertificateId = config.requiredString("aws.elb.ssl.certificate"),
+      elbSubnets = config.requiredString("aws.elb.subnets").split(","),
+      asgSubnets = config.requiredString("aws.autoscaling.subnets").split(","),
+      lcSecurityGroup = config.requiredString("aws.launch.configuration.security.group"),
+      elbSecurityGroup = config.requiredString("aws.service.security.group"),
+      ec2KeyName = config.requiredString("aws.service.key"),
+      launchConfigImageId = config.requiredString("aws.launch.configuration.ami"),
+      launchConfigIamInstanceProfile = config.requiredString("aws.launch.configuration.role"),
+      serviceRole = config.requiredString("aws.service.role"),
+      instanceType = bc.instanceType,
+      containerMemory = bc.memory.asInstanceOf[Int],
+      portContainer = bc.portContainer,
+      portHost = bc.portHost
+    )
+  }.getOrElse {
+    sys.error(s"Build[$buildId] Must have build configuration before getting settings for auto scaling group")
   }
 
 }
