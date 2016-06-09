@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
-val awsVersion = "1.11.6"
+val awsVersion = "1.11.7"
 
 lazy val generated = project
   .in(file("generated"))
@@ -86,7 +86,7 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name <<= name("delta-" + _),
   libraryDependencies ++= Seq(
-    "io.flow" %% "lib-play" % "0.1.25",
+    "io.flow" %% "lib-play" % "0.1.26",
     specs2 % Test,
     "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   ),

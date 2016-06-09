@@ -14,6 +14,8 @@ class DefaultTokenClient() extends Client {
 
   def tokens: io.flow.token.v0.Tokens = new Tokens()
 
+  def validations = throw new UnsupportedOperationException()
+
 }
 
 class Tokens() extends io.flow.token.v0.Tokens {
