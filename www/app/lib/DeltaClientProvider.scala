@@ -42,4 +42,6 @@ class DefaultDeltaClientProvider @javax.inject.Inject() (
   override def baseUrl: String = throw new UnsupportedOperationException()
 
   override def tokens: Tokens = throw new UnsupportedOperationException()
+
+  override def validations: Tokens = throw new UnsupportedOperationException()
 }
