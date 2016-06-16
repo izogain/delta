@@ -12,7 +12,14 @@ case class Recipient(
   name: Name,
   userId: String,
   identifier: String
-)
+) {
+  def fullName(): Option[String] = {
+    Seq(name.first, name.last).flatten.map(_.trim).filter(!_.isEmpty).toList match {
+      case Nil => None
+      case names => Some(names.mkString(" "))
+    }
+  }
+}
 
 object Recipient {
 

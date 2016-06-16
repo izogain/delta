@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
-val awsVersion = "1.11.7"
+val awsVersion = "1.11.8"
 
 lazy val generated = project
   .in(file("generated"))
@@ -52,7 +52,7 @@ lazy val api = project
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
       "org.postgresql" % "postgresql" % "9.4.1208",
-      "com.sendgrid"   %  "sendgrid-java" % "2.2.2",
+      "com.sendgrid"   %  "sendgrid-java" % "3.0.0",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
     )
   )
@@ -86,7 +86,7 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name <<= name("delta-" + _),
   libraryDependencies ++= Seq(
-    "io.flow" %% "lib-play" % "0.1.26",
+    "io.flow" %% "lib-play" % "0.1.28",
     specs2 % Test,
     "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   ),

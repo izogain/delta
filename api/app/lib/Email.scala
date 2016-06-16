@@ -1,9 +1,10 @@
 package io.flow.delta.api.lib
 
-import io.flow.common.v0.models.{Name, User}
+import io.flow.common.v0.models.Name
 import io.flow.play.util.{DefaultConfig, IdGenerator}
-import java.nio.file.{Path, Paths, Files}
+import java.nio.file.{Files, Path, Paths}
 import java.nio.charset.StandardCharsets
+
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import com.sendgrid._
@@ -37,28 +38,33 @@ class Email @javax.inject.Inject() (
   }
 
   def sendHtml(
-    to: Recipient,
+    recipient: Recipient,
     subject: String,
     body: String
   ) {
     val prefixedSubject = subjectWithPrefix(subject)
 
-    val email = new SendGrid.Email()
-    email.addTo(to.email)
-    fullName(to.name).map { n => email.addToName(n) }
-    email.setFrom(fromEmail)
-    fullName(fromName).map { n => email.setFromName(n) }
-    email.setSubject(prefixedSubject)
-    email.setHtml(body)
+    val from = new com.sendgrid.Email(fromEmail)
+    val to = recipient.fullName() match {
+      case Some(fn) => new com.sendgrid.Email(recipient.email, fn)
+      case None => new com.sendgrid.Email(recipient.email)
+    }
+    val content = new Content("text/html", body)
+
+    val mail = new com.sendgrid.Mail(from, prefixedSubject, to, content)
 
     localDeliveryDir match {
       case Some(dir) => {
-        localDelivery(dir, to, prefixedSubject, body)
+        localDelivery(dir, recipient, prefixedSubject, body)
       }
 
       case None => {
-        val response = sendgrid.send(email)
-        assert(response.getStatus, "Error sending email: " + response.getMessage())
+        val request = new Request()
+        request.method = Method.POST
+        request.endpoint = "mail/send"
+        request.body = mail.build()
+        val response = sendgrid.api(request)
+        assert(response.statusCode != 202, "Error sending email: " + response.body)
       }
     }
   }
