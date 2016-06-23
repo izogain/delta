@@ -58,20 +58,14 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
   }
 
   def createLoadBalancer(settings: Settings, name: String, externalPort: Int) {
-    val http = new Listener()
-      .withProtocol("HTTP")
-      .withInstanceProtocol("HTTP")
-      .withLoadBalancerPort(80)
-      .withInstancePort(externalPort)
-
     val https = new Listener()
-      .withProtocol("HTTPS")
-      .withInstanceProtocol("HTTP")
+      .withProtocol("HTTPS") // incoming request should be over https
+      .withInstanceProtocol("HTTP") // elb will forward request to individual instance via http (no "s")
       .withLoadBalancerPort(443)
       .withInstancePort(externalPort.toInt)
       .withSSLCertificateId(settings.elbSslCertificateId)
 
-    val elbListeners = Seq(http, https)
+    val elbListeners = Seq(https)
 
     try {
       Logger.info(s"AWS ElasticLoadBalancer createLoadBalancer name[$name]")
