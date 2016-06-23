@@ -215,11 +215,8 @@ case class EC2ContainerService @javax.inject.Inject() (
         case Nil => Nil
         case arns => {
           Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] serviceArns[${serviceArns.mkString(", ")}]")
-          val services = client.describeServices(
-            new DescribeServicesRequest().withCluster(cluster).withServices(arns.asJava)
-          ).getServices().asScala
 
-          services.map { service =>
+          getServicesInfo(cluster, arns).map { service =>
             Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] taskDefinition[${service.getTaskDefinition}]")
             client.describeTaskDefinition(
               new DescribeTaskDefinitionRequest()
