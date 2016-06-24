@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
-val awsVersion = "1.11.9"
+val awsVersion = "1.11.10"
 
 lazy val generated = project
   .in(file("generated"))
