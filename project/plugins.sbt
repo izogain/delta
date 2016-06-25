@@ -13,6 +13,6 @@ resolvers += Resolver.url("scoverage-bintray", url("https://dl.bintray.com/sksam
 
 addSbtPlugin("org.scoverage" %% "sbt-scoverage" % "1.3.3")
 
-addSbtPlugin("com.gilt.sbt" % "sbt-newrelic" % "0.1.5")
+addSbtPlugin("com.gilt.sbt" % "sbt-newrelic" % "0.1.7")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-traceur" % "1.0.1")
