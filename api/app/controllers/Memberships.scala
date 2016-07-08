@@ -4,7 +4,7 @@ import db.MembershipsDao
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.{Membership, MembershipForm, Role}
 import io.flow.delta.v0.models.json._
-import io.flow.play.util.Validation
+import io.flow.play.util.{Config, Validation}
 import io.flow.postgresql.Authorization
 import io.flow.common.v0.models.json._
 import play.api.mvc._
@@ -12,7 +12,8 @@ import play.api.libs.json._
 
 @javax.inject.Singleton
 class Memberships @javax.inject.Inject() (
-  val tokenClient: io.flow.token.v0.interfaces.Client
+  override val config: Config,
+  override val tokenClient: io.flow.token.v0.interfaces.Client
 ) extends Controller with BaseIdentifiedRestController {
 
   def get(

@@ -4,8 +4,10 @@ import db.{TokensDao, UsersDao}
 import io.flow.common.v0.models.UserReference
 import io.flow.token.v0.interfaces.Client
 import io.flow.token.v0.errors.UnitResponse
-import io.flow.token.v0.models.{ Token => FlowToken }
-import scala.concurrent.Future
+import io.flow.token.v0.models.{AuthenticationForm, TokenReference, Token => FlowToken}
+import org.joda.time.DateTime
+
+import scala.concurrent.{ExecutionContext, Future}
 
 @javax.inject.Singleton
 class DefaultTokenClient() extends Client {
@@ -21,27 +23,31 @@ class DefaultTokenClient() extends Client {
 class Tokens() extends io.flow.token.v0.Tokens {
 
   override def get(
-   tokens: Seq[String],
-    requestHeaders: Seq[(String, String)]
+    id: _root_.scala.Option[Seq[String]] = None,
+    token: _root_.scala.Option[String] = None,
+    limit: Long = 25,
+    offset: Long = 0,
+    sort: String = "-created_at",
+    requestHeaders: Seq[(String, String)] = Nil
   )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.token.v0.models.Token]] = Future {
-    tokens.flatMap { t =>
+    token.flatMap { t =>
       TokensDao.findByToken(t) match {
         case Some(t) => {
-          Some(FlowToken(user = UserReference(t.user.id)))
+          Some(FlowToken(id = t.id, user = UserReference(t.user.id), createdAt = new DateTime))
         }
 
         case None => {
-          UsersDao.findById(t).map { u => FlowToken(user = UserReference(id = u.id)) }
+          UsersDao.findById(t).map { u => FlowToken(id = u.id, user = UserReference(id = u.id), createdAt = new DateTime) }
         }
       }
-    }
+    }.toSeq
   }
 
-  override def getByToken(
+  override def getById(
     token: String,
     requestHeaders: Seq[(String, String)]
   )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.token.v0.models.Token] = {
-    get(Seq(token)).map(_.headOption.getOrElse {
+    get(token = Some(token), requestHeaders = requestHeaders).map(_.headOption.getOrElse {
       throw new UnitResponse(404)
     })
   }
@@ -51,9 +57,10 @@ class Tokens() extends io.flow.token.v0.Tokens {
     requestHeaders: Seq[(String, String)]
   )(implicit ec: scala.concurrent.ExecutionContext) = throw new UnsupportedOperationException()
 
-  override def deleteByToken(
+  override def deleteById(
     token: String,
     requestHeaders: Seq[(String, String)]
   )(implicit ec: scala.concurrent.ExecutionContext) = throw new UnsupportedOperationException()
 
+  override def postAuthentications(authenticationForm: AuthenticationForm, requestHeaders: Seq[(String, String)])(implicit ec: ExecutionContext): Future[TokenReference] = ???
 }

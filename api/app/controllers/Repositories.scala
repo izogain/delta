@@ -6,14 +6,16 @@ import io.flow.delta.config.v0.models.json._
 import io.flow.delta.api.lib.Github
 import io.flow.delta.lib.config.{Defaults, Parser}
 import io.flow.github.v0.models.json._
-import io.flow.play.util.Validation
+import io.flow.play.util.{Config, Validation}
 import play.api.mvc._
 import play.api.libs.json._
+
 import scala.concurrent.Future
 
 @javax.inject.Singleton
 class Repositories @javax.inject.Inject() (
-  val tokenClient: io.flow.token.v0.interfaces.Client,
+  override val config: Config,
+  override val tokenClient: io.flow.token.v0.interfaces.Client,
   val github: Github,
   parser: Parser
 ) extends Controller with BaseIdentifiedRestController {

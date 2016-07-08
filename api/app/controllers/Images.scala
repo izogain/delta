@@ -4,12 +4,14 @@ import db.{ImagesDao, ImagesWriteDao}
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.Image
 import io.flow.delta.v0.models.json._
+import io.flow.play.util.Config
 import play.api.mvc._
 import play.api.libs.json._
 
 @javax.inject.Singleton
 class Images @javax.inject.Inject() (
-  val tokenClient: io.flow.token.v0.interfaces.Client,
+  override val config: Config,
+  override val tokenClient: io.flow.token.v0.interfaces.Client,
   imagesWriteDao: ImagesWriteDao
 ) extends Controller with BaseIdentifiedRestController {
 

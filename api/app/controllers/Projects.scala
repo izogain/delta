@@ -1,19 +1,20 @@
 package controllers
 
-import db.{BuildsDao, ImagesDao, ProjectsDao,ProjectsWriteDao, BuildDesiredStatesDao, BuildLastStatesDao}
+import db.{BuildDesiredStatesDao, BuildLastStatesDao, BuildsDao, ImagesDao, ProjectsDao, ProjectsWriteDao}
 import io.flow.postgresql.Authorization
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Build, ProjectForm, BuildState}
+import io.flow.delta.v0.models.{Build, BuildState, ProjectForm}
 import io.flow.delta.v0.models.json._
-import io.flow.play.util.Validation
+import io.flow.play.util.{Config, Validation}
 import io.flow.common.v0.models.json._
 import play.api.mvc._
 import play.api.libs.json._
 
 @javax.inject.Singleton
 class Projects @javax.inject.Inject() (
-  val tokenClient: io.flow.token.v0.interfaces.Client,
+  override val config: Config,
+  override val tokenClient: io.flow.token.v0.interfaces.Client,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   projectsWriteDao: ProjectsWriteDao
 ) extends Controller with BaseIdentifiedRestController {
