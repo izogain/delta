@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
-val awsVersion = "1.11.15"
+val awsVersion = "1.11.18"
 
 lazy val generated = project
   .in(file("generated"))
@@ -52,7 +52,7 @@ lazy val api = project
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
       "org.postgresql" % "postgresql" % "9.4.1208",
-      "com.sendgrid"   %  "sendgrid-java" % "3.0.2",
+      "com.sendgrid"   %  "sendgrid-java" % "3.0.3",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
     )
   )
