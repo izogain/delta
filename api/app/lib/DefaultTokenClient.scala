@@ -4,7 +4,7 @@ import db.{TokensDao, UsersDao}
 import io.flow.common.v0.models.UserReference
 import io.flow.token.v0.interfaces.Client
 import io.flow.token.v0.errors.UnitResponse
-import io.flow.token.v0.models.{AuthenticationForm, TokenReference, Token => FlowToken}
+import io.flow.token.v0.models.{TokenAuthenticationForm, TokenReference, Token => FlowToken}
 import org.joda.time.DateTime
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,6 +22,20 @@ class DefaultTokenClient() extends Client {
 
 class Tokens() extends io.flow.token.v0.Tokens {
 
+  override def getVersions(
+    id: _root_.scala.Option[Seq[String]] = None,
+    tokenId: _root_.scala.Option[Seq[String]] = None,
+    limit: Long = 25,
+    offset: Long = 0,
+    sort: String = "journal_timestamp",
+    requestHeaders: Seq[(String, String)] = Nil
+  )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Seq[io.flow.token.v0.models.TokenVersion]] = throw new UnsupportedOperationException()
+
+  override def getCleartextById(
+    id: String,
+    requestHeaders: Seq[(String, String)] = Nil
+  )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.token.v0.models.Cleartext] = throw new UnsupportedOperationException()
+
   override def get(
     id: _root_.scala.Option[Seq[String]] = None,
     token: _root_.scala.Option[String] = None,
@@ -33,11 +47,11 @@ class Tokens() extends io.flow.token.v0.Tokens {
     token.flatMap { t =>
       TokensDao.findByToken(t) match {
         case Some(t) => {
-          Some(FlowToken(id = t.id, user = UserReference(t.user.id), createdAt = new DateTime))
+          Some(FlowToken(id = t.id, user = UserReference(t.user.id), createdAt = new DateTime, partial = t.id))
         }
 
         case None => {
-          UsersDao.findById(t).map { u => FlowToken(id = u.id, user = UserReference(id = u.id), createdAt = new DateTime) }
+          UsersDao.findById(t).map { u => FlowToken(id = u.id, user = UserReference(id = u.id), createdAt = new DateTime, partial = u.id) }
         }
       }
     }.toSeq
@@ -62,5 +76,5 @@ class Tokens() extends io.flow.token.v0.Tokens {
     requestHeaders: Seq[(String, String)]
   )(implicit ec: scala.concurrent.ExecutionContext) = throw new UnsupportedOperationException()
 
-  override def postAuthentications(authenticationForm: AuthenticationForm, requestHeaders: Seq[(String, String)])(implicit ec: ExecutionContext): Future[TokenReference] = ???
+  override def postAuthentications(authenticationForm: TokenAuthenticationForm, requestHeaders: Seq[(String, String)])(implicit ec: ExecutionContext): Future[TokenReference] = ???
 }
