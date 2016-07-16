@@ -12,9 +12,6 @@ class BuildStatesDaoSpec extends PlaySpec with OneAppPerSuite with Helpers {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[this] lazy val buildDesiredStatesWriteDao = app.injector.instanceOf[BuildDesiredStatesWriteDao]
-  private[this] lazy val buildLastStatesWriteDao = app.injector.instanceOf[BuildLastStatesWriteDao]
-
   def upsertBuildDesiredState(
     build: Build = upsertBuild(),
     form: StateForm = createStateForm()

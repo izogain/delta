@@ -1,10 +1,10 @@
 package io.flow.delta.actors.functions
 
-import db.{BuildDesiredStatesDao, BuildDesiredStatesWriteDao, TagsDao, UsersDao}
+import db.{BuildLastStatesDao, BuildDesiredStatesDao, BuildDesiredStatesWriteDao, ConfigsDao, TagsDao, UsersDao}
 import io.flow.delta.actors.{BuildSupervisorFunction, SupervisorResult}
-import io.flow.delta.config.v0.models.BuildStage
+import io.flow.delta.config.v0.models.{BuildStage, ConfigError, ConfigProject, ConfigUndefinedType}
 import io.flow.delta.lib.StateFormatter
-import io.flow.delta.v0.models.{Build, StateForm, Version}
+import io.flow.delta.v0.models.{Build, State, StateForm, Version}
 import io.flow.postgresql.{Authorization, OrderBy}
 import scala.concurrent.Future
 
@@ -32,6 +32,9 @@ object SetDesiredState extends BuildSupervisorFunction {
 
 case class SetDesiredState(build: Build) extends Github {
 
+  private[this] val buildDesiredStatesWriteDao = play.api.Play.current.injector.instanceOf[BuildDesiredStatesWriteDao]
+  private[this] val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
+
   def run(): SupervisorResult = {
     TagsDao.findAll(
       Authorization.All,
@@ -46,20 +49,14 @@ case class SetDesiredState(build: Build) extends Github {
       case Some(latestTag) => {
         BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
-            setVersions(Seq(Version(latestTag.name, instances = SetDesiredState.DefaultNumberInstances)))
+            setVersions(Seq(Version(latestTag.name, instances = numberInstances(build))))
           }
+
           case Some(state) => {
-            // By default, we create the same number of instances of
-            // the new version as the total number of instances in the
-            // last state.
-            val instances: Long = state.versions.headOption.map(_.instances).sum match {
-              case 0 => SetDesiredState.DefaultNumberInstances
-              case n => n
-            }
-            val targetVersions = Seq(Version(latestTag.name, instances = instances))
+            val targetVersions = Seq(Version(latestTag.name, instances = numberInstances(build)))
 
             if (state.versions == targetVersions) {
-              SupervisorResult.Ready("Desired state remains: " + StateFormatter.label(targetVersions))
+              SupervisorResult.Ready("Desired versions remain: " + targetVersions.map(_.name).mkString(", "))
             } else {
               setVersions(targetVersions)
             }
@@ -72,7 +69,7 @@ case class SetDesiredState(build: Build) extends Github {
   def setVersions(versions: Seq[Version]): SupervisorResult = {
     assert(!versions.isEmpty, "Must have at least one version")
 
-    play.api.Play.current.injector.instanceOf[BuildDesiredStatesWriteDao].upsert(
+    buildDesiredStatesWriteDao.upsert(
       UsersDao.systemUser,
       build,
       StateForm(
@@ -83,4 +80,24 @@ case class SetDesiredState(build: Build) extends Github {
     SupervisorResult.Change("Desired state changed to: " + StateFormatter.label(versions))
   }
 
+  /**
+    * By default, we create the same number of instances of the new
+    * version as the total number of instances in the last state.
+    */
+  def numberInstances(build: Build): Long = {
+    configsDao.findByProjectId(Authorization.All, build.project.id).map(_.config) match {
+      case None => SetDesiredState.DefaultNumberInstances
+      case Some(config) => {
+        config match {
+          case cfg: ConfigProject => {
+            cfg.builds.find(_.name == build.name) match {
+              case None => SetDesiredState.DefaultNumberInstances
+              case Some(bc) => bc.initialNumberInstances
+            }
+          }
+          case ConfigError(_) | ConfigUndefinedType(_) => SetDesiredState.DefaultNumberInstances
+        }
+      }
+    }
+  }
 }

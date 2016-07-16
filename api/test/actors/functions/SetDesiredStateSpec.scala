@@ -27,7 +27,21 @@ class SetDesiredStateSpec extends PlaySpec with OneAppPerSuite with db.Helpers {
     SetDesiredState(build).run() must be(SupervisorResult.Change("Desired state changed to: 0.0.2: 2 instances"))
 
     // No-op if no change
-    SetDesiredState(build).run() must be(SupervisorResult.Ready("Desired state remains: 0.0.2: 2 instances"))
+    SetDesiredState(build).run() must be(SupervisorResult.Ready("Desired versions remain: 0.0.2"))
+  }
+
+  "once set, desired state does not reset number of instances" in {
+    // let ECS manage number of instances on a go forward basis.
+    val project = createProject()
+    val build = upsertBuild(project)
+
+    val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
+    SetDesiredState(build).run() must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances"))
+
+    setLastState(build, "0.0.1", 10)
+
+    // No-op if no change
+    SetDesiredState(build).run() must be(SupervisorResult.Ready("Desired versions remain: 0.0.1"))
   }
 
 }

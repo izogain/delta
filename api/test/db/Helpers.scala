@@ -15,6 +15,9 @@ trait Helpers {
 
   lazy val systemUser = createUser()
 
+  lazy val buildDesiredStatesWriteDao = play.api.Play.current.injector.instanceOf[BuildDesiredStatesWriteDao]
+  lazy val buildLastStatesWriteDao = play.api.Play.current.injector.instanceOf[BuildLastStatesWriteDao]
+  
   def injector = play.api.Play.current.injector
 
   val random = Random()
@@ -325,6 +328,19 @@ trait Helpers {
       buildId = build.id,
       name = createTestKey(),
       version = createTestVersion()
+    )
+  }
+
+  def setLastState(build: Build, tag: String, instances: Long) {
+    rightOrErrors(
+      buildLastStatesWriteDao.upsert(systemUser, build, StateForm(
+        versions = Seq(
+          Version(
+            name = tag,
+            instances = instances
+          )
+        )
+      ))
     )
   }
 
