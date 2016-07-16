@@ -332,15 +332,20 @@ trait Helpers {
   }
 
   def setLastState(build: Build, tag: String, instances: Long) {
-    rightOrErrors(
-      buildLastStatesWriteDao.upsert(systemUser, build, StateForm(
-        versions = Seq(
-          Version(
-            name = tag,
-            instances = instances
-          )
+    setLastStates(
+      build,
+      Seq(
+        Version(
+          name = tag,
+          instances = instances
         )
-      ))
+      )
+    )
+  }
+
+  def setLastStates(build: Build, versions: Seq[Version]) {
+    rightOrErrors(
+      buildLastStatesWriteDao.upsert(systemUser, build, StateForm(versions = versions))
     )
   }
 
