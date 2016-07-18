@@ -1,4 +1,4 @@
-FROM flowdocker/play:0.0.52
+FROM flowdocker/play:0.0.60
 
 RUN apt-get install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_5.x | bash -
