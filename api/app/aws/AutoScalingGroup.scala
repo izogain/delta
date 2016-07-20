@@ -19,6 +19,9 @@ class AutoScalingGroup @javax.inject.Inject() (
   private[this] lazy val dockerHubToken = config.requiredString("dockerhub.delta.auth.token")
   private[this] lazy val dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
 
+  private[this] lazy val sumoId = config.requiredString("sumo.service.id")
+  private[this] lazy val sumoKey = config.requiredString("sumo.service.key")
+
   lazy val client = new AmazonAutoScalingClient(credentials.aws, configuration.aws)
   lazy val encoder = new BASE64Encoder()
 
@@ -131,8 +134,13 @@ class AutoScalingGroup @javax.inject.Inject() (
       """echo 'OPTIONS="-e env=production"' > /etc/sysconfig/docker""",
       s"""echo 'ECS_CLUSTER=${ecsClusterName}' >> /etc/ecs/ecs.config""",
       """echo 'ECS_ENGINE_AUTH_TYPE=dockercfg' >> /etc/ecs/ecs.config""",
-      s"""echo 'ECS_ENGINE_AUTH_DATA={"https://index.docker.io/v1/":{"auth":"${dockerHubToken}","email":"${dockerHubEmail}"}}' >> /etc/ecs/ecs.config"""
+      s"""echo 'ECS_ENGINE_AUTH_DATA={"https://index.docker.io/v1/":{"auth":"${dockerHubToken}","email":"${dockerHubEmail}"}}' >> /etc/ecs/ecs.config""",
+      """mkdir -p /etc/sumo""",
+      s"""echo '{"api.version":"v1","sources":[{"sourceType":"LocalFile","name":"ecs_docker_logs","category":"${id}_docker_logs","pathExpression":"/var/lib/docker/containers/*/*.log","blacklist":[]}]}' > /etc/sumo/sources.json""",
+      """curl -o /tmp/sumo.sh https://collectors.sumologic.com/rest/download/linux/64""",
+      """chmod +x /tmp/sumo.sh""",
+      """export PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)""",
+      s"""sh /tmp/sumo.sh -q -Vsumo.accessid="${sumoId}" -Vsumo.accesskey="${sumoKey}" -VsyncSources="/etc/sumo/sources.json" -Vcollector.name="${id}-""" + "$PRIVATE_IP\""
     ).mkString("\n")
   }
-
 }
