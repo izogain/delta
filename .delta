@@ -1,7 +1,7 @@
 builds:
   - api:
       dockerfile: api/Dockerfile
-      initial.number.instance: 1
+      initial.number.instances: 1
       port.container: 9000
       port.host: 6091
   - www:
