@@ -2,12 +2,11 @@ package controllers
 
 import io.flow.delta.v0.models.EventType
 import io.flow.delta.www.lib.DeltaClientProvider
-import io.flow.play.util.{Config, PaginatedCollection}
+import io.flow.play.util.PaginatedCollection
 import play.api.i18n.MessagesApi
 
 class EventsController @javax.inject.Inject() (
   val messagesApi: MessagesApi,
-  override val config: Config,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider
 ) extends BaseController(tokenClient, deltaClientProvider) {

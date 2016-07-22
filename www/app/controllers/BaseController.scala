@@ -79,7 +79,7 @@ abstract class BaseController(
     )
   }
 
-  def user(
+  override def user(
     session: play.api.mvc.Session,
     headers: play.api.mvc.Headers,
     path: String,
@@ -112,7 +112,10 @@ abstract class BaseController(
   ) (
     implicit ec: ExecutionContext
   ): UiData = {
-    val userReferenceOption = request.user
+    val userReferenceOption = Await.result(
+      request.user,
+      Duration(1, "seconds")
+    )
 
     val user = userReferenceOption.flatMap { ref =>
       Await.result(

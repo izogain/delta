@@ -22,7 +22,7 @@ class Subscriptions @javax.inject.Inject() (
    * If we find an 'identifier' query string parameter, use that to
    * find the user and authenticate as that user.
    */
-  def user(
+  override def user(
     session: Session,
     headers: Headers,
     path: String,
@@ -32,15 +32,7 @@ class Subscriptions @javax.inject.Inject() (
   ): Future[Option[UserReference]] = {
     queryString.get("identifier").getOrElse(Nil).toList match {
       case Nil => {
-        Future {
-          super.auth(headers) match {
-            case Some(authData) => Some(authData.user)
-            case None => {
-              Logger.error("Could not find user")
-              None
-            }
-          }
-        }
+        super.user(session, headers, path, queryString)
       }
       case id :: Nil => {
         Future {
