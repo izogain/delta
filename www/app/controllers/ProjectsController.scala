@@ -5,8 +5,9 @@ import io.flow.delta.v0.models.{EventType, Project, ProjectForm, Scms, Visibilit
 import io.flow.delta.v0.models.json._
 import io.flow.delta.config.v0.models.{Config, ConfigError, ConfigProject, ConfigUndefinedType}
 import io.flow.delta.www.lib.DeltaClientProvider
-import io.flow.play.util.{Pagination, PaginatedCollection}
+import io.flow.play.util.{Config => UtilConfig, PaginatedCollection, Pagination}
 import play.api.libs.json.Json
+
 import scala.concurrent.Future
 import play.api.Logger
 import play.api.i18n.MessagesApi
@@ -16,6 +17,7 @@ import play.api.data.Forms._
 
 class ProjectsController @javax.inject.Inject() (
   val messagesApi: MessagesApi,
+  override val config: UtilConfig,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider
 ) extends BaseController(tokenClient, deltaClientProvider) {

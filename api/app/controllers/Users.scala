@@ -60,8 +60,9 @@ class Users @javax.inject.Inject() (
         UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
       }
       case s: JsSuccess[UserForm] => {
-        request.user.map { userOption =>
-          usersWriteDao.create(userOption, s.get) match {
+        Future {
+          val user = request.user
+          usersWriteDao.create(user, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(user) => Created(Json.toJson(user))
           }
