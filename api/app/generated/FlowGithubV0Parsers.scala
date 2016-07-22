@@ -47,6 +47,18 @@ package io.flow.github.v0.anorm.parsers {
 
   }
 
+  object NodeType {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
+
+    def parser(name: String = "node_type"): RowParser[io.flow.github.v0.models.NodeType] = {
+      SqlParser.str(name) map {
+        case value => io.flow.github.v0.models.NodeType(value)
+      }
+    }
+
+  }
+
   object OwnerType {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(s"$prefix${sep}name")
@@ -71,7 +83,219 @@ package io.flow.github.v0.anorm.parsers {
 
   }
 
+  object Blob {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      content = s"$prefix${sep}content",
+      encoding = s"$prefix${sep}encoding",
+      url = s"$prefix${sep}url",
+      sha = s"$prefix${sep}sha",
+      size = s"$prefix${sep}size"
+    )
+
+    def parser(
+      content: String = "content",
+      encoding: String = "encoding",
+      url: String = "url",
+      sha: String = "sha",
+      size: String = "size"
+    ): RowParser[io.flow.github.v0.models.Blob] = {
+      SqlParser.str(content) ~
+      io.flow.github.v0.anorm.parsers.Encoding.parser(encoding) ~
+      SqlParser.str(url) ~
+      SqlParser.str(sha) ~
+      SqlParser.long(size) map {
+        case content ~ encoding ~ url ~ sha ~ size => {
+          io.flow.github.v0.models.Blob(
+            content = content,
+            encoding = encoding,
+            url = url,
+            sha = sha,
+            size = size
+          )
+        }
+      }
+    }
+
+  }
+
+  object BlobCreated {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      url = s"$prefix${sep}url",
+      sha = s"$prefix${sep}sha"
+    )
+
+    def parser(
+      url: String = "url",
+      sha: String = "sha"
+    ): RowParser[io.flow.github.v0.models.BlobCreated] = {
+      SqlParser.str(url) ~
+      SqlParser.str(sha) map {
+        case url ~ sha => {
+          io.flow.github.v0.models.BlobCreated(
+            url = url,
+            sha = sha
+          )
+        }
+      }
+    }
+
+  }
+
+  object BlobForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      content = s"$prefix${sep}content",
+      encoding = s"$prefix${sep}encoding"
+    )
+
+    def parser(
+      content: String = "content",
+      encoding: String = "encoding"
+    ): RowParser[io.flow.github.v0.models.BlobForm] = {
+      SqlParser.str(content) ~
+      io.flow.github.v0.anorm.parsers.Encoding.parser(encoding) map {
+        case content ~ encoding => {
+          io.flow.github.v0.models.BlobForm(
+            content = content,
+            encoding = encoding
+          )
+        }
+      }
+    }
+
+  }
+
   object Commit {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url",
+      htmlUrl = s"$prefix${sep}html_url",
+      authorPrefix = s"$prefix${sep}author",
+      committerPrefix = s"$prefix${sep}committer",
+      treePrefix = s"$prefix${sep}tree",
+      message = s"$prefix${sep}message",
+      parents = s"$prefix${sep}parents"
+    )
+
+    def parser(
+      sha: String = "sha",
+      url: String = "url",
+      htmlUrl: String = "html_url",
+      authorPrefix: String = "author",
+      committerPrefix: String = "committer",
+      treePrefix: String = "tree",
+      message: String = "message",
+      parents: String = "parents"
+    ): RowParser[io.flow.github.v0.models.Commit] = {
+      SqlParser.str(sha) ~
+      SqlParser.str(url) ~
+      SqlParser.str(htmlUrl) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(authorPrefix) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(committerPrefix) ~
+      io.flow.github.v0.anorm.parsers.TreeSummary.parserWithPrefix(treePrefix) ~
+      SqlParser.str(message) ~
+      SqlParser.get[Seq[io.flow.github.v0.models.CommitSummary]](parents) map {
+        case sha ~ url ~ htmlUrl ~ author ~ committer ~ tree ~ message ~ parents => {
+          io.flow.github.v0.models.Commit(
+            sha = sha,
+            url = url,
+            htmlUrl = htmlUrl,
+            author = author,
+            committer = committer,
+            tree = tree,
+            message = message,
+            parents = parents
+          )
+        }
+      }
+    }
+
+  }
+
+  object CommitForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      message = s"$prefix${sep}message",
+      tree = s"$prefix${sep}tree",
+      parents = s"$prefix${sep}parents",
+      authorPrefix = s"$prefix${sep}author",
+      committerPrefix = s"$prefix${sep}committer"
+    )
+
+    def parser(
+      message: String = "message",
+      tree: String = "tree",
+      parents: String = "parents",
+      authorPrefix: String = "author",
+      committerPrefix: String = "committer"
+    ): RowParser[io.flow.github.v0.models.CommitForm] = {
+      SqlParser.str(message) ~
+      SqlParser.str(tree) ~
+      SqlParser.get[Seq[String]](parents) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(authorPrefix) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(committerPrefix) map {
+        case message ~ tree ~ parents ~ author ~ committer => {
+          io.flow.github.v0.models.CommitForm(
+            message = message,
+            tree = tree,
+            parents = parents,
+            author = author,
+            committer = committer
+          )
+        }
+      }
+    }
+
+  }
+
+  object CommitResponse {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url",
+      authorPrefix = s"$prefix${sep}author",
+      committerPrefix = s"$prefix${sep}committer",
+      message = s"$prefix${sep}message",
+      treePrefix = s"$prefix${sep}tree",
+      parents = s"$prefix${sep}parents"
+    )
+
+    def parser(
+      sha: String = "sha",
+      url: String = "url",
+      authorPrefix: String = "author",
+      committerPrefix: String = "committer",
+      message: String = "message",
+      treePrefix: String = "tree",
+      parents: String = "parents"
+    ): RowParser[io.flow.github.v0.models.CommitResponse] = {
+      SqlParser.str(sha) ~
+      SqlParser.str(url) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(authorPrefix) ~
+      io.flow.github.v0.anorm.parsers.Person.parserWithPrefix(committerPrefix) ~
+      SqlParser.str(message) ~
+      io.flow.github.v0.anorm.parsers.TreeSummary.parserWithPrefix(treePrefix) ~
+      SqlParser.get[Seq[io.flow.github.v0.models.TreeSummary]](parents) map {
+        case sha ~ url ~ author ~ committer ~ message ~ tree ~ parents => {
+          io.flow.github.v0.models.CommitResponse(
+            sha = sha,
+            url = url,
+            author = author,
+            committer = committer,
+            message = message,
+            tree = tree,
+            parents = parents
+          )
+        }
+      }
+    }
+
+  }
+
+  object CommitSummary {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
       sha = s"$prefix${sep}sha",
@@ -81,11 +305,11 @@ package io.flow.github.v0.anorm.parsers {
     def parser(
       sha: String = "sha",
       url: String = "url"
-    ): RowParser[io.flow.github.v0.models.Commit] = {
+    ): RowParser[io.flow.github.v0.models.CommitSummary] = {
       SqlParser.str(sha) ~
       SqlParser.str(url) map {
         case sha ~ url => {
-          io.flow.github.v0.models.Commit(
+          io.flow.github.v0.models.CommitSummary(
             sha = sha,
             url = url
           )
@@ -148,6 +372,58 @@ package io.flow.github.v0.anorm.parsers {
             gitUrl = gitUrl,
             htmlUrl = htmlUrl,
             downloadUrl = downloadUrl
+          )
+        }
+      }
+    }
+
+  }
+
+  object CreateTreeForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      baseTree = s"$prefix${sep}base_tree",
+      tree = s"$prefix${sep}tree"
+    )
+
+    def parser(
+      baseTree: String = "base_tree",
+      tree: String = "tree"
+    ): RowParser[io.flow.github.v0.models.CreateTreeForm] = {
+      SqlParser.str(baseTree) ~
+      SqlParser.get[Seq[io.flow.github.v0.models.TreeForm]](tree) map {
+        case baseTree ~ tree => {
+          io.flow.github.v0.models.CreateTreeForm(
+            baseTree = baseTree,
+            tree = tree
+          )
+        }
+      }
+    }
+
+  }
+
+  object CreateTreeResponse {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url",
+      treeResultPrefix = s"$prefix${sep}tree_result"
+    )
+
+    def parser(
+      sha: String = "sha",
+      url: String = "url",
+      treeResultPrefix: String = "tree_result"
+    ): RowParser[io.flow.github.v0.models.CreateTreeResponse] = {
+      SqlParser.str(sha) ~
+      SqlParser.str(url) ~
+      io.flow.github.v0.anorm.parsers.Tree.parserWithPrefix(treeResultPrefix) map {
+        case sha ~ url ~ treeResult => {
+          io.flow.github.v0.models.CreateTreeResponse(
+            sha = sha,
+            url = url,
+            treeResult = treeResult
           )
         }
       }
@@ -291,6 +567,166 @@ package io.flow.github.v0.anorm.parsers {
 
   }
 
+  object Node {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      path = s"$prefix${sep}path",
+      mode = s"$prefix${sep}mode",
+      `type` = s"$prefix${sep}type",
+      size = s"$prefix${sep}size",
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url"
+    )
+
+    def parser(
+      path: String = "path",
+      mode: String = "mode",
+      `type`: String = "type",
+      size: String = "size",
+      sha: String = "sha",
+      url: String = "url"
+    ): RowParser[io.flow.github.v0.models.Node] = {
+      SqlParser.str(path) ~
+      SqlParser.str(mode) ~
+      io.flow.github.v0.anorm.parsers.NodeType.parser(`type`) ~
+      SqlParser.long(size) ~
+      SqlParser.str(sha) ~
+      SqlParser.str(url) map {
+        case path ~ mode ~ typeInstance ~ size ~ sha ~ url => {
+          io.flow.github.v0.models.Node(
+            path = path,
+            mode = mode,
+            `type` = typeInstance,
+            size = size,
+            sha = sha,
+            url = url
+          )
+        }
+      }
+    }
+
+  }
+
+  object NodeForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      path = s"$prefix${sep}path",
+      mode = s"$prefix${sep}mode",
+      `type` = s"$prefix${sep}type",
+      sha = s"$prefix${sep}sha"
+    )
+
+    def parser(
+      path: String = "path",
+      mode: String = "mode",
+      `type`: String = "type",
+      sha: String = "sha"
+    ): RowParser[io.flow.github.v0.models.NodeForm] = {
+      SqlParser.str(path) ~
+      SqlParser.str(mode) ~
+      io.flow.github.v0.anorm.parsers.NodeType.parser(`type`) ~
+      SqlParser.str(sha) map {
+        case path ~ mode ~ typeInstance ~ sha => {
+          io.flow.github.v0.models.NodeForm(
+            path = path,
+            mode = mode,
+            `type` = typeInstance,
+            sha = sha
+          )
+        }
+      }
+    }
+
+  }
+
+  object Person {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      name = s"$prefix${sep}name",
+      email = s"$prefix${sep}email",
+      date = s"$prefix${sep}date"
+    )
+
+    def parser(
+      name: String = "name",
+      email: String = "email",
+      date: String = "date"
+    ): RowParser[io.flow.github.v0.models.Person] = {
+      SqlParser.str(name) ~
+      SqlParser.str(email) ~
+      SqlParser.get[_root_.org.joda.time.DateTime](date) map {
+        case name ~ email ~ date => {
+          io.flow.github.v0.models.Person(
+            name = name,
+            email = email,
+            date = date
+          )
+        }
+      }
+    }
+
+  }
+
+  object PullRequest {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      id = s"$prefix${sep}id",
+      url = s"$prefix${sep}url",
+      number = s"$prefix${sep}number"
+    )
+
+    def parser(
+      id: String = "id",
+      url: String = "url",
+      number: String = "number"
+    ): RowParser[io.flow.github.v0.models.PullRequest] = {
+      SqlParser.str(id) ~
+      SqlParser.str(url) ~
+      SqlParser.str(number) map {
+        case id ~ url ~ number => {
+          io.flow.github.v0.models.PullRequest(
+            id = id,
+            url = url,
+            number = number
+          )
+        }
+      }
+    }
+
+  }
+
+  object PullRequestForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      title = s"$prefix${sep}title",
+      head = s"$prefix${sep}head",
+      base = s"$prefix${sep}base",
+      body = s"$prefix${sep}body"
+    )
+
+    def parser(
+      title: String = "title",
+      head: String = "head",
+      base: String = "base",
+      body: String = "body"
+    ): RowParser[io.flow.github.v0.models.PullRequestForm] = {
+      SqlParser.str(title) ~
+      SqlParser.str(head) ~
+      SqlParser.str(base) ~
+      SqlParser.str(body).? map {
+        case title ~ head ~ base ~ body => {
+          io.flow.github.v0.models.PullRequestForm(
+            title = title,
+            head = head,
+            base = base,
+            body = body
+          )
+        }
+      }
+    }
+
+  }
+
   object Ref {
 
     def parserWithPrefix(prefix: String, sep: String = "_") = parser(
@@ -335,6 +771,26 @@ package io.flow.github.v0.anorm.parsers {
         case ref ~ sha => {
           io.flow.github.v0.models.RefForm(
             ref = ref,
+            sha = sha
+          )
+        }
+      }
+    }
+
+  }
+
+  object RefUpdateForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      sha = s"$prefix${sep}sha"
+    )
+
+    def parser(
+      sha: String = "sha"
+    ): RowParser[io.flow.github.v0.models.RefUpdateForm] = {
+      SqlParser.str(sha) map {
+        case sha => {
+          io.flow.github.v0.models.RefUpdateForm(
             sha = sha
           )
         }
@@ -479,7 +935,7 @@ package io.flow.github.v0.anorm.parsers {
       commitPrefix: String = "commit"
     ): RowParser[io.flow.github.v0.models.TagSummary] = {
       SqlParser.str(name) ~
-      io.flow.github.v0.anorm.parsers.Commit.parserWithPrefix(commitPrefix) map {
+      io.flow.github.v0.anorm.parsers.CommitSummary.parserWithPrefix(commitPrefix) map {
         case name ~ commit => {
           io.flow.github.v0.models.TagSummary(
             name = name,
@@ -512,6 +968,138 @@ package io.flow.github.v0.anorm.parsers {
             name = name,
             email = email,
             date = date
+          )
+        }
+      }
+    }
+
+  }
+
+  object Tree {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url",
+      truncated = s"$prefix${sep}truncated",
+      tree = s"$prefix${sep}tree"
+    )
+
+    def parser(
+      sha: String = "sha",
+      url: String = "url",
+      truncated: String = "truncated",
+      tree: String = "tree"
+    ): RowParser[io.flow.github.v0.models.Tree] = {
+      SqlParser.str(sha) ~
+      SqlParser.str(url) ~
+      SqlParser.bool(truncated) ~
+      SqlParser.get[Seq[io.flow.github.v0.models.Node]](tree) map {
+        case sha ~ url ~ truncated ~ tree => {
+          io.flow.github.v0.models.Tree(
+            sha = sha,
+            url = url,
+            truncated = truncated,
+            tree = tree
+          )
+        }
+      }
+    }
+
+  }
+
+  object TreeForm {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      path = s"$prefix${sep}path",
+      mode = s"$prefix${sep}mode",
+      `type` = s"$prefix${sep}type",
+      sha = s"$prefix${sep}sha",
+      content = s"$prefix${sep}content"
+    )
+
+    def parser(
+      path: String = "path",
+      mode: String = "mode",
+      `type`: String = "type",
+      sha: String = "sha",
+      content: String = "content"
+    ): RowParser[io.flow.github.v0.models.TreeForm] = {
+      SqlParser.str(path) ~
+      SqlParser.str(mode) ~
+      io.flow.github.v0.anorm.parsers.NodeType.parser(`type`) ~
+      SqlParser.str(sha).? ~
+      SqlParser.str(content).? map {
+        case path ~ mode ~ typeInstance ~ sha ~ content => {
+          io.flow.github.v0.models.TreeForm(
+            path = path,
+            mode = mode,
+            `type` = typeInstance,
+            sha = sha,
+            content = content
+          )
+        }
+      }
+    }
+
+  }
+
+  object TreeResult {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      path = s"$prefix${sep}path",
+      mode = s"$prefix${sep}mode",
+      `type` = s"$prefix${sep}type",
+      size = s"$prefix${sep}size",
+      sha = s"$prefix${sep}sha",
+      url = s"$prefix${sep}url"
+    )
+
+    def parser(
+      path: String = "path",
+      mode: String = "mode",
+      `type`: String = "type",
+      size: String = "size",
+      sha: String = "sha",
+      url: String = "url"
+    ): RowParser[io.flow.github.v0.models.TreeResult] = {
+      SqlParser.str(path) ~
+      SqlParser.str(mode) ~
+      io.flow.github.v0.anorm.parsers.NodeType.parser(`type`) ~
+      SqlParser.long(size) ~
+      SqlParser.str(sha) ~
+      SqlParser.str(url) map {
+        case path ~ mode ~ typeInstance ~ size ~ sha ~ url => {
+          io.flow.github.v0.models.TreeResult(
+            path = path,
+            mode = mode,
+            `type` = typeInstance,
+            size = size,
+            sha = sha,
+            url = url
+          )
+        }
+      }
+    }
+
+  }
+
+  object TreeSummary {
+
+    def parserWithPrefix(prefix: String, sep: String = "_") = parser(
+      url = s"$prefix${sep}url",
+      sha = s"$prefix${sep}sha"
+    )
+
+    def parser(
+      url: String = "url",
+      sha: String = "sha"
+    ): RowParser[io.flow.github.v0.models.TreeSummary] = {
+      SqlParser.str(url) ~
+      SqlParser.str(sha) map {
+        case url ~ sha => {
+          io.flow.github.v0.models.TreeSummary(
+            url = url,
+            sha = sha
           )
         }
       }

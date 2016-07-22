@@ -5,7 +5,54 @@
  */
 package io.flow.github.v0.models {
 
+  case class Blob(
+    content: String,
+    encoding: io.flow.github.v0.models.Encoding,
+    url: String,
+    sha: String,
+    size: Long
+  )
+
+  case class BlobCreated(
+    url: String,
+    sha: String
+  )
+
+  case class BlobForm(
+    content: String,
+    encoding: io.flow.github.v0.models.Encoding = io.flow.github.v0.models.Encoding.Utf8
+  )
+
   case class Commit(
+    sha: String,
+    url: String,
+    htmlUrl: String,
+    author: io.flow.github.v0.models.Person,
+    committer: io.flow.github.v0.models.Person,
+    tree: io.flow.github.v0.models.TreeSummary,
+    message: String,
+    parents: Seq[io.flow.github.v0.models.CommitSummary]
+  )
+
+  case class CommitForm(
+    message: String,
+    tree: String,
+    parents: Seq[String],
+    author: io.flow.github.v0.models.Person,
+    committer: io.flow.github.v0.models.Person
+  )
+
+  case class CommitResponse(
+    sha: String,
+    url: String,
+    author: io.flow.github.v0.models.Person,
+    committer: io.flow.github.v0.models.Person,
+    message: String,
+    tree: io.flow.github.v0.models.TreeSummary,
+    parents: Seq[io.flow.github.v0.models.TreeSummary]
+  )
+
+  case class CommitSummary(
     sha: String,
     url: String
   )
@@ -22,6 +69,17 @@ package io.flow.github.v0.models {
     gitUrl: String,
     htmlUrl: String,
     downloadUrl: String
+  )
+
+  case class CreateTreeForm(
+    baseTree: String,
+    tree: Seq[io.flow.github.v0.models.TreeForm]
+  )
+
+  case class CreateTreeResponse(
+    sha: String,
+    url: String,
+    treeResult: io.flow.github.v0.models.Tree
   )
 
   case class Error(
@@ -57,6 +115,41 @@ package io.flow.github.v0.models {
     contentType: _root_.scala.Option[String] = None
   )
 
+  case class Node(
+    path: String,
+    mode: String,
+    `type`: io.flow.github.v0.models.NodeType,
+    size: Long,
+    sha: String,
+    url: String
+  )
+
+  case class NodeForm(
+    path: String,
+    mode: String,
+    `type`: io.flow.github.v0.models.NodeType,
+    sha: String
+  )
+
+  case class Person(
+    name: String,
+    email: String,
+    date: _root_.org.joda.time.DateTime
+  )
+
+  case class PullRequest(
+    id: String,
+    url: String,
+    number: String
+  )
+
+  case class PullRequestForm(
+    title: String,
+    head: String,
+    base: String,
+    body: _root_.scala.Option[String] = None
+  )
+
   case class Ref(
     ref: String,
     url: String,
@@ -65,6 +158,10 @@ package io.flow.github.v0.models {
 
   case class RefForm(
     ref: String,
+    sha: String
+  )
+
+  case class RefUpdateForm(
     sha: String
   )
 
@@ -98,13 +195,42 @@ package io.flow.github.v0.models {
 
   case class TagSummary(
     name: String,
-    commit: io.flow.github.v0.models.Commit
+    commit: io.flow.github.v0.models.CommitSummary
   )
 
   case class Tagger(
     name: String,
     email: String,
     date: _root_.org.joda.time.DateTime
+  )
+
+  case class Tree(
+    sha: String,
+    url: String,
+    truncated: Boolean,
+    tree: Seq[io.flow.github.v0.models.Node]
+  )
+
+  case class TreeForm(
+    path: String,
+    mode: String,
+    `type`: io.flow.github.v0.models.NodeType,
+    sha: _root_.scala.Option[String] = None,
+    content: _root_.scala.Option[String] = None
+  )
+
+  case class TreeResult(
+    path: String,
+    mode: String,
+    `type`: io.flow.github.v0.models.NodeType,
+    size: Long,
+    sha: String,
+    url: String
+  )
+
+  case class TreeSummary(
+    url: String,
+    sha: String
   )
 
   case class UnprocessableEntity(
@@ -171,6 +297,7 @@ package io.flow.github.v0.models {
   object Encoding {
 
     case object Base64 extends Encoding { override def toString = "base64" }
+    case object Utf8 extends Encoding { override def toString = "utf-8" }
 
     /**
      * UNDEFINED captures values that are sent either in error or
@@ -188,7 +315,7 @@ package io.flow.github.v0.models {
      * lower case to avoid collisions with the camel cased values
      * above.
      */
-    val all = Seq(Base64)
+    val all = Seq(Base64, Utf8)
 
     private[this]
     val byName = all.map(x => x.toString.toLowerCase -> x).toMap
@@ -230,6 +357,41 @@ package io.flow.github.v0.models {
     def apply(value: String): HookEvent = fromString(value).getOrElse(UNDEFINED(value))
 
     def fromString(value: String): _root_.scala.Option[HookEvent] = byName.get(value.toLowerCase)
+
+  }
+
+  sealed trait NodeType
+
+  object NodeType {
+
+    case object Blob extends NodeType { override def toString = "blob" }
+    case object Tree extends NodeType { override def toString = "tree" }
+    case object Commit extends NodeType { override def toString = "commit" }
+
+    /**
+     * UNDEFINED captures values that are sent either in error or
+     * that were added by the server after this library was
+     * generated. We want to make it easy and obvious for users of
+     * this library to handle this case gracefully.
+     *
+     * We use all CAPS for the variable name to avoid collisions
+     * with the camel cased values above.
+     */
+    case class UNDEFINED(override val toString: String) extends NodeType
+
+    /**
+     * all returns a list of all the valid, known values. We use
+     * lower case to avoid collisions with the camel cased values
+     * above.
+     */
+    val all = Seq(Blob, Tree, Commit)
+
+    private[this]
+    val byName = all.map(x => x.toString.toLowerCase -> x).toMap
+
+    def apply(value: String): NodeType = fromString(value).getOrElse(UNDEFINED(value))
+
+    def fromString(value: String): _root_.scala.Option[NodeType] = byName.get(value.toLowerCase)
 
   }
 
@@ -421,6 +583,36 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit val jsonReadsGithubNodeType = new play.api.libs.json.Reads[io.flow.github.v0.models.NodeType] {
+      def reads(js: play.api.libs.json.JsValue): play.api.libs.json.JsResult[io.flow.github.v0.models.NodeType] = {
+        js match {
+          case v: play.api.libs.json.JsString => play.api.libs.json.JsSuccess(io.flow.github.v0.models.NodeType(v.value))
+          case _ => {
+            (js \ "value").validate[String] match {
+              case play.api.libs.json.JsSuccess(v, _) => play.api.libs.json.JsSuccess(io.flow.github.v0.models.NodeType(v))
+              case err: play.api.libs.json.JsError => err
+            }
+          }
+        }
+      }
+    }
+
+    def jsonWritesGithubNodeType(obj: io.flow.github.v0.models.NodeType) = {
+      play.api.libs.json.JsString(obj.toString)
+    }
+
+    def jsObjectNodeType(obj: io.flow.github.v0.models.NodeType) = {
+      play.api.libs.json.Json.obj("value" -> play.api.libs.json.JsString(obj.toString))
+    }
+
+    implicit def jsonWritesGithubNodeType: play.api.libs.json.Writes[NodeType] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.NodeType] {
+        def writes(obj: io.flow.github.v0.models.NodeType) = {
+          jsonWritesGithubNodeType(obj)
+        }
+      }
+    }
+
     implicit val jsonReadsGithubOwnerType = new play.api.libs.json.Reads[io.flow.github.v0.models.OwnerType] {
       def reads(js: play.api.libs.json.JsValue): play.api.libs.json.JsResult[io.flow.github.v0.models.OwnerType] = {
         js match {
@@ -481,17 +673,101 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubBlob: play.api.libs.json.Reads[Blob] = {
+      (
+        (__ \ "content").read[String] and
+        (__ \ "encoding").read[io.flow.github.v0.models.Encoding] and
+        (__ \ "url").read[String] and
+        (__ \ "sha").read[String] and
+        (__ \ "size").read[Long]
+      )(Blob.apply _)
+    }
+
+    def jsObjectBlob(obj: io.flow.github.v0.models.Blob) = {
+      play.api.libs.json.Json.obj(
+        "content" -> play.api.libs.json.JsString(obj.content),
+        "encoding" -> play.api.libs.json.JsString(obj.encoding.toString),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "size" -> play.api.libs.json.JsNumber(obj.size)
+      )
+    }
+
+    implicit def jsonWritesGithubBlob: play.api.libs.json.Writes[Blob] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Blob] {
+        def writes(obj: io.flow.github.v0.models.Blob) = {
+          jsObjectBlob(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubBlobCreated: play.api.libs.json.Reads[BlobCreated] = {
+      (
+        (__ \ "url").read[String] and
+        (__ \ "sha").read[String]
+      )(BlobCreated.apply _)
+    }
+
+    def jsObjectBlobCreated(obj: io.flow.github.v0.models.BlobCreated) = {
+      play.api.libs.json.Json.obj(
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "sha" -> play.api.libs.json.JsString(obj.sha)
+      )
+    }
+
+    implicit def jsonWritesGithubBlobCreated: play.api.libs.json.Writes[BlobCreated] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.BlobCreated] {
+        def writes(obj: io.flow.github.v0.models.BlobCreated) = {
+          jsObjectBlobCreated(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubBlobForm: play.api.libs.json.Reads[BlobForm] = {
+      (
+        (__ \ "content").read[String] and
+        (__ \ "encoding").read[io.flow.github.v0.models.Encoding]
+      )(BlobForm.apply _)
+    }
+
+    def jsObjectBlobForm(obj: io.flow.github.v0.models.BlobForm) = {
+      play.api.libs.json.Json.obj(
+        "content" -> play.api.libs.json.JsString(obj.content),
+        "encoding" -> play.api.libs.json.JsString(obj.encoding.toString)
+      )
+    }
+
+    implicit def jsonWritesGithubBlobForm: play.api.libs.json.Writes[BlobForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.BlobForm] {
+        def writes(obj: io.flow.github.v0.models.BlobForm) = {
+          jsObjectBlobForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubCommit: play.api.libs.json.Reads[Commit] = {
       (
         (__ \ "sha").read[String] and
-        (__ \ "url").read[String]
+        (__ \ "url").read[String] and
+        (__ \ "html_url").read[String] and
+        (__ \ "author").read[io.flow.github.v0.models.Person] and
+        (__ \ "committer").read[io.flow.github.v0.models.Person] and
+        (__ \ "tree").read[io.flow.github.v0.models.TreeSummary] and
+        (__ \ "message").read[String] and
+        (__ \ "parents").read[Seq[io.flow.github.v0.models.CommitSummary]]
       )(Commit.apply _)
     }
 
     def jsObjectCommit(obj: io.flow.github.v0.models.Commit) = {
       play.api.libs.json.Json.obj(
         "sha" -> play.api.libs.json.JsString(obj.sha),
-        "url" -> play.api.libs.json.JsString(obj.url)
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "html_url" -> play.api.libs.json.JsString(obj.htmlUrl),
+        "author" -> jsObjectPerson(obj.author),
+        "committer" -> jsObjectPerson(obj.committer),
+        "tree" -> jsObjectTreeSummary(obj.tree),
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "parents" -> play.api.libs.json.Json.toJson(obj.parents)
       )
     }
 
@@ -499,6 +775,88 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Commit] {
         def writes(obj: io.flow.github.v0.models.Commit) = {
           jsObjectCommit(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubCommitForm: play.api.libs.json.Reads[CommitForm] = {
+      (
+        (__ \ "message").read[String] and
+        (__ \ "tree").read[String] and
+        (__ \ "parents").read[Seq[String]] and
+        (__ \ "author").read[io.flow.github.v0.models.Person] and
+        (__ \ "committer").read[io.flow.github.v0.models.Person]
+      )(CommitForm.apply _)
+    }
+
+    def jsObjectCommitForm(obj: io.flow.github.v0.models.CommitForm) = {
+      play.api.libs.json.Json.obj(
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "tree" -> play.api.libs.json.JsString(obj.tree),
+        "parents" -> play.api.libs.json.Json.toJson(obj.parents),
+        "author" -> jsObjectPerson(obj.author),
+        "committer" -> jsObjectPerson(obj.committer)
+      )
+    }
+
+    implicit def jsonWritesGithubCommitForm: play.api.libs.json.Writes[CommitForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.CommitForm] {
+        def writes(obj: io.flow.github.v0.models.CommitForm) = {
+          jsObjectCommitForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubCommitResponse: play.api.libs.json.Reads[CommitResponse] = {
+      (
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "author").read[io.flow.github.v0.models.Person] and
+        (__ \ "committer").read[io.flow.github.v0.models.Person] and
+        (__ \ "message").read[String] and
+        (__ \ "tree").read[io.flow.github.v0.models.TreeSummary] and
+        (__ \ "parents").read[Seq[io.flow.github.v0.models.TreeSummary]]
+      )(CommitResponse.apply _)
+    }
+
+    def jsObjectCommitResponse(obj: io.flow.github.v0.models.CommitResponse) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "author" -> jsObjectPerson(obj.author),
+        "committer" -> jsObjectPerson(obj.committer),
+        "message" -> play.api.libs.json.JsString(obj.message),
+        "tree" -> jsObjectTreeSummary(obj.tree),
+        "parents" -> play.api.libs.json.Json.toJson(obj.parents)
+      )
+    }
+
+    implicit def jsonWritesGithubCommitResponse: play.api.libs.json.Writes[CommitResponse] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.CommitResponse] {
+        def writes(obj: io.flow.github.v0.models.CommitResponse) = {
+          jsObjectCommitResponse(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubCommitSummary: play.api.libs.json.Reads[CommitSummary] = {
+      (
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String]
+      )(CommitSummary.apply _)
+    }
+
+    def jsObjectCommitSummary(obj: io.flow.github.v0.models.CommitSummary) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url)
+      )
+    }
+
+    implicit def jsonWritesGithubCommitSummary: play.api.libs.json.Writes[CommitSummary] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.CommitSummary] {
+        def writes(obj: io.flow.github.v0.models.CommitSummary) = {
+          jsObjectCommitSummary(obj)
         }
       }
     }
@@ -541,6 +899,52 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Contents] {
         def writes(obj: io.flow.github.v0.models.Contents) = {
           jsObjectContents(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubCreateTreeForm: play.api.libs.json.Reads[CreateTreeForm] = {
+      (
+        (__ \ "base_tree").read[String] and
+        (__ \ "tree").read[Seq[io.flow.github.v0.models.TreeForm]]
+      )(CreateTreeForm.apply _)
+    }
+
+    def jsObjectCreateTreeForm(obj: io.flow.github.v0.models.CreateTreeForm) = {
+      play.api.libs.json.Json.obj(
+        "base_tree" -> play.api.libs.json.JsString(obj.baseTree),
+        "tree" -> play.api.libs.json.Json.toJson(obj.tree)
+      )
+    }
+
+    implicit def jsonWritesGithubCreateTreeForm: play.api.libs.json.Writes[CreateTreeForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.CreateTreeForm] {
+        def writes(obj: io.flow.github.v0.models.CreateTreeForm) = {
+          jsObjectCreateTreeForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubCreateTreeResponse: play.api.libs.json.Reads[CreateTreeResponse] = {
+      (
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "tree_result").read[io.flow.github.v0.models.Tree]
+      )(CreateTreeResponse.apply _)
+    }
+
+    def jsObjectCreateTreeResponse(obj: io.flow.github.v0.models.CreateTreeResponse) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "tree_result" -> jsObjectTree(obj.treeResult)
+      )
+    }
+
+    implicit def jsonWritesGithubCreateTreeResponse: play.api.libs.json.Writes[CreateTreeResponse] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.CreateTreeResponse] {
+        def writes(obj: io.flow.github.v0.models.CreateTreeResponse) = {
+          jsObjectCreateTreeResponse(obj)
         }
       }
     }
@@ -657,6 +1061,138 @@ package io.flow.github.v0.models {
       }
     }
 
+    implicit def jsonReadsGithubNode: play.api.libs.json.Reads[Node] = {
+      (
+        (__ \ "path").read[String] and
+        (__ \ "mode").read[String] and
+        (__ \ "type").read[io.flow.github.v0.models.NodeType] and
+        (__ \ "size").read[Long] and
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String]
+      )(Node.apply _)
+    }
+
+    def jsObjectNode(obj: io.flow.github.v0.models.Node) = {
+      play.api.libs.json.Json.obj(
+        "path" -> play.api.libs.json.JsString(obj.path),
+        "mode" -> play.api.libs.json.JsString(obj.mode),
+        "type" -> play.api.libs.json.JsString(obj.`type`.toString),
+        "size" -> play.api.libs.json.JsNumber(obj.size),
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url)
+      )
+    }
+
+    implicit def jsonWritesGithubNode: play.api.libs.json.Writes[Node] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Node] {
+        def writes(obj: io.flow.github.v0.models.Node) = {
+          jsObjectNode(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubNodeForm: play.api.libs.json.Reads[NodeForm] = {
+      (
+        (__ \ "path").read[String] and
+        (__ \ "mode").read[String] and
+        (__ \ "type").read[io.flow.github.v0.models.NodeType] and
+        (__ \ "sha").read[String]
+      )(NodeForm.apply _)
+    }
+
+    def jsObjectNodeForm(obj: io.flow.github.v0.models.NodeForm) = {
+      play.api.libs.json.Json.obj(
+        "path" -> play.api.libs.json.JsString(obj.path),
+        "mode" -> play.api.libs.json.JsString(obj.mode),
+        "type" -> play.api.libs.json.JsString(obj.`type`.toString),
+        "sha" -> play.api.libs.json.JsString(obj.sha)
+      )
+    }
+
+    implicit def jsonWritesGithubNodeForm: play.api.libs.json.Writes[NodeForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.NodeForm] {
+        def writes(obj: io.flow.github.v0.models.NodeForm) = {
+          jsObjectNodeForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubPerson: play.api.libs.json.Reads[Person] = {
+      (
+        (__ \ "name").read[String] and
+        (__ \ "email").read[String] and
+        (__ \ "date").read[_root_.org.joda.time.DateTime]
+      )(Person.apply _)
+    }
+
+    def jsObjectPerson(obj: io.flow.github.v0.models.Person) = {
+      play.api.libs.json.Json.obj(
+        "name" -> play.api.libs.json.JsString(obj.name),
+        "email" -> play.api.libs.json.JsString(obj.email),
+        "date" -> play.api.libs.json.JsString(_root_.org.joda.time.format.ISODateTimeFormat.dateTime.print(obj.date))
+      )
+    }
+
+    implicit def jsonWritesGithubPerson: play.api.libs.json.Writes[Person] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Person] {
+        def writes(obj: io.flow.github.v0.models.Person) = {
+          jsObjectPerson(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubPullRequest: play.api.libs.json.Reads[PullRequest] = {
+      (
+        (__ \ "id").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "number").read[String]
+      )(PullRequest.apply _)
+    }
+
+    def jsObjectPullRequest(obj: io.flow.github.v0.models.PullRequest) = {
+      play.api.libs.json.Json.obj(
+        "id" -> play.api.libs.json.JsString(obj.id),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "number" -> play.api.libs.json.JsString(obj.number)
+      )
+    }
+
+    implicit def jsonWritesGithubPullRequest: play.api.libs.json.Writes[PullRequest] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.PullRequest] {
+        def writes(obj: io.flow.github.v0.models.PullRequest) = {
+          jsObjectPullRequest(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubPullRequestForm: play.api.libs.json.Reads[PullRequestForm] = {
+      (
+        (__ \ "title").read[String] and
+        (__ \ "head").read[String] and
+        (__ \ "base").read[String] and
+        (__ \ "body").readNullable[String]
+      )(PullRequestForm.apply _)
+    }
+
+    def jsObjectPullRequestForm(obj: io.flow.github.v0.models.PullRequestForm) = {
+      play.api.libs.json.Json.obj(
+        "title" -> play.api.libs.json.JsString(obj.title),
+        "head" -> play.api.libs.json.JsString(obj.head),
+        "base" -> play.api.libs.json.JsString(obj.base)
+      ) ++ (obj.body match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("body" -> play.api.libs.json.JsString(x))
+      })
+    }
+
+    implicit def jsonWritesGithubPullRequestForm: play.api.libs.json.Writes[PullRequestForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.PullRequestForm] {
+        def writes(obj: io.flow.github.v0.models.PullRequestForm) = {
+          jsObjectPullRequestForm(obj)
+        }
+      }
+    }
+
     implicit def jsonReadsGithubRef: play.api.libs.json.Reads[Ref] = {
       (
         (__ \ "ref").read[String] and
@@ -699,6 +1235,24 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.RefForm] {
         def writes(obj: io.flow.github.v0.models.RefForm) = {
           jsObjectRefForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubRefUpdateForm: play.api.libs.json.Reads[RefUpdateForm] = {
+      (__ \ "sha").read[String].map { x => new RefUpdateForm(sha = x) }
+    }
+
+    def jsObjectRefUpdateForm(obj: io.flow.github.v0.models.RefUpdateForm) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha)
+      )
+    }
+
+    implicit def jsonWritesGithubRefUpdateForm: play.api.libs.json.Writes[RefUpdateForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.RefUpdateForm] {
+        def writes(obj: io.flow.github.v0.models.RefUpdateForm) = {
+          jsObjectRefUpdateForm(obj)
         }
       }
     }
@@ -800,14 +1354,14 @@ package io.flow.github.v0.models {
     implicit def jsonReadsGithubTagSummary: play.api.libs.json.Reads[TagSummary] = {
       (
         (__ \ "name").read[String] and
-        (__ \ "commit").read[io.flow.github.v0.models.Commit]
+        (__ \ "commit").read[io.flow.github.v0.models.CommitSummary]
       )(TagSummary.apply _)
     }
 
     def jsObjectTagSummary(obj: io.flow.github.v0.models.TagSummary) = {
       play.api.libs.json.Json.obj(
         "name" -> play.api.libs.json.JsString(obj.name),
-        "commit" -> jsObjectCommit(obj.commit)
+        "commit" -> jsObjectCommitSummary(obj.commit)
       )
     }
 
@@ -839,6 +1393,117 @@ package io.flow.github.v0.models {
       new play.api.libs.json.Writes[io.flow.github.v0.models.Tagger] {
         def writes(obj: io.flow.github.v0.models.Tagger) = {
           jsObjectTagger(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTree: play.api.libs.json.Reads[Tree] = {
+      (
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String] and
+        (__ \ "truncated").read[Boolean] and
+        (__ \ "tree").read[Seq[io.flow.github.v0.models.Node]]
+      )(Tree.apply _)
+    }
+
+    def jsObjectTree(obj: io.flow.github.v0.models.Tree) = {
+      play.api.libs.json.Json.obj(
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "truncated" -> play.api.libs.json.JsBoolean(obj.truncated),
+        "tree" -> play.api.libs.json.Json.toJson(obj.tree)
+      )
+    }
+
+    implicit def jsonWritesGithubTree: play.api.libs.json.Writes[Tree] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.Tree] {
+        def writes(obj: io.flow.github.v0.models.Tree) = {
+          jsObjectTree(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTreeForm: play.api.libs.json.Reads[TreeForm] = {
+      (
+        (__ \ "path").read[String] and
+        (__ \ "mode").read[String] and
+        (__ \ "type").read[io.flow.github.v0.models.NodeType] and
+        (__ \ "sha").readNullable[String] and
+        (__ \ "content").readNullable[String]
+      )(TreeForm.apply _)
+    }
+
+    def jsObjectTreeForm(obj: io.flow.github.v0.models.TreeForm) = {
+      play.api.libs.json.Json.obj(
+        "path" -> play.api.libs.json.JsString(obj.path),
+        "mode" -> play.api.libs.json.JsString(obj.mode),
+        "type" -> play.api.libs.json.JsString(obj.`type`.toString)
+      ) ++ (obj.sha match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("sha" -> play.api.libs.json.JsString(x))
+      }) ++
+      (obj.content match {
+        case None => play.api.libs.json.Json.obj()
+        case Some(x) => play.api.libs.json.Json.obj("content" -> play.api.libs.json.JsString(x))
+      })
+    }
+
+    implicit def jsonWritesGithubTreeForm: play.api.libs.json.Writes[TreeForm] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TreeForm] {
+        def writes(obj: io.flow.github.v0.models.TreeForm) = {
+          jsObjectTreeForm(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTreeResult: play.api.libs.json.Reads[TreeResult] = {
+      (
+        (__ \ "path").read[String] and
+        (__ \ "mode").read[String] and
+        (__ \ "type").read[io.flow.github.v0.models.NodeType] and
+        (__ \ "size").read[Long] and
+        (__ \ "sha").read[String] and
+        (__ \ "url").read[String]
+      )(TreeResult.apply _)
+    }
+
+    def jsObjectTreeResult(obj: io.flow.github.v0.models.TreeResult) = {
+      play.api.libs.json.Json.obj(
+        "path" -> play.api.libs.json.JsString(obj.path),
+        "mode" -> play.api.libs.json.JsString(obj.mode),
+        "type" -> play.api.libs.json.JsString(obj.`type`.toString),
+        "size" -> play.api.libs.json.JsNumber(obj.size),
+        "sha" -> play.api.libs.json.JsString(obj.sha),
+        "url" -> play.api.libs.json.JsString(obj.url)
+      )
+    }
+
+    implicit def jsonWritesGithubTreeResult: play.api.libs.json.Writes[TreeResult] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TreeResult] {
+        def writes(obj: io.flow.github.v0.models.TreeResult) = {
+          jsObjectTreeResult(obj)
+        }
+      }
+    }
+
+    implicit def jsonReadsGithubTreeSummary: play.api.libs.json.Reads[TreeSummary] = {
+      (
+        (__ \ "url").read[String] and
+        (__ \ "sha").read[String]
+      )(TreeSummary.apply _)
+    }
+
+    def jsObjectTreeSummary(obj: io.flow.github.v0.models.TreeSummary) = {
+      play.api.libs.json.Json.obj(
+        "url" -> play.api.libs.json.JsString(obj.url),
+        "sha" -> play.api.libs.json.JsString(obj.sha)
+      )
+    }
+
+    implicit def jsonWritesGithubTreeSummary: play.api.libs.json.Writes[TreeSummary] = {
+      new play.api.libs.json.Writes[io.flow.github.v0.models.TreeSummary] {
+        def writes(obj: io.flow.github.v0.models.TreeSummary) = {
+          jsObjectTreeSummary(obj)
         }
       }
     }
@@ -1000,6 +1665,17 @@ package io.flow.github.v0 {
       HookEvent.fromString(_).get, _.toString, enumHookEventNotFound
     )
 
+    // Enum: NodeType
+    private[this] val enumNodeTypeNotFound = (key: String, e: _root_.java.lang.Exception) => s"Unrecognized $key, should be one of ${io.flow.github.v0.models.NodeType.all.mkString(", ")}"
+
+    implicit val pathBindableEnumNodeType = new PathBindable.Parsing[io.flow.github.v0.models.NodeType] (
+      NodeType.fromString(_).get, _.toString, enumNodeTypeNotFound
+    )
+
+    implicit val queryStringBindableEnumNodeType = new QueryStringBindable.Parsing[io.flow.github.v0.models.NodeType](
+      NodeType.fromString(_).get, _.toString, enumNodeTypeNotFound
+    )
+
     // Enum: OwnerType
     private[this] val enumOwnerTypeNotFound = (key: String, e: _root_.java.lang.Exception) => s"Unrecognized $key, should be one of ${io.flow.github.v0.models.OwnerType.all.mkString(", ")}"
 
@@ -1050,9 +1726,15 @@ package io.flow.github.v0 {
 
     logger.info(s"Initializing io.flow.github.v0.Client for url $baseUrl")
 
+    def blobs: Blobs = Blobs
+
+    def commits: Commits = Commits
+
     def contents: Contents = Contents
 
     def hooks: Hooks = Hooks
+
+    def pullRequests: PullRequests = PullRequests
 
     def refs: Refs = Refs
 
@@ -1060,9 +1742,74 @@ package io.flow.github.v0 {
 
     def tags: Tags = Tags
 
+    def trees: Trees = Trees
+
     def userEmails: UserEmails = UserEmails
 
     def users: Users = Users
+
+    object Blobs extends Blobs {
+      override def getBySha(
+        owner: String,
+        repo: String,
+        sha: String,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Blob] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/blobs/${play.utils.UriEncoding.encodePathSegment(sha, "UTF-8")}", requestHeaders = requestHeaders).map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Blob", r, _.validate[io.flow.github.v0.models.Blob])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404")
+        }
+      }
+
+      override def post(
+        owner: String,
+        repo: String,
+        blobForm: io.flow.github.v0.models.BlobForm,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.BlobCreated] = {
+        val payload = play.api.libs.json.Json.toJson(blobForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/blobs", body = Some(payload), requestHeaders = requestHeaders).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.BlobCreated", r, _.validate[io.flow.github.v0.models.BlobCreated])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
+        }
+      }
+    }
+
+    object Commits extends Commits {
+      override def getBySha(
+        owner: String,
+        repo: String,
+        sha: String,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Commit] = {
+        _executeRequest("GET", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/commits/${play.utils.UriEncoding.encodePathSegment(sha, "UTF-8")}", requestHeaders = requestHeaders).map {
+          case r if r.status == 200 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Commit", r, _.validate[io.flow.github.v0.models.Commit])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 200, 404, 422")
+        }
+      }
+
+      override def post(
+        owner: String,
+        repo: String,
+        commitForm: io.flow.github.v0.models.CommitForm,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.CommitResponse] = {
+        val payload = play.api.libs.json.Json.toJson(commitForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/commits", body = Some(payload), requestHeaders = requestHeaders).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.CommitResponse", r, _.validate[io.flow.github.v0.models.CommitResponse])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
+        }
+      }
+    }
 
     object Contents extends Contents {
       override def getReadme(
@@ -1167,6 +1914,24 @@ package io.flow.github.v0 {
       }
     }
 
+    object PullRequests extends PullRequests {
+      override def post(
+        owner: String,
+        repo: String,
+        pullRequestForm: io.flow.github.v0.models.PullRequestForm,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.PullRequest] = {
+        val payload = play.api.libs.json.Json.toJson(pullRequestForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/pulls", body = Some(payload), requestHeaders = requestHeaders).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.PullRequest", r, _.validate[io.flow.github.v0.models.PullRequest])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
+        }
+      }
+    }
+
     object Refs extends Refs {
       override def get(
         owner: String,
@@ -1202,6 +1967,23 @@ package io.flow.github.v0 {
         val payload = play.api.libs.json.Json.toJson(refForm)
 
         _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/refs", body = Some(payload), requestHeaders = requestHeaders).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Ref", r, _.validate[io.flow.github.v0.models.Ref])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
+        }
+      }
+
+      override def putByRef(
+        owner: String,
+        repo: String,
+        ref: String,
+        refUpdateForm: io.flow.github.v0.models.RefUpdateForm,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref] = {
+        val payload = play.api.libs.json.Json.toJson(refUpdateForm)
+
+        _executeRequest("PUT", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/refs/${play.utils.UriEncoding.encodePathSegment(ref, "UTF-8")}", body = Some(payload), requestHeaders = requestHeaders).map {
           case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Ref", r, _.validate[io.flow.github.v0.models.Ref])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
@@ -1317,6 +2099,24 @@ package io.flow.github.v0 {
 
         _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/tags", body = Some(payload), requestHeaders = requestHeaders).map {
           case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.Tag", r, _.validate[io.flow.github.v0.models.Tag])
+          case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
+          case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
+          case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
+        }
+      }
+    }
+
+    object Trees extends Trees {
+      override def post(
+        owner: String,
+        repo: String,
+        createTreeForm: io.flow.github.v0.models.CreateTreeForm,
+        requestHeaders: Seq[(String, String)] = Nil
+      )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.CreateTreeResponse] = {
+        val payload = play.api.libs.json.Json.toJson(createTreeForm)
+
+        _executeRequest("POST", s"/repos/${play.utils.UriEncoding.encodePathSegment(owner, "UTF-8")}/${play.utils.UriEncoding.encodePathSegment(repo, "UTF-8")}/git/trees", body = Some(payload), requestHeaders = requestHeaders).map {
+          case r if r.status == 201 => _root_.io.flow.github.v0.Client.parseJson("io.flow.github.v0.models.CreateTreeResponse", r, _.validate[io.flow.github.v0.models.CreateTreeResponse])
           case r if r.status == 404 => throw new io.flow.github.v0.errors.UnitResponse(r.status)
           case r if r.status == 422 => throw new io.flow.github.v0.errors.UnprocessableEntityResponse(r)
           case r => throw new io.flow.github.v0.errors.FailedRequest(r.status, s"Unsupported response code[${r.status}]. Expected: 201, 404, 422")
@@ -1451,15 +2251,51 @@ package io.flow.github.v0 {
 
     trait Client {
       def baseUrl: String
+      def blobs: io.flow.github.v0.Blobs
+      def commits: io.flow.github.v0.Commits
       def contents: io.flow.github.v0.Contents
       def hooks: io.flow.github.v0.Hooks
+      def pullRequests: io.flow.github.v0.PullRequests
       def refs: io.flow.github.v0.Refs
       def repositories: io.flow.github.v0.Repositories
       def tags: io.flow.github.v0.Tags
+      def trees: io.flow.github.v0.Trees
       def userEmails: io.flow.github.v0.UserEmails
       def users: io.flow.github.v0.Users
     }
 
+  }
+
+  trait Blobs {
+    def getBySha(
+      owner: String,
+      repo: String,
+      sha: String,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Blob]
+
+    def post(
+      owner: String,
+      repo: String,
+      blobForm: io.flow.github.v0.models.BlobForm,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.BlobCreated]
+  }
+
+  trait Commits {
+    def getBySha(
+      owner: String,
+      repo: String,
+      sha: String,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Commit]
+
+    def post(
+      owner: String,
+      repo: String,
+      commitForm: io.flow.github.v0.models.CommitForm,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.CommitResponse]
   }
 
   trait Contents {
@@ -1511,6 +2347,15 @@ package io.flow.github.v0 {
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[Unit]
   }
 
+  trait PullRequests {
+    def post(
+      owner: String,
+      repo: String,
+      pullRequestForm: io.flow.github.v0.models.PullRequestForm,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.PullRequest]
+  }
+
   trait Refs {
     def get(
       owner: String,
@@ -1529,6 +2374,14 @@ package io.flow.github.v0 {
       owner: String,
       repo: String,
       refForm: io.flow.github.v0.models.RefForm,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref]
+
+    def putByRef(
+      owner: String,
+      repo: String,
+      ref: String,
+      refUpdateForm: io.flow.github.v0.models.RefUpdateForm,
       requestHeaders: Seq[(String, String)] = Nil
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Ref]
   }
@@ -1589,6 +2442,15 @@ package io.flow.github.v0 {
       tagForm: io.flow.github.v0.models.TagForm,
       requestHeaders: Seq[(String, String)] = Nil
     )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.Tag]
+  }
+
+  trait Trees {
+    def post(
+      owner: String,
+      repo: String,
+      createTreeForm: io.flow.github.v0.models.CreateTreeForm,
+      requestHeaders: Seq[(String, String)] = Nil
+    )(implicit ec: scala.concurrent.ExecutionContext): scala.concurrent.Future[io.flow.github.v0.models.CreateTreeResponse]
   }
 
   trait UserEmails {
