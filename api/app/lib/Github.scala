@@ -285,6 +285,9 @@ class DefaultGithub @javax.inject.Inject() (
       case (Some(encoded), Encoding.Base64) => {
         new String(Base64.decodeBase64(encoded.getBytes))
       }
+      case (Some(encoded), Encoding.Utf8) => {
+        encoded
+      }
       case (Some(_), Encoding.UNDEFINED(name)) => {
         sys.error(s"Unsupported encoding[$name] for content: $contents")
       }
