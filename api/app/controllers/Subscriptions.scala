@@ -32,8 +32,15 @@ class Subscriptions @javax.inject.Inject() (
   ): Future[Option[UserReference]] = {
     queryString.get("identifier").getOrElse(Nil).toList match {
       case Nil => {
-        Logger.error("Could not find user")
-        Future { None }
+        Future {
+          super.auth(headers) match {
+            case Some(authData) => Some(authData.user)
+            case None => {
+              Logger.error("Could not find user")
+              None
+            }
+          }
+        }
       }
       case id :: Nil => {
         Future {
