@@ -3,7 +3,8 @@ package controllers
 import io.flow.delta.v0.errors.UnitResponse
 import io.flow.delta.v0.models.{Token, TokenForm}
 import io.flow.delta.www.lib.DeltaClientProvider
-import io.flow.play.util.{Pagination, PaginatedCollection}
+import io.flow.play.util.{Config, PaginatedCollection, Pagination}
+
 import scala.concurrent.Future
 import play.api.i18n.MessagesApi
 import play.api.mvc._
@@ -12,6 +13,7 @@ import play.api.data.Forms._
 
 class TokensController @javax.inject.Inject() (
   val messagesApi: MessagesApi,
+  override val config: Config,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider
 ) extends BaseController(tokenClient, deltaClientProvider) {

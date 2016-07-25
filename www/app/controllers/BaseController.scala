@@ -5,6 +5,9 @@ import io.flow.delta.v0.models.Organization
 import io.flow.delta.www.lib.{DeltaClientProvider, Section, UiData}
 import io.flow.common.v0.models.UserReference
 import io.flow.play.controllers.IdentifiedController
+import io.flow.play.util.AuthData
+import org.joda.time.DateTime
+
 import scala.concurrent.ExecutionContext
 import play.api.i18n._
 import play.api.mvc._
@@ -13,6 +16,24 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 object Helpers {
+
+  def userFromHeaders(headers: play.api.mvc.Headers)(implicit ec: scala.concurrent.ExecutionContext): Option[AuthData] = {
+    // hack - how to get this without using the mvc.Session?
+    headers.get("COOKIE") match {
+      case None => None
+      case Some(cookie) => {
+        val pattern = "PLAY_SESSION=\\w+-user_id=([\\w-]+)".r
+        cookie match {
+          case pattern(user) => {
+            Some(AuthData(createdAt = new DateTime(), user = UserReference(id = user), organization = None))
+          }
+          case _ => {
+            None
+          }
+        }
+      }
+    }
+  }
 
   def userFromSession(
     tokenClient: io.flow.token.v0.interfaces.Client,
@@ -79,15 +100,8 @@ abstract class BaseController(
     )
   }
 
-  override def user(
-    session: play.api.mvc.Session,
-    headers: play.api.mvc.Headers,
-    path: String,
-    queryString: Map[String, Seq[String]]
-  ) (
-    implicit ec: scala.concurrent.ExecutionContext
-  ): scala.concurrent.Future[Option[UserReference]] = {
-    Helpers.userFromSession(tokenClient, session)
+  override def auth(headers: play.api.mvc.Headers)(implicit ec: scala.concurrent.ExecutionContext): Option[AuthData] = {
+    Helpers.userFromHeaders(headers)
   }
 
   def uiData[T](
@@ -112,10 +126,7 @@ abstract class BaseController(
   ) (
     implicit ec: ExecutionContext
   ): UiData = {
-    val userReferenceOption = Await.result(
-      request.user,
-      Duration(1, "seconds")
-    )
+    val userReferenceOption = request.user
 
     val user = userReferenceOption.flatMap { ref =>
       Await.result(
