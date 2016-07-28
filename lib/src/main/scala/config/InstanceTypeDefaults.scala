@@ -8,6 +8,7 @@ object InstanceTypeDefaults {
   def memory(typ: InstanceType): Int = {
     typ match {
       case InstanceType.M4Large => 7500
+      case InstanceType.C4Large => 3500
 
       case InstanceType.T2Micro => 700
       case InstanceType.T2Small => 1500

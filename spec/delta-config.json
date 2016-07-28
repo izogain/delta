@@ -24,6 +24,7 @@
     "instance_type": {
       "description": "List of supported AWS instance types - see https://aws.amazon.com/ec2/instance-types/",
       "values": [
+	{ "name": "c4.large" },
 	{ "name": "m4.large" },
 	{ "name": "t2.micro" },
 	{ "name": "t2.small" },
@@ -31,7 +32,7 @@
 	{ "name": "t2.large" }
       ]
     },
-    
+
     "project_stage": {
       "description": "Represents the individual stages of the continuous delivery system that can be enabled / disabled at the project level",
       "values": [
