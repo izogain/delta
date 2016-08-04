@@ -9,7 +9,7 @@ scalaVersion in ThisBuild := "2.11.8"
 // required because of issue between scoverage & sbt
 parallelExecution in Test in ThisBuild := true
 
-val awsVersion = "1.11.22"
+val awsVersion = "1.11.21"
 
 lazy val generated = project
   .in(file("generated"))
@@ -46,7 +46,7 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.33",
+      "io.flow" %% "lib-postgresql" % "0.0.35",
       "org.scalatestplus" %% "play" % "1.4.0" % "test",
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
