@@ -6,10 +6,7 @@ organization := "io.flow"
 
 scalaVersion in ThisBuild := "2.11.8"
 
-// required because of issue between scoverage & sbt
-parallelExecution in Test in ThisBuild := true
-
-val awsVersion = "1.11.24"
+val awsVersion = "1.11.25"
 
 lazy val generated = project
   .in(file("generated"))
@@ -51,8 +48,8 @@ lazy val api = project
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
-      "org.postgresql" % "postgresql" % "9.4.1208",
-      "com.sendgrid"   %  "sendgrid-java" % "3.0.6",
+      "org.postgresql" % "postgresql" % "9.4.1209",
+      "com.sendgrid"   %  "sendgrid-java" % "3.0.7",
       "org.scalatestplus" %% "play" % "1.4.0" % "test"
     )
   )
@@ -93,7 +90,6 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   sources in (Compile,doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
   scalacOptions += "-feature",
-  coverageHighlighting := true,
   resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
   resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases",
   resolvers += "Artifactory" at "https://flow.artifactoryonline.com/flow/libs-release/",
@@ -104,5 +100,3 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     System.getenv("ARTIFACTORY_PASSWORD")
   )
 )
-
-version := "0.2.16"
