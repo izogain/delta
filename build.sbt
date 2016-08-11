@@ -44,13 +44,11 @@ lazy val api = project
       ws,
       jdbc,
       "io.flow" %% "lib-postgresql" % "0.0.35",
-      "org.scalatestplus" %% "play" % "1.4.0" % "test",
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
-      "org.postgresql" % "postgresql" % "9.4.1209",
-      "com.sendgrid"   %  "sendgrid-java" % "3.0.7",
-      "org.scalatestplus" %% "play" % "1.4.0" % "test"
+      "com.sendgrid"   %  "sendgrid-java" % "3.0.8",
+      "org.postgresql" % "postgresql" % "9.4.1209"
     )
   )
 
@@ -84,8 +82,8 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   name <<= name("delta-" + _),
   libraryDependencies ++= Seq(
     "io.flow" %% "lib-play" % "0.1.37",
-    specs2 % Test,
-    "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+    "org.scalatestplus" %% "play" % "1.4.0" % "test",
+    specs2 % Test
   ),
   sources in (Compile,doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
