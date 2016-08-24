@@ -169,7 +169,7 @@ class BuildActor @javax.inject.Inject() (
         cluster <- createCluster(build)
         lc <- createLaunchConfiguration(build)
         elb <- createLoadBalancer(build)
-        asg <- createAutoScalingGroup(build, lc, elb)
+        asg <- upsertAutoScalingGroup(build, lc, elb)
       } yield {
         // All steps have completed
       }
@@ -200,6 +200,8 @@ class BuildActor @javax.inject.Inject() (
       }
 
     } else if (diff.lastInstances < diff.desiredInstances) {
+      self ! BuildActor.Messages.ConfigureAWS
+
       val instances = diff.desiredInstances - diff.lastInstances
       log.runAsync(s"Bring up ${Text.pluralize(instances, "instance", "instances")} of ${diff.versionName}") {
         ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
@@ -231,9 +233,9 @@ class BuildActor @javax.inject.Inject() (
     }
   }
 
-  def createAutoScalingGroup(build: Build, launchConfigName: String, loadBalancerName: String): Future[String] = {
+  def upsertAutoScalingGroup(build: Build, launchConfigName: String, loadBalancerName: String): Future[String] = {
     log.runSync("EC2 auto scaling group") {
-      asg.createAutoScalingGroup(awsSettings, BuildNames.projectName(build), launchConfigName, loadBalancerName)
+      asg.upsertAutoScalingGroup(awsSettings, BuildNames.projectName(build), launchConfigName, loadBalancerName)
     }
   }
 

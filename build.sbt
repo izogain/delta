@@ -44,6 +44,7 @@ lazy val api = project
       ws,
       jdbc,
       "io.flow" %% "lib-postgresql" % "0.0.35",
+      "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,

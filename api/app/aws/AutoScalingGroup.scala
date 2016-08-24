@@ -2,8 +2,10 @@ package io.flow.delta.aws
 
 import io.flow.play.util.Config
 
+import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
 import com.amazonaws.services.autoscaling.model._
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest
 import play.api.Logger
 import sun.misc.BASE64Encoder
 
@@ -22,6 +24,7 @@ class AutoScalingGroup @javax.inject.Inject() (
   private[this] lazy val sumoId = config.requiredString("sumo.service.id")
   private[this] lazy val sumoKey = config.requiredString("sumo.service.key")
 
+  lazy val ec2Client = new AmazonEC2Client(credentials.aws, configuration.aws)
   lazy val client = new AmazonAutoScalingClient(credentials.aws, configuration.aws)
   lazy val encoder = new BASE64Encoder()
 
@@ -33,7 +36,7 @@ class AutoScalingGroup @javax.inject.Inject() (
       .withDeviceName("/dev/xvda")
       .withEbs(new Ebs()
         .withDeleteOnTermination(true)
-        .withVolumeSize(8)
+        .withVolumeSize(16)
         .withVolumeType("gp2")
       ),
     new BlockDeviceMapping()
@@ -103,10 +106,31 @@ class AutoScalingGroup @javax.inject.Inject() (
     name
   }
 
-  def createAutoScalingGroup(settings: Settings, id: String, launchConfigName: String, loadBalancerName: String): String = {
+  def upsertAutoScalingGroup(settings: Settings, id: String, launchConfigName: String, loadBalancerName: String): String = {
     val name = getAutoScalingGroupName(id)
+
+    client.describeAutoScalingGroups(
+      new DescribeAutoScalingGroupsRequest()
+        .withAutoScalingGroupNames(Seq(name).asJava)
+    ).getAutoScalingGroups.asScala.headOption match {
+      case None => {
+        createAutoScalingGroup(settings, name, launchConfigName, loadBalancerName)
+      }
+      case Some(asg) => {
+        if (asg.getLaunchConfigurationName != launchConfigName) {
+          val instances = asg.getInstances.asScala.map(_.getInstanceId).asJava
+          val oldLaunchConfigurationName = asg.getLaunchConfigurationName
+          updateAutoScalingGroup(name, launchConfigName, oldLaunchConfigurationName, instances)
+        }
+      }
+    }
+
+    name
+  }
+
+  def createAutoScalingGroup(settings: Settings, name: String, launchConfigName: String, loadBalancerName: String) {
     try {
-      Logger.info(s"AWS AutoScalingGroup createAutoScalingGroup id[$id]")
+      Logger.info(s"AWS AutoScalingGroup createAutoScalingGroup $name")
       client.createAutoScalingGroup(
         new CreateAutoScalingGroupRequest()
           .withAutoScalingGroupName(name)
@@ -120,10 +144,49 @@ class AutoScalingGroup @javax.inject.Inject() (
           .withDesiredCapacity(settings.asgDesiredSize)
       )
     } catch {
-      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
+      case e: Throwable => Logger.error(s"Error creating autoscaling group $name with launch config $launchConfigName and load balancer $loadBalancerName. Error: ${e.getMessage}")
     }
+  }
 
-    return name
+  /**
+    * TODO:
+    * This could probably be handled more gracefully
+    * Right now it causes an outage and unsure how to handle
+    * old instance termination in a phased approach
+    */
+  def updateAutoScalingGroup(name: String, newlaunchConfigName: String, oldLaunchConfigurationName: String, instances: java.util.Collection[String]) {
+    try {
+      // update the auto scaling group
+      client.updateAutoScalingGroup(
+        new UpdateAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withLaunchConfigurationName(newlaunchConfigName)
+      )
+
+      // detach the old instances
+      client.detachInstances(
+        new DetachInstancesRequest()
+          .withAutoScalingGroupName(name)
+          .withInstanceIds(instances)
+      )
+
+      // delete the old launch configuration
+      client.deleteLaunchConfiguration(
+        new DeleteLaunchConfigurationRequest()
+          .withLaunchConfigurationName(name)
+      )
+
+      /**
+        * terminate the old instances to allow new ones to come
+        * up with updated launch config and load balancer
+        */
+      ec2Client.terminateInstances(
+        new TerminateInstancesRequest()
+          .withInstanceIds(instances)
+      )
+    } catch {
+      case e: Throwable => Logger.error(s"Error updating autoscaling group $name with launch config $newlaunchConfigName. Error: ${e.getMessage}")
+    }
   }
 
   def lcUserData(id: String): String = {
