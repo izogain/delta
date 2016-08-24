@@ -173,7 +173,7 @@ class AutoScalingGroup @javax.inject.Inject() (
       // delete the old launch configuration
       client.deleteLaunchConfiguration(
         new DeleteLaunchConfigurationRequest()
-          .withLaunchConfigurationName(name)
+          .withLaunchConfigurationName(oldLaunchConfigurationName)
       )
 
       /**
