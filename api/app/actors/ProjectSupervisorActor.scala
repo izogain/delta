@@ -37,11 +37,11 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
 
   def receive = {
 
-    case msg @ ProjectSupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
       setProjectId(id)
     }
 
-    case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
       withProject { project =>
         Logger.info(s"PursueDesiredState project[${project.id}]")
         withConfig { config =>
@@ -57,7 +57,7 @@ class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject wi
       }
     }
 
-    case msg @ ProjectSupervisorActor.Messages.CheckTag(name: String) => withVerboseErrorHandler(msg) {
+    case msg @ ProjectSupervisorActor.Messages.CheckTag(name: String) => withErrorHandler(msg) {
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
           sender ! MainActor.Messages.BuildCheckTag(build.id, name)

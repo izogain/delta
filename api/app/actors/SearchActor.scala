@@ -21,7 +21,7 @@ class SearchActor extends Actor with ErrorHandler {
 
   def receive = {
 
-    case msg @ SearchActor.Messages.SyncProject(id) => withVerboseErrorHandler(msg) {
+    case msg @ SearchActor.Messages.SyncProject(id) => withErrorHandler(msg) {
       ProjectsDao.findById(Authorization.All, id) match {
         case None => ItemsDao.deleteByObjectId(Authorization.All, MainActor.SystemUser, id)
         case Some(project) => ItemsDao.replaceProject(MainActor.SystemUser, project)

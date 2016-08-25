@@ -56,11 +56,11 @@ class DockerHubActor @javax.inject.Inject() (
   private[this] val TimeoutSeconds = 1500
 
   def receive = {
-    case msg @ DockerHubActor.Messages.Setup => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubActor.Messages.Setup => withErrorHandler(msg) {
       setBuildId(buildId)
     }
 
-    case msg @ DockerHubActor.Messages.Build(version) => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubActor.Messages.Build(version) => withErrorHandler(msg) {
       withOrganization { org =>
         withProject { project =>
           withEnabledBuild { build =>
@@ -95,7 +95,7 @@ class DockerHubActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ DockerHubActor.Messages.Monitor(version, start) => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubActor.Messages.Monitor(version, start) => withErrorHandler(msg) {
       withEnabledBuild { build =>
         withOrganization { org =>
           syncImages(org.docker, build)

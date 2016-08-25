@@ -129,43 +129,43 @@ class MainActor @javax.inject.Inject() (
     }
 
     case _ => akka.event.LoggingReceive {
-      case msg @ MainActor.Messages.BuildCreated(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildCreated(id) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.BuildUpdated(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildUpdated(id) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.BuildDeleted(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildDeleted(id) => withErrorHandler(msg) {
         (buildActors -= id).map { case (id, actor) =>
           actor ! BuildActor.Messages.Delete
           actor ! PoisonPill
         }
       }
 
-      case msg @ MainActor.Messages.BuildSync(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildSync(id) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.BuildCheckTag(id, name) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildCheckTag(id, name) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(id) ! BuildSupervisorActor.Messages.CheckTag(name)
       }
 
-      case msg @ MainActor.Messages.UserCreated(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.UserCreated(id) => withErrorHandler(msg) {
         upsertUserActor(id) ! UserActor.Messages.Created
       }
 
-      case msg @ MainActor.Messages.ProjectCreated(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ProjectCreated(id) => withErrorHandler(msg) {
         self ! MainActor.Messages.ProjectSync(id)
       }
 
-      case msg @ MainActor.Messages.ProjectUpdated(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ProjectUpdated(id) => withErrorHandler(msg) {
         searchActor ! SearchActor.Messages.SyncProject(id)
         upsertProjectSupervisorActor(id) ! ProjectSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.ProjectDeleted(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ProjectDeleted(id) => withErrorHandler(msg) {
         searchActor ! SearchActor.Messages.SyncProject(id)
 
         (projectActors -= id).map { case (id, actor) =>
@@ -177,7 +177,7 @@ class MainActor @javax.inject.Inject() (
         }
       }
 
-      case msg @ MainActor.Messages.ProjectSync(id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ProjectSync(id) => withErrorHandler(msg) {
         val ref = upsertProjectActor(id)
         ref ! ProjectActor.Messages.SyncConfig
         ref ! ProjectActor.Messages.SyncBuilds
@@ -185,51 +185,51 @@ class MainActor @javax.inject.Inject() (
         searchActor ! SearchActor.Messages.SyncProject(id)
       }
 
-      case msg @ MainActor.Messages.Scale(buildId, diffs) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.Scale(buildId, diffs) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
       }
 
-      case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
       }
 
-      case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
       }
 
-      case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.CheckTag(version)
       }
 
-      case msg @ MainActor.Messages.BuildDockerImage(buildId, version) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildDockerImage(buildId, version) => withErrorHandler(msg) {
         upsertDockerHubActor(buildId) ! DockerHubActor.Messages.Build(version)
       }
 
-      case msg @ MainActor.Messages.CheckLastState(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.CheckLastState(buildId) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.CheckLastState
       }
 
-      case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildDesiredStateUpdated(buildId) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.BuildLastStateUpdated(buildId) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.ConfigureAWS(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.ConfigureAWS(buildId) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.ConfigureAWS
       }
 
-      case msg @ MainActor.Messages.RemoveOldServices(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.RemoveOldServices(buildId) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.RemoveOldServices
       }
 
-      case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withVerboseErrorHandler(msg) {
+      case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.UpdateContainerAgent
       }
 

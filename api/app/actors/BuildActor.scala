@@ -59,7 +59,7 @@ class BuildActor @javax.inject.Inject() (
 
   def receive = {
 
-    case msg @ BuildActor.Messages.Setup => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.Setup => withErrorHandler(msg) {
       setBuildId(buildId)
 
       if (isScaleEnabled) {
@@ -74,39 +74,39 @@ class BuildActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ BuildActor.Messages.Delete => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.Delete => withErrorHandler(msg) {
       withBuild { build =>
         //removeAwsResources(build)
         Logger.info(s"Called BuildActor.Messages.Delete for build id - ${build.id}, name - ${build.name}")
       }
     }
 
-    case msg @ BuildActor.Messages.CheckLastState => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.CheckLastState => withErrorHandler(msg) {
       withEnabledBuild { build =>
         captureLastState(build)
       }
     }
 
-    case msg @ BuildActor.Messages.UpdateContainerAgent => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.UpdateContainerAgent => withErrorHandler(msg) {
       withEnabledBuild { build =>
         updateContainerAgent(build)
       }
     }
 
-    case msg @ BuildActor.Messages.RemoveOldServices => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.RemoveOldServices => withErrorHandler(msg) {
       withEnabledBuild { build =>
         removeOldServices(build)
       }
     }
 
     // Configure EC2 LC, ELB, ASG for a build (id: user, fulfillment, splashpage, etc)
-    case msg @ BuildActor.Messages.ConfigureAWS => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.ConfigureAWS => withErrorHandler(msg) {
       withEnabledBuild { build =>
         configureAWS(build)
       }
     }
 
-    case msg @ BuildActor.Messages.Scale(diffs) => withVerboseErrorHandler(msg) {
+    case msg @ BuildActor.Messages.Scale(diffs) => withErrorHandler(msg) {
       withOrganization { org =>
         withEnabledBuild { build =>
           diffs.foreach { diff =>

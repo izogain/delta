@@ -122,7 +122,7 @@ class DockerHubTokenActor @javax.inject.Inject() (
 
   def receive = {
 
-    case msg @ DockerHubTokenActor.Messages.Refresh => withVerboseErrorHandler(msg) {
+    case msg @ DockerHubTokenActor.Messages.Refresh => withErrorHandler(msg) {
       dockerHubToken.refresh()
     }
 

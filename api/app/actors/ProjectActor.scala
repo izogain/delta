@@ -47,7 +47,7 @@ class ProjectActor @javax.inject.Inject() (
 
   def receive = {
 
-    case msg @ ProjectActor.Messages.Setup => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.Setup => withErrorHandler(msg) {
       setProjectId(projectId)
 
       withProject { project =>
@@ -66,7 +66,7 @@ class ProjectActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ ProjectActor.Messages.SyncBuilds => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.SyncBuilds => withErrorHandler(msg) {
       withProject { project =>
         BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
           mainActor ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
@@ -74,7 +74,7 @@ class ProjectActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ ProjectActor.Messages.SyncConfig => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.SyncConfig => withErrorHandler(msg) {
       withProject { project =>
         withRepo { repo =>
           github.dotDeltaFile(UserReference(project.user.id), repo.owner, repo.project).map { configOption =>
@@ -88,7 +88,7 @@ class ProjectActor @javax.inject.Inject() (
       }
     }
 
-    case msg @ ProjectActor.Messages.SyncIfInactive => withVerboseErrorHandler(msg) {
+    case msg @ ProjectActor.Messages.SyncIfInactive => withErrorHandler(msg) {
       withProject { project =>
         EventsDao.findAll(
           projectId = Some(project.id),

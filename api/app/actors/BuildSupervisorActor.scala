@@ -34,11 +34,11 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
 
   def receive = {
 
-    case msg @ BuildSupervisorActor.Messages.Data(id) => withVerboseErrorHandler(msg) {
+    case msg @ BuildSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
       setBuildId(id)
     }
 
-    case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withVerboseErrorHandler(msg) {
+    case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
       withEnabledBuild { build =>
         withBuildConfig { buildConfig =>
           log.runSync("PursueDesiredState") {
@@ -54,7 +54,7 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
       * desired state (or ahead of the desired state), triggers
       * PursueDesiredState. Otherwise a no-op.
       */
-    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withVerboseErrorHandler(msg) {  
+    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {  
       withEnabledBuild { build =>
         BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
