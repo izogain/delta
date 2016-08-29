@@ -1,5 +1,7 @@
 package io.flow.delta.aws
 
+import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest
 import io.flow.delta.v0.models.Version
 import com.amazonaws.services.ecs.AmazonECSClient
 import com.amazonaws.services.ecs.model._
@@ -33,6 +35,8 @@ case class EC2ContainerService @javax.inject.Inject() (
 
   private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
 
+  private[this] lazy val ec2Client = new AmazonEC2Client(credentials.aws, configuration.aws)
+
   private[this] lazy val client = new AmazonECSClient(credentials.aws, configuration.aws)
 
   def getBaseName(imageName: String, imageVersion: String): String = {
@@ -52,6 +56,25 @@ case class EC2ContainerService @javax.inject.Inject() (
 
   def getServiceName(imageName: String, imageVersion: String): String = {
     return s"${getBaseName(imageName, imageVersion)}-service"
+  }
+
+  /**
+    * Checks health of container instance agents
+    */
+  def ensureContainerAgentHealth(projectId: String): Future[Unit] = {
+    Future {
+      val cluster = EC2ContainerService.getClusterName(projectId)
+      try {
+        val result = client.describeContainerInstances(new DescribeContainerInstancesRequest().withCluster(cluster))
+        val badEc2Instances = result.getContainerInstances.asScala.filter(_.getAgentConnected == false).map(_.getEc2InstanceId)
+        if (!badEc2Instances.isEmpty) {
+          ec2Client.terminateInstances(new TerminateInstancesRequest().withInstanceIds(badEc2Instances.asJava))
+          Logger.info(s"Terminated ec2 instances [${badEc2Instances.mkString(",")}] because of unhealthy ecs agent")
+        }
+      } catch {
+        case e: Throwable => Logger.error(s"Failed ensureContainerAgentHealth cluster [$cluster] - Error: ${e.getMessage}")
+      }
+    }
   }
 
   /**

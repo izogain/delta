@@ -29,6 +29,8 @@ object BuildActor {
 
     case object Setup extends Message
 
+    case object EnsureContainerAgentHealth extends Message
+
     case object UpdateContainerAgent extends Message
 
     case object RemoveOldServices extends Message
@@ -84,6 +86,12 @@ class BuildActor @javax.inject.Inject() (
     case msg @ BuildActor.Messages.CheckLastState => withErrorHandler(msg) {
       withEnabledBuild { build =>
         captureLastState(build)
+      }
+    }
+
+    case msg @ BuildActor.Messages.EnsureContainerAgentHealth => withErrorHandler(msg) {
+      withEnabledBuild { build =>
+        ensureContainerAgentHealth(build)
       }
     }
 
@@ -173,6 +181,12 @@ class BuildActor @javax.inject.Inject() (
       } yield {
         // All steps have completed
       }
+    }
+  }
+
+  def ensureContainerAgentHealth(build: Build): Unit = {
+    log.runAsync("ECS ensure container agent health") {
+      ecs.ensureContainerAgentHealth(BuildNames.projectName(build))
     }
   }
 

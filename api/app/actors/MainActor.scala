@@ -46,6 +46,7 @@ object MainActor {
 
     case class ConfigureAWS(buildId: String)
 
+    case class EnsureContainerAgentHealth(buildId: String)
     case class UpdateContainerAgent(buildId: String)
     case class RemoveOldServices(buildId: String)
   }
@@ -84,6 +85,14 @@ class MainActor @javax.inject.Inject() (
     case _ => {
       scheduleRecurring(system, "main.actor.update.jwt.token.seconds") {
         dockerHubTokenActor ! DockerHubTokenActor.Messages.Refresh
+      }
+
+      scheduleRecurring(system, "main.actor.ensure.container.agent.health.seconds") {
+        Pager.create { offset =>
+          BuildsDao.findAll(Authorization.All, offset = offset)
+        }.foreach { build =>
+          self ! MainActor.Messages.EnsureContainerAgentHealth(build.id)
+        }
       }
 
       scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
@@ -231,6 +240,10 @@ class MainActor @javax.inject.Inject() (
 
       case msg @ MainActor.Messages.UpdateContainerAgent(buildId) => withErrorHandler(msg) {
         upsertBuildActor(buildId) ! BuildActor.Messages.UpdateContainerAgent
+      }
+
+      case msg @ MainActor.Messages.EnsureContainerAgentHealth(buildId) => withErrorHandler(msg) {
+        upsertBuildActor(buildId) ! BuildActor.Messages.EnsureContainerAgentHealth
       }
 
       case msg: Any => logUnhandledMessage(msg)
