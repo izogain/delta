@@ -82,7 +82,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
      where id = {id}
   """
 
-  private[this] val urlKey = UrlKey(minKeyLength = 3)
+  private[this] val urlKey = UrlKey(minKeyLength = 2)
 
   private[db] def validate(
     form: OrganizationForm,

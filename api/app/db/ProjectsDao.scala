@@ -139,7 +139,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
      where id = {id}
   """
 
-  private[this] val urlKey = UrlKey(minKeyLength = 3)
+  private[this] val urlKey = UrlKey(minKeyLength = 2)
 
   def toSummary(project: Project): ProjectSummary = {
     ProjectSummary(
