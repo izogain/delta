@@ -1,0 +1,19 @@
+@(config: io.flow.delta.config.v0.models.ConfigProject)
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <tbody>
+
+      <tr>
+        <td><strong>Stages</strong></td>
+        <td>@config.stages.map(_.toString).mkString(", ")</td>
+      </tr>
+
+      <tr>
+        <td><strong>Branches</strong></td>
+        <td>@config.branches.map(_.name).mkString(", ")</td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,36 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  projectId: Option[String],
+  typ: Option[io.flow.delta.v0.models.EventType],
+  hasError: Option[Boolean],
+  events: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Event]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data) {
+<section class="col-xs-12 px0">
+  @if(events.isEmpty) {
+    <em>No changes</em>
+  } else {
+    <code class="text-muted">
+      @events.items.map { e =>
+        @io.flow.play.util.DateHelper.consoleLongDateTime(e.createdAt) <a href="@routes.ProjectsController.show(e.project.id)">@e.project.id</a> @e.summary
+        <br/>
+        @if(!e.error.isEmpty) {
+          <p class="bg-danger">@e.error.get</p>
+        }
+      }
+    </code>
+
+    @if(events.hasPrevious || events.hasNext) {
+      <ul class="pager">
+        @if(events.hasPrevious) {
+          <li><a href="@routes.EventsController.index(events.page - 1, project_id = projectId, event_type = typ, has_error = hasError)">Previous</a></li>
+        }
+        @if(events.hasNext) {
+          <li><a href="@routes.EventsController.index(events.page + 1, project_id = projectId, event_type = typ, has_error = hasError)">Next</a></li>
+        }
+      </ul>
+    }
+  }
+</section>
+}

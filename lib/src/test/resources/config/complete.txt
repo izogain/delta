@@ -1,0 +1,30 @@
+# example of a configuration file that specified every option available
+
+stages:
+  enable:
+    - sync_shas
+    - sync_tags
+  disable:
+    - tag
+
+branches:
+  - master
+  - release
+
+
+builds:
+  - api
+  - www:
+      dockerfile: www/Dockerfile
+      instance.type: t2.medium
+      memory: 8150
+      initial.number.instances: 10
+      port.container: 7050
+      port.host: 8000
+      enable:
+        - set_desired_state
+        - build_docker_image
+      disable:
+        - scale
+      dependencies:
+        - api

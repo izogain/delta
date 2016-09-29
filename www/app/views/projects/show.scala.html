@@ -1,0 +1,199 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  project: io.flow.delta.v0.models.Project,
+  buildStates: Seq[io.flow.delta.v0.models.BuildState],
+  masterHash: Option[String],
+  latestTag: Option[io.flow.delta.v0.models.Tag],
+  changeEvents: Seq[io.flow.delta.v0.models.Event],
+  recentEvents: Seq[io.flow.delta.v0.models.Event],
+  recentErrorEvents: Seq[io.flow.delta.v0.models.Event]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some(s"${project.organization.id}/${project.name}"))) {
+<div class="col-xs-1 col-sm-2 col-md-2 px0 py3">
+  <div class="dropdown pull-right">
+    <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      <span class="glyphicon glyphicon-option-vertical" aria-hidden="true"></span>
+    </button>
+    <ul class="dropdown-menu">
+      @if(io.flow.delta.www.lib.Permissions.Project.edit(project, data.user)) {
+        <li>
+          <a href="@routes.ProjectsController.edit(project.id)">
+            <span class="glyphicon glyphicon-pencil pr1" aria-hidden="true"></span>
+            Edit
+          </a>
+        </li>
+      }
+      @if(io.flow.delta.www.lib.Permissions.Project.delete(project, data.user)) {
+        <li>
+          <a class="delete" data-confirm="Are you sure?" href="@routes.ProjectsController.postDelete(project.id)">
+            <span class="glyphicon glyphicon-trash pr1" aria-hidden="true"></span>
+            Delete
+          </a>
+        </li>
+      }
+
+      <li role="separator" class="divider"></li>
+      <li>
+        <a class="autoRefresh" href="@(project.id)?autorefresh=1" role="button">
+          <span class="glyphicon glyphicon-repeat pr1" aria-hidden="true"></span>
+          Auto Refresh
+        </a>
+      </li>
+
+
+      <li>
+        <a class="postForm" href="@routes.ProjectsController.postSync(project.id)" role="button">
+          <span class="glyphicon glyphicon-refresh pr1" aria-hidden="true"></span>
+          Sync
+        </a>
+      </li>
+    </ul>
+  </div>
+ </div>
+
+<div class="col-xs-12 p0">
+  @buildStates.map { buildState =>
+  <section class="build-state mt3">
+    <section class="build-name col-xs-12 center">
+      <h4>@buildState.name</h4>
+    </section>
+    <article class="state-desired col-xs-12 col-md-4 center">
+      <div class="panel panel-default">
+        <section class="state-heading panel-heading">
+          <span class="lead panel-title">Desired State</span>
+        </section>
+        <section class="panel-body">
+         @buildState.desired.map { state =>
+          @if(state.versions.isEmpty) {
+            <section class="version h1 mt1">&dash;</section>
+            <section class="instance-count">0 instances</section>
+          } else {
+            @state.versions.map { v =>
+              <section class="version h1 mt1">@v.name</section>
+              <section class="instance-count">@io.flow.delta.lib.Text.pluralize(v.instances, "instance", "instances")</section>
+            }
+          }
+          <section class="last-updated italic"><small>Updated @io.flow.delta.lib.Text.since(state.timestamp)</small></section>
+        }
+        </section>
+      </div>
+    </article>
+
+    <article class="state-desired col-xs-12 col-md-4 center">
+      <div class="panel panel-default">
+        <section class="state-heading panel-heading">
+          <span class="lead panel-title">Last State</span>
+        </section>
+        <section class="panel-body">
+        @buildState.last.map { state =>
+          @if(state.versions.isEmpty) {
+            <section class="version h1 mt0">&dash;</section>
+            <section class="instance-count">0 instances</section>
+          } else {
+            @state.versions.map { v =>
+              <section class="version h1 mt1">@v.name</section>
+              <section class="instance-count">@io.flow.delta.lib.Text.pluralize(v.instances, "instance", "instances")</section>
+            }
+          }
+          <section class="last-updated italic"><small>Updated @io.flow.delta.lib.Text.since(state.timestamp)</small></section>
+        }.getOrElse(Html("&dash;"))
+        </section>
+      </div>
+    </article>
+
+  </section>
+  }
+</div>
+
+<section class="col-xs-12 col-md-6">
+  <h3 class="p2">Project Information</h3>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <tbody>
+        <tr>
+          <td><strong>Latest Docker Image</strong></td>
+          <td>@{buildStates.flatMap(_.latestImage).toList match {
+                case Nil => Html("&dash;")
+                case image :: Nil => image
+                case images => Html("<ul>" + images.sorted.mkString("</li><li>", "<li>", "</li>") + "</ul>")
+              }}
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Latest Tag</strong></td>
+          <td>
+            @latestTag.map { tag =>
+              @tag.name
+              @if(Some(tag.hash) == masterHash) {
+                [master]
+              } else {
+                [@io.flow.delta.lib.Text.truncate(tag.hash, 10)]
+              }
+            }.getOrElse(Html("&dash;"))
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Master</strong></td><td>@masterHash.getOrElse("-")</td>
+        </tr>
+        <tr>
+          <td><strong>Visbility</strong></td><td>@project.visibility.toString</td>
+        </tr>
+        <tr>
+          <td><strong>SCMS</strong></td><td><a href="@project.uri">@project.uri</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="col-xs-12 col-md-6">
+  <h3 class="p2">Configuration</h3>
+  @{project.config match {
+    case io.flow.delta.config.v0.models.ConfigError(errors) => configError(errors)
+    case io.flow.delta.config.v0.models.ConfigUndefinedType(other) => configError(Seq(s"Unknown configuration error[$other]"))
+    case cfg: io.flow.delta.config.v0.models.ConfigProject => configProject(cfg)
+  }}
+</section>
+
+@{project.config match {
+  case cfg: io.flow.delta.config.v0.models.ConfigProject => configBuilds(cfg)
+  case _ => ""
+}}
+
+<section class="col-xs-12">
+  <h3>Change Events (<a href="@routes.EventsController.index(project_id = Some(project.id), event_type = Some(io.flow.delta.v0.models.EventType.Change))">View all</a>)</h3>
+  @if(changeEvents.isEmpty) {
+    <em>No changes</em>
+  } else {
+    @eventsTable(changeEvents)
+  }
+</section>
+
+<section class="col-xs-12">
+  <h3>Recent Error Events (<a href="@routes.EventsController.index(project_id = Some(project.id), has_error = Some(true))">View all</a>)</h3>
+  @if(recentErrorEvents.isEmpty) {
+    <em>No events in past 60 minutes</em>
+  } else {
+    <em>We show up to the 5 most recent events w/ errors that were created in past 60 minutes</em>
+    @eventsTable(recentErrorEvents)
+  }
+</section>
+
+<section class="col-xs-12">
+  <h3>Recent Events (<a href="@routes.EventsController.index(project_id = Some(project.id))">View all</a>)</h3>
+  @if(recentEvents.isEmpty) {
+    <em>No events in past 10 minutes</em>
+  } else {
+    <em>We show up to the 5 most recent events that were created in past 10 minutes</em>
+    @eventsTable(recentEvents)
+  }
+</section>
+
+<script>
+  var Delta = Delta || {};
+  Delta.project = Delta.project || {};
+  Delta.project.id = '@project.id';
+</script>
+
+}

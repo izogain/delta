@@ -1,0 +1,30 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  projects: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Project]
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some("Projects"))) {
+<section class="col-xs-12 px0">
+  <div class="col-xs-12 text-right">
+    <span class="glyphicon glyphicon-plus"></span> <a href="@routes.ProjectsController.github()">Add project</a>
+  </div>
+
+  @if(projects.isEmpty) {
+    <em>No projects</em>
+
+  } else {
+    @table(projects.items)
+
+    @if(projects.hasPrevious || projects.hasNext) {
+      <ul class="pager">
+        @if(projects.hasPrevious) {
+          <li><a href="@routes.ProjectsController.index(projects.page - 1)">Previous</a></li>
+       }
+        @if(projects.hasNext) {
+         <li><a href="@routes.ProjectsController.index(projects.page + 1)">Next</a></li>
+        }
+      </ul>
+    }
+  }
+  </section>
+}

@@ -1,0 +1,20 @@
+@(
+  data: io.flow.delta.www.lib.UiData,
+  organization: io.flow.delta.v0.models.Organization,
+  form: Form[controllers.OrganizationsController.UiForm],
+  errorMessages: Seq[String] = Nil
+)(implicit flash: Flash, messages: Messages)
+
+@main(data.copy(title = Some("Edit organization")), errorMessages = errorMessages) {
+<section class="col-xs-12 px0">
+  <div class="container">
+
+    @helper.form(action = routes.OrganizationsController.postEdit(organization.id)) {
+
+      @organizationForm(form, routes.OrganizationsController.show(organization.id), id = Some(organization.id))
+
+    }
+
+  </div>
+</section>
+}

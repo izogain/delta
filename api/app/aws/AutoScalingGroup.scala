@@ -1,0 +1,209 @@
+package io.flow.delta.aws
+
+import io.flow.play.util.Config
+
+import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.autoscaling.AmazonAutoScalingClient
+import com.amazonaws.services.autoscaling.model._
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest
+import play.api.Logger
+import sun.misc.BASE64Encoder
+
+import collection.JavaConverters._
+
+@javax.inject.Singleton
+class AutoScalingGroup @javax.inject.Inject() (
+  config: Config,
+  credentials: Credentials,
+  configuration: Configuration
+) {
+
+  private[this] lazy val dockerHubToken = config.requiredString("dockerhub.delta.auth.token")
+  private[this] lazy val dockerHubEmail = config.requiredString("dockerhub.delta.auth.email")
+
+  private[this] lazy val sumoId = config.requiredString("sumo.service.id")
+  private[this] lazy val sumoKey = config.requiredString("sumo.service.key")
+
+  lazy val ec2Client = new AmazonEC2Client(credentials.aws, configuration.aws)
+  lazy val client = new AmazonAutoScalingClient(credentials.aws, configuration.aws)
+  lazy val encoder = new BASE64Encoder()
+
+  /**
+  * Defined Values, probably make object vals somewhere?
+  */
+  val launchConfigBlockDeviceMappings = Seq(
+    new BlockDeviceMapping()
+      .withDeviceName("/dev/xvda")
+      .withEbs(new Ebs()
+        .withDeleteOnTermination(true)
+        .withVolumeSize(16)
+        .withVolumeType("gp2")
+      ),
+    new BlockDeviceMapping()
+      .withDeviceName("/dev/xvdcz")
+      .withEbs(new Ebs()
+        .withDeleteOnTermination(true)
+        .withEncrypted(false)
+        .withVolumeSize(22)
+        .withVolumeType("gp2")
+      )
+  ).asJava
+
+  def getLaunchConfigurationName(settings: Settings, id: String) = s"$id-ecs-lc-${settings.launchConfigImageId}-${settings.launchConfigInstanceType}"
+
+  def getAutoScalingGroupName(id: String) = s"$id-ecs-auto-scaling-group"
+
+  def createLaunchConfiguration(settings: Settings, id: String): String = {
+    val name = getLaunchConfigurationName(settings, id)
+    try {
+      Logger.info(s"AWS AutoScalingGroup createLaunchConfiguration id[$id]")
+      client.createLaunchConfiguration(
+        new CreateLaunchConfigurationRequest()
+          .withLaunchConfigurationName(name)
+          .withAssociatePublicIpAddress(false)
+          .withIamInstanceProfile(settings.launchConfigIamInstanceProfile)
+          .withBlockDeviceMappings(launchConfigBlockDeviceMappings)
+          .withSecurityGroups(Seq(settings.lcSecurityGroup).asJava)
+          .withKeyName(settings.ec2KeyName)
+          .withImageId(settings.launchConfigImageId)
+          .withInstanceType(settings.launchConfigInstanceType)
+          .withUserData(encoder.encode(lcUserData(id).getBytes))
+      )
+    } catch {
+      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
+    }
+
+    return name
+  }
+
+  def deleteAutoScalingGroup(id: String): String = {
+    val name = getAutoScalingGroupName(id)
+    Logger.info(s"AWS delete ASG projectId[$id]")
+
+    try {
+      client.deleteAutoScalingGroup(
+        new DeleteAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withForceDelete(true)
+      )
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting autoscaling group $name - Error: ${e.getMessage}")
+    }
+
+    name
+  }
+
+  def deleteLaunchConfiguration(settings: Settings, id: String): String = {
+    val name = getLaunchConfigurationName(settings, id)
+    Logger.info(s"AWS delete launch config projectId[$id]")
+
+    try {
+      client.deleteLaunchConfiguration(new DeleteLaunchConfigurationRequest().withLaunchConfigurationName(name))
+    } catch {
+      case e: Throwable => Logger.error(s"Error deleting launch configuration $name - Error: ${e.getMessage}")
+    }
+
+    name
+  }
+
+  def upsertAutoScalingGroup(settings: Settings, id: String, launchConfigName: String, loadBalancerName: String): String = {
+    val name = getAutoScalingGroupName(id)
+
+    client.describeAutoScalingGroups(
+      new DescribeAutoScalingGroupsRequest()
+        .withAutoScalingGroupNames(Seq(name).asJava)
+    ).getAutoScalingGroups.asScala.headOption match {
+      case None => {
+        createAutoScalingGroup(settings, name, launchConfigName, loadBalancerName)
+      }
+      case Some(asg) => {
+        if (asg.getLaunchConfigurationName != launchConfigName) {
+          val instances = asg.getInstances.asScala.map(_.getInstanceId).asJava
+          val oldLaunchConfigurationName = asg.getLaunchConfigurationName
+          updateAutoScalingGroup(name, launchConfigName, oldLaunchConfigurationName, instances)
+        }
+      }
+    }
+
+    name
+  }
+
+  def createAutoScalingGroup(settings: Settings, name: String, launchConfigName: String, loadBalancerName: String) {
+    try {
+      Logger.info(s"AWS AutoScalingGroup createAutoScalingGroup $name")
+      client.createAutoScalingGroup(
+        new CreateAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withLaunchConfigurationName(launchConfigName)
+          .withLoadBalancerNames(Seq(loadBalancerName).asJava)
+          .withVPCZoneIdentifier(settings.asgSubnets.mkString(","))
+          .withNewInstancesProtectedFromScaleIn(false)
+          .withHealthCheckGracePeriod(settings.asgHealthCheckGracePeriod)
+          .withMinSize(settings.asgMinSize)
+          .withMaxSize(settings.asgMaxSize)
+          .withDesiredCapacity(settings.asgDesiredSize)
+      )
+    } catch {
+      case e: Throwable => Logger.error(s"Error creating autoscaling group $name with launch config $launchConfigName and load balancer $loadBalancerName. Error: ${e.getMessage}")
+    }
+  }
+
+  /**
+    * TODO:
+    * This could probably be handled more gracefully
+    * Right now it causes an outage and unsure how to handle
+    * old instance termination in a phased approach
+    */
+  def updateAutoScalingGroup(name: String, newlaunchConfigName: String, oldLaunchConfigurationName: String, instances: java.util.Collection[String]) {
+    try {
+      // update the auto scaling group
+      client.updateAutoScalingGroup(
+        new UpdateAutoScalingGroupRequest()
+          .withAutoScalingGroupName(name)
+          .withLaunchConfigurationName(newlaunchConfigName)
+      )
+
+      // detach the old instances
+      client.detachInstances(
+        new DetachInstancesRequest()
+          .withAutoScalingGroupName(name)
+          .withInstanceIds(instances)
+      )
+
+      // delete the old launch configuration
+      client.deleteLaunchConfiguration(
+        new DeleteLaunchConfigurationRequest()
+          .withLaunchConfigurationName(oldLaunchConfigurationName)
+      )
+
+      /**
+        * terminate the old instances to allow new ones to come
+        * up with updated launch config and load balancer
+        */
+      ec2Client.terminateInstances(
+        new TerminateInstancesRequest()
+          .withInstanceIds(instances)
+      )
+    } catch {
+      case e: Throwable => Logger.error(s"Error updating autoscaling group $name with launch config $newlaunchConfigName. Error: ${e.getMessage}")
+    }
+  }
+
+  def lcUserData(id: String): String = {
+    val ecsClusterName = EC2ContainerService.getClusterName(id)
+
+    return Seq(
+      """#!/bin/bash""",
+      """echo 'OPTIONS="-e env=production"' > /etc/sysconfig/docker""",
+      s"""echo 'ECS_CLUSTER=${ecsClusterName}' >> /etc/ecs/ecs.config""",
+      """echo 'ECS_ENGINE_AUTH_TYPE=dockercfg' >> /etc/ecs/ecs.config""",
+      s"""echo 'ECS_ENGINE_AUTH_DATA={"https://index.docker.io/v1/":{"auth":"${dockerHubToken}","email":"${dockerHubEmail}"}}' >> /etc/ecs/ecs.config""",
+      """mkdir -p /etc/sumo""",
+      s"""echo '{"api.version":"v1","sources":[{"sourceType":"LocalFile","name":"ecs_docker_logs","category":"${id}_docker_logs","pathExpression":"/var/lib/docker/containers/*/*.log","blacklist":[]}]}' > /etc/sumo/sources.json""",
+      """curl -o /tmp/sumo.sh https://collectors.sumologic.com/rest/download/linux/64""",
+      """chmod +x /tmp/sumo.sh""",
+      """export PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)""",
+      s"""sh /tmp/sumo.sh -q -Vsumo.accessid="${sumoId}" -Vsumo.accesskey="${sumoKey}" -VsyncSources="/etc/sumo/sources.json" -Vcollector.name="${id}-""" + "$PRIVATE_IP\""
+    ).mkString("\n")
+  }
+}

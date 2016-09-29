@@ -1,0 +1,58 @@
+GET     /_internal_/healthcheck                 controllers.HealthchecksController.index()
+GET     /                                       controllers.ApplicationController.index(organization: Option[String] ?= None, builds_page: Int ?= 0)
+
+GET     /projects                               controllers.ApplicationController.redirect
+GET     /projects/                              controllers.ProjectsController.index(page: Int ?= 0)
+GET     /projects/github                        controllers.ProjectsController.github()
+GET     /projects/github/:org                   controllers.ProjectsController.githubOrg(org: String, repositoriesPage: Int ?= 0)
+POST    /projects/github/:org/post              controllers.ProjectsController.postGithubOrg(org: String, owner: String, name: String, repositoriesPage: Int ?= 0)
+GET     /projects/create                        controllers.ProjectsController.create()
+POST    /projects/postCreate                    controllers.ProjectsController.postCreate()
+GET     /projects/:id                           controllers.ProjectsController.show(id: String)
+GET     /projects/:id/edit                      controllers.ProjectsController.edit(id: String)
+POST    /projects/:id/postEdit                  controllers.ProjectsController.postEdit(id: String)
+POST    /projects/:id/postSync                  controllers.ProjectsController.postSync(id: String)
+POST    /projects/:id/delete                    controllers.ProjectsController.postDelete(id: String)
+
+GET     /events                                 controllers.ApplicationController.redirect
+GET     /events/                                controllers.EventsController.index(page: Int ?= 0, project_id: Option[String] ?= None, event_type: Option[io.flow.delta.v0.models.EventType] ?= None, has_error: Option[Boolean] ?= None)
+
+GET     /search                                 controllers.SearchController.index(q: Option[String] ?= None, page: Int ?= 0)
+
+GET     /subscriptions                          controllers.ApplicationController.redirect
+GET     /subscriptions/                         controllers.SubscriptionsController.index()
+GET     /subscriptions/:identifier              controllers.SubscriptionsController.identifier(identifier: String)
+POST    /subscriptions/:identifier/:publication/toggle      controllers.SubscriptionsController.postToggle(identifier: String, publication: io.flow.delta.v0.models.Publication)
+
+GET     /login                                  controllers.ApplicationController.redirect
+GET     /login/                                 controllers.LoginController.index(return_url: Option[String] ?= None)
+GET     /login/github                           controllers.LoginController.githubCallback(code: String, state: Option[String] ?= None, return_url: Option[String] ?= None)
+GET     /logout                                 controllers.LogoutController.index
+GET     /logged_out                             controllers.LogoutController.logged_out
+
+GET     /tokens                                 controllers.ApplicationController.redirect
+GET     /tokens/                                controllers.TokensController.index(page: Int ?= 0)
+GET     /tokens/create                          controllers.TokensController.create
+POST    /tokens/postCreate                      controllers.TokensController.postCreate
+GET     /tokens/:id/show                        controllers.TokensController.show(id: String)
+POST    /tokens/:id/postDelete                  controllers.TokensController.postDelete(id: String)
+
+GET     /organizations                          controllers.OrganizationsController.index(page: Int ?= 0)
+GET     /organizations/create                   controllers.OrganizationsController.create(return_url: Option[String] ?= None)
+POST    /organizations/postCreate               controllers.OrganizationsController.postCreate()
+GET     /organizations/:id                      controllers.OrganizationsController.show(id: String, projectsPage: Int ?= 0)
+GET     /organizations/:id/edit                 controllers.OrganizationsController.edit(id: String)
+POST    /organizations/:id/postEdit             controllers.OrganizationsController.postEdit(id: String)
+POST    /organizations/:id/delete               controllers.OrganizationsController.postDelete(id: String)
+
+GET     /:org                                   controllers.OrganizationsController.redirectToDashboard(org: String)
+GET     /:org/members                           controllers.MembersController.index(org: String, page: Int ?= 0)
+GET     /:org/members/create                    controllers.MembersController.create(org: String)
+POST    /:org/members/createPost                controllers.MembersController.postCreate(org: String)
+POST    /:org/members/postDelete                controllers.MembersController.postDelete(org: String, id: String)
+POST    /:org/members/postMakeMember            controllers.MembersController.postMakeMember(org: String, id: String)
+POST    /:org/members/postMakeAdmin             controllers.MembersController.postMakeAdmin(org: String, id: String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET     /webjars/*file              controllers.WebJarAssets.at(file)
