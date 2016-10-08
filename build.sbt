@@ -1,4 +1,4 @@
-lib-poimport play.PlayImport.PlayKeys._
+import play.PlayImport.PlayKeys._
 
 name := "delta"
 
