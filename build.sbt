@@ -1,4 +1,4 @@
-import play.PlayImport.PlayKeys._
+lib-poimport play.PlayImport.PlayKeys._
 
 name := "delta"
 
@@ -6,7 +6,7 @@ organization := "io.flow"
 
 scalaVersion in ThisBuild := "2.11.8"
 
-val awsVersion = "1.11.38"
+val awsVersion = "1.11.41"
 
 lazy val generated = project
   .in(file("generated"))
@@ -43,7 +43,7 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.36",
+      "io.flow" %% "lib-postgresql" % "0.0.37",
       "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
