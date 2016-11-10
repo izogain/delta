@@ -73,6 +73,14 @@ case class SyncDockerImages(build: Build) {
       }
 
     }.recover {
+      case io.flow.docker.registry.v0.errors.UnitResponse(401) => {
+        SupervisorResult.Error(s"${BuildNames.projectName(build)} HTTP 401 while fetching docker tags for build id[${build.id}]")
+      }
+
+      case io.flow.docker.registry.v0.errors.UnitResponse(404) => {
+        SupervisorResult.Ready("No docker images found")
+      }
+
       case ex: Throwable => {
         ex.printStackTrace(System.err)
         SupervisorResult.Error(s"${BuildNames.projectName(build)} Error fetching docker tags for build id[${build.id}]", Some(ex))
