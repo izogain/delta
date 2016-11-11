@@ -128,6 +128,16 @@ case class Tag(project: Project, branchName: String) extends Github {
           tagsWriteDao.upsert(UsersDao.systemUser, project.id, name, sha)
           SupervisorResult.Change(s"Created tag $name for sha[$sha]")
         }.recover {
+          case e: io.flow.github.v0.errors.UnprocessableEntityResponse => {
+            e.unprocessableEntity.message match {
+              case "Reference already exists" => {
+                SupervisorResult.Ready(s"Tag $name for sha[$sha] already exists")
+              }
+              case other => {
+                SupervisorResult.Error(s"422 creating ref: $other")
+              }
+            }
+          }
           case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
             SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", Some(r))
           }
