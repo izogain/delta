@@ -138,9 +138,6 @@ case class Tag(project: Project, branchName: String) extends Github {
               }
             }
           }
-          case r: io.flow.github.v0.errors.UnprocessableEntityResponse => {
-            SupervisorResult.Error(s"Error creating ref: ${r.unprocessableEntity.message}", Some(r))
-          }
         }
       }
     }
