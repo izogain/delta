@@ -2,6 +2,7 @@ package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
 import db.{ConfigsDao, ImagesDao, ImagesWriteDao, UsersDao}
+import io.flow.delta.actors.functions.SyncDockerImages
 import io.flow.delta.lib.BuildNames
 import io.flow.delta.v0.models._
 import io.flow.delta.config.v0.models.{Build => BuildConfig}
@@ -10,7 +11,7 @@ import io.flow.docker.registry.v0.Client
 import io.flow.play.actors.ErrorHandler
 import org.joda.time.DateTime
 import play.api.Logger
-
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import scala.util.{Failure, Success, Try}
@@ -99,6 +100,11 @@ class DockerHubActor @javax.inject.Inject() (
       withEnabledBuild { build =>
         withOrganization { org =>
           val imageFullName = BuildNames.dockerImageName(org.docker, build, version)
+
+          Await.result(
+            SyncDockerImages(build).run,
+            Duration.Inf
+          )
 
           ImagesDao.findByBuildIdAndVersion(build.id, version) match {
             case Some(image) => {
