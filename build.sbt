@@ -6,7 +6,7 @@ organization := "io.flow"
 
 scalaVersion in ThisBuild := "2.11.8"
 
-val awsVersion = "1.11.60"
+val awsVersion = "1.11.61"
 
 lazy val generated = project
   .in(file("generated"))
@@ -44,10 +44,10 @@ lazy val api = project
       ws,
       jdbc,
       "io.flow" %% "lib-postgresql" % "0.0.38",
-      "com.amazonaws" % "aws-java-sdk-ec2" % 1.11.61,
-      "com.amazonaws" % "aws-java-sdk-ecs" % 1.11.61,
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % 1.11.61,
-      "com.amazonaws" % "aws-java-sdk-autoscaling" % 1.11.61,
+      "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
       "com.sendgrid"   %  "sendgrid-java" % "3.1.0",
       "org.postgresql" % "postgresql" % "9.4.1212"
     )
