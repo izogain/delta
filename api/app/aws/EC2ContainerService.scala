@@ -38,24 +38,50 @@ case class EC2ContainerService @javax.inject.Inject() (
   private[this] lazy val ec2Client = new AmazonEC2Client(credentials.aws, configuration.aws)
 
   private[this] lazy val client = new AmazonECSClient(credentials.aws, configuration.aws)
-
-  def getBaseName(imageName: String, imageVersion: String): String = {
-    return Seq(
-      s"${imageName.replaceAll("[/]","-")}", // flow/registry becomes flow-registry
-      s"${imageVersion.replaceAll("[.]","-")}" // 1.2.3 becomes 1-2-3
-    ).mkString("-")
+  
+  /**
+   * We are currently on version 1.0. The new version 1.1 changes the ECS 
+   * deployment to reuse service definitions, only changing the task 
+   * definition to update the docker image. This will move the logic of
+   * rolling out a new deploy to ECS instead of Delta. Requirements of
+   * your service for version 1.1:
+   * 
+   * - Docker containers upgraded to 1.12.
+   * - HEALTHCHECK statement in Dockerfile.
+   * - version=1.1 in .delta file
+   * 
+   * Once all services have been upgraded to version 1.1, we will remove
+   * the split logic and default to 1.1 moving forward.
+   */
+  private[this] val BuildVersion11 = "1.1"
+  
+  def getBaseName(imageName: String, imageVersion: Option[String] = None): String = {
+    Seq(
+      Some(s"${imageName.replaceAll("[/]","-")}"), // flow/registry becomes flow-registry
+      imageVersion.map { v => s"${v.replaceAll("[.]","-")}" } // 1.2.3 becomes 1-2-3
+    ).flatten.mkString("-")
   }
 
-  def getContainerName(imageName: String, imageVersion: String): String = {
-    return s"${getBaseName(imageName, imageVersion)}-container"
+  def getServiceName(imageName: String, imageVersion: String, settings: Settings): String = {
+    if (BuildVersion11 == settings.version) {
+      // Use the same service name for version 1.1
+      s"${getBaseName(imageName)}-service"
+    } else {
+      s"${getBaseName(imageName, Some(imageVersion))}-service"
+    }
+  }
+
+  def getContainerName(imageName: String, imageVersion: String, settings: Settings): String = {
+    if (BuildVersion11 == settings.version) {
+      // Use the same container name for version 1.1
+      s"${getBaseName(imageName)}-container"
+    } else {
+      s"${getBaseName(imageName, Some(imageVersion))}-container"
+    }
   }
 
   def getTaskName(imageName: String, imageVersion: String): String = {
-    return s"${getBaseName(imageName, imageVersion)}-task"
-  }
-
-  def getServiceName(imageName: String, imageVersion: String): String = {
-    return s"${getBaseName(imageName, imageVersion)}-service"
+    s"${getBaseName(imageName, Some(imageVersion))}-task"
   }
 
   /**
@@ -183,7 +209,7 @@ case class EC2ContainerService @javax.inject.Inject() (
 
     for {
       taskDef <- registerTaskDefinition(settings, imageName, imageVersion, projectId)
-      service <- createService(settings, imageName, imageVersion, projectId, taskDef)
+      service <- createOrUpdateService(settings, imageName, imageVersion, projectId, taskDef, desiredCount)
       count <- updateServiceDesiredCount(cluster, service, desiredCount)
     } yield {
       // Nothing
@@ -352,7 +378,7 @@ case class EC2ContainerService @javax.inject.Inject() (
     projectId: String
   ): Future[String] = {
     val taskName = getTaskName(imageName, imageVersion)
-    val containerName = getContainerName(imageName, imageVersion)
+    val containerName = getContainerName(imageName, imageVersion, settings)
 
     Logger.info(s"AWS EC2ContainerService registerTaskDefinition projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
 
@@ -390,9 +416,9 @@ case class EC2ContainerService @javax.inject.Inject() (
     }
   }
 
-  def getServiceInstances(imageName: String, imageVersion: String, projectId: String): Future[Seq[String]] = {
+  def getServiceInstances(imageName: String, imageVersion: String, projectId: String, settings: Settings): Future[Seq[String]] = {
     val clusterName = EC2ContainerService.getClusterName(projectId)
-    val serviceName = getServiceName(imageName, imageVersion)
+    val serviceName = getServiceName(imageName, imageVersion, settings)
 
     Future {
       Logger.info(s"AWS EC2ContainerService describeTasks projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
@@ -413,18 +439,25 @@ case class EC2ContainerService @javax.inject.Inject() (
     }
   }
 
-  def createService(
+  def createOrUpdateService(
     settings: Settings,
     imageName: String,
     imageVersion: String,
     projectId: String,
-    taskDefinition: String
+    taskDefinition: String,
+    desiredCount: Long
   ): Future[String] = {
     Future {
       val clusterName = EC2ContainerService.getClusterName(projectId)
-      val serviceName = getServiceName(imageName, imageVersion)
-      val containerName = getContainerName(imageName, imageVersion)
+      val serviceName = getServiceName(imageName, imageVersion, settings)
+      val containerName = getContainerName(imageName, imageVersion, settings)
       val loadBalancerName = ElasticLoadBalancer.getLoadBalancerName(projectId)
+
+      val (serviceDesiredCount,minimumHealthyPercent) = if (BuildVersion11 == settings.version) {
+        (desiredCount.toInt, 50) // allows ECS to deploy new task definitions
+      } else {
+        (0, 99) // initialize service with desired count of 0, scale up will come later
+      }
 
       Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
       val resp = client.describeServices(
@@ -433,19 +466,19 @@ case class EC2ContainerService @javax.inject.Inject() (
           .withServices(Seq(serviceName).asJava)
       )
 
-      // if service doesn't exist in the cluster
       if (!resp.getFailures().isEmpty()) {
-        Logger.info(s"AWS EC2ContainerService createService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
+        // service doesn't exist in cluster, create service
+        Logger.info(s"AWS EC2ContainerService createOrUpdateService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
         client.createService(
           new CreateServiceRequest()
             .withServiceName(serviceName)
             .withCluster(clusterName)
-            .withDesiredCount(0) // initialize service with desired count of 0, scale up will come later
+            .withDesiredCount(serviceDesiredCount)
             .withRole(settings.serviceRole)
             .withTaskDefinition(taskDefinition)
             .withDeploymentConfiguration(
             new DeploymentConfiguration()
-              .withMinimumHealthyPercent(99)
+              .withMinimumHealthyPercent(minimumHealthyPercent)
               .withMaximumPercent(100)
           )
             .withLoadBalancers(
@@ -456,6 +489,17 @@ case class EC2ContainerService @javax.inject.Inject() (
                 .withContainerPort(settings.portContainer)
             ).asJava
           )
+        )
+
+      } else if (BuildVersion11 == settings.version) {
+        // service exists in cluster, update service but only for version 1.1
+        // to make sure we don't mess with existing deploy method
+        Logger.info(s"AWS EC2ContainerService 1.1 createOrUpdateService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
+        client.updateService(
+          new UpdateServiceRequest()
+          .withCluster(clusterName)
+          .withService(serviceName)
+          .withTaskDefinition(taskDefinition)
         )
       }
 
