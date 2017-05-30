@@ -205,26 +205,62 @@ case class EC2ContainerService @javax.inject.Inject() (
     projectId: String,
     desiredCount: Long
   ): Future[Unit] = {
-    val cluster = EC2ContainerService.getClusterName(projectId)
-
     for {
       taskDef <- registerTaskDefinition(settings, imageName, imageVersion, projectId)
       service <- createOrUpdateService(settings, imageName, imageVersion, projectId, taskDef, desiredCount)
-      count <- updateServiceDesiredCount(cluster, service, desiredCount)
+      count <- updateServiceDesiredCount(settings, imageName, imageVersion, projectId, desiredCount)
     } yield {
       // Nothing
     }
   }
 
-  def updateServiceDesiredCount(cluster: String, service: String, desiredCount: Long): Future[Long] = {
+  def updateServiceDesiredCount(
+    settings: Settings,
+    imageName: String,
+    imageVersion: String,
+    projectId: String,
+    desiredCount: Long
+  ): Future[Long] = {
     Future {
-      Logger.info(s"AWS EC2ContainerService updateService cluster[$cluster]")
-      client.updateService(
-        new UpdateServiceRequest()
-        .withCluster(cluster)
-        .withService(service)
-        .withDesiredCount(desiredCount.toInt)
-      )
+      // Find matching service running specified image version and update
+      // the desired count. If there is no matching version in ECS, do 
+      // nothing. This method will go away after all services have been
+      // upgraded to version 1.1 since we still need this to handle the
+      // case where the previous version was deployed using 1.0 (i.e. clean
+      // up the old service by setting desired count to 0).
+      val cluster = EC2ContainerService.getClusterName(projectId)
+      val serviceArns = getServiceArns(cluster)
+
+      serviceArns match {
+        case Nil => Nil
+        case arns => {
+          getServicesInfo(cluster, arns).map { service =>
+            client.describeTaskDefinition(
+              new DescribeTaskDefinitionRequest()
+                .withTaskDefinition(service.getTaskDefinition)
+            ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
+              case None => {
+                sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
+              }
+              case Some(containerDef) => {
+                val image = Util.parseImage(containerDef.getImage()).getOrElse {
+                  sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
+                }
+                if (image.version == imageVersion) {
+                  val serviceName = service.getServiceName
+                  Logger.info(s"AWS EC2ContainerService updateService cluster[$cluster], service[$serviceName], desiredCount[$desiredCount]")
+                  client.updateService(
+                    new UpdateServiceRequest()
+                      .withCluster(cluster)
+                      .withService(serviceName)
+                      .withDesiredCount(desiredCount.toInt)
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
       desiredCount
     }
   }
@@ -324,7 +360,7 @@ case class EC2ContainerService @javax.inject.Inject() (
       }
     }
   }
-
+  
   private[this] def getServiceArns(cluster: String): Seq[String] = {
     var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
     var hasMore = true
@@ -492,15 +528,19 @@ case class EC2ContainerService @javax.inject.Inject() (
         )
 
       } else if (BuildVersion11 == settings.version) {
-        // service exists in cluster, update service but only for version 1.1
+        // Service exists in cluster, update service but only for version 1.1
         // to make sure we don't mess with existing deploy method
         Logger.info(s"AWS EC2ContainerService 1.1 createOrUpdateService projectId[$projectId] imageName[$imageName] imageVersion[$imageVersion]")
-        client.updateService(
-          new UpdateServiceRequest()
-          .withCluster(clusterName)
-          .withService(serviceName)
-          .withTaskDefinition(taskDefinition)
-        )
+        if (desiredCount > 0) {
+          client.updateService(
+            new UpdateServiceRequest()
+              .withCluster(clusterName)
+              .withService(serviceName)
+              .withTaskDefinition(taskDefinition)
+          )
+        } else {
+          // Scale down does not apply for delta version 1.1, do nothing
+        }
       }
 
       serviceName
