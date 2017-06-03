@@ -387,7 +387,8 @@ case class EC2ContainerService @javax.inject.Inject() (
             }
           }
           Logger.info(s"PaoloDeltaDebug projectId: ${projectId}, paoloVersions: ${paoloVersions}, finalVersions: ${finalVersions}")
-          finalVersions
+          //finalVersions
+          paoloVersions
         }
       }
     }
