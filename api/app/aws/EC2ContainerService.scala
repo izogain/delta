@@ -299,9 +299,7 @@ case class EC2ContainerService @javax.inject.Inject() (
       serviceArns match {
         case Nil => Nil
         case arns => {
-          // -----------------------------------------------------
-          // TODO: REMOVE THESE - TEMPORARY FOR DEBUGGING
-          val paoloVersions = getServicesInfo(cluster, arns).flatMap { service =>
+          val versions = getServicesInfo(cluster, arns).flatMap { service =>
             // task ARNs running in the service
             val taskArns = client.listTasks(new ListTasksRequest().withCluster(cluster).withServiceName(service.getServiceArn)).getTaskArns
 
@@ -329,66 +327,10 @@ case class EC2ContainerService @javax.inject.Inject() (
               Version(version, healthyInstances.size)
             }
           }
-          // -----------------------------------------------------
 
-          val finalVersions = getServicesInfo(cluster, arns).map { service =>
-            Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] taskDefinition[${service.getTaskDefinition}]")
-            client.describeTaskDefinition(
-              new DescribeTaskDefinitionRequest()
-                .withTaskDefinition(service.getTaskDefinition)
-            ).getTaskDefinition().getContainerDefinitions().asScala.headOption match {
-              case None => {
-                sys.error(s"No container definitions for task definition ${service.getTaskDefinition}")
-              }
+          Logger.info(s"DeltaDebug projectId: ${projectId}, versions: ${versions}")
 
-              case Some(containerDef) => {
-                val image = Util.parseImage(containerDef.getImage()).getOrElse {
-                  sys.error(s"Invalid image name[${containerDef.getImage()}] - could not parse version")
-                }
-
-                /**
-                  * service.runningCount is what ECS thinks is running but we need to verify that the actual EC2 instances are healthy
-                  * Steps:
-                  * 1. Get the ECS container instances for this service
-                  * 2. Check the ELB if these instances are actually healthy from the ELB
-                  */
-                Logger.info(s"AWS EC2ContainerService describeTasks - get ECS container instances - projectId[$projectId] service[${service.getServiceArn}]")
-                client.listTasks(new ListTasksRequest().withCluster(cluster).withServiceName(service.getServiceArn)).getTaskArns.asScala.toList match {
-                  case Nil => {
-                    Version(image.version, 0)
-                  }
-
-                  case taskArns => {
-                    client.describeTasks(
-                      new DescribeTasksRequest().withCluster(cluster).withTasks(taskArns.asJava)
-                    ).getTasks.asScala.map(_.getContainerInstanceArn).toList match {
-                      case Nil => {
-                        Version(image.version, 0)
-                      }
-
-                      case serviceContainerInstances => {
-                        Logger.info(s"AWS EC2ContainerService describeContainerInstances - get ec2 instance IDs for - projectId[$projectId] serviceContainerInstances[${serviceContainerInstances.mkString(", ")}]")
-                        val serviceInstances = client.describeContainerInstances(
-                          new DescribeContainerInstancesRequest().withCluster(cluster).withContainerInstances(serviceContainerInstances.asJava)
-                        ).getContainerInstances().asScala.map(_.getEc2InstanceId)
-
-                        // healthy instances = count of service instances actually in the elb which are healthy
-                        val healthyInstances = serviceInstances.filter(elbHealthyInstances.contains(_))
-
-                        Logger.info(s"  - $projectId: elbInstances: ${elbHealthyInstances.instances().sorted}")
-                        Logger.info(s"  - $projectId: serviceInstances: ${serviceInstances.sorted}")
-                        Logger.info(s"  - $projectId: healthyInstances: ${healthyInstances.sorted}")
-                        Version(image.version, healthyInstances.size)
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          Logger.info(s"PaoloDeltaDebug projectId: ${projectId}, paoloVersions: ${paoloVersions}, finalVersions: ${finalVersions}")
-          //finalVersions
-          paoloVersions
+          versions
         }
       }
     }
