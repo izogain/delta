@@ -301,15 +301,12 @@ case class EC2ContainerService @javax.inject.Inject() (
         case arns => {
           // -----------------------------------------------------
           // TODO: REMOVE THESE - TEMPORARY FOR DEBUGGING
-          Logger.info(s"PaoloDeltaDebug START FOR PROJECT $projectId")
-          getServicesInfo(cluster, arns).flatMap { service =>
+          val paoloVersions = getServicesInfo(cluster, arns).flatMap { service =>
             // task ARNs running in the service
             val taskArns = client.listTasks(new ListTasksRequest().withCluster(cluster).withServiceName(service.getServiceArn)).getTaskArns
-            Logger.info(s"PaoloDeltaDebug taskArns: ${taskArns.asScala.mkString("; ")}")
 
             // get the tasks using the ARNs
             val tasks = client.describeTasks(new DescribeTasksRequest().withCluster(cluster).withTasks(taskArns)).getTasks.asScala.toSeq
-            Logger.info(s"PaoloDeltaDebug tasks arns: ${tasks.map(_.getTaskArn).mkString("; ")}")
 
             // get the final list of versions we have online in the single service in the cluster
             // since multiple versions of the api can run on the same service in the same cluster
@@ -319,32 +316,22 @@ case class EC2ContainerService @javax.inject.Inject() (
                 new DescribeTaskDefinitionRequest().withTaskDefinition(task.getTaskDefinitionArn)
               ).getTaskDefinition.getContainerDefinitions.asScala.head.getImage.split(":").last
             }.map { case (version, tasks) =>
-              Logger.info(s"PaoloDeltaDebug version: $version, tasks: ${tasks.map(_.getTaskArn).mkString("; ")}")
-
               // get the container instances for these tasks
               val containerArns = tasks.map(_.getContainerInstanceArn).asJava
-              Logger.info(s"PaoloDeltaDebug container arns: ${containerArns.asScala.mkString("; ")}")
 
               // get the container instances for these tasks given arns - and check first if they are healthy
               val serviceInstances = client.describeContainerInstances(
                 new DescribeContainerInstancesRequest().withCluster(cluster).withContainerInstances(containerArns)
               ).getContainerInstances.asScala.map(_.getEc2InstanceId)
-              Logger.info(s"PaoloDeltaDebug serviceInstances: ${serviceInstances.mkString("; ")}")
 
               // healthy instances = count of service instances actually in the elb which are healthy
               val healthyInstances = serviceInstances.filter(elbHealthyInstances.contains)
-              Logger.info(s"PaoloDeltaDebug version: $version, healthyInstances: ${healthyInstances.mkString("; ")}")
               Version(version, healthyInstances.size)
             }
           }
-          Logger.info(s"PaoloDeltaDebug START FOR PROJECT $projectId")
           // -----------------------------------------------------
 
-
-
-          Logger.info(s"AWS EC2ContainerService describeServices projectId[$projectId] serviceArns[${serviceArns.mkString(", ")}]")
-
-          getServicesInfo(cluster, arns).map { service =>
+          val finalVersions = getServicesInfo(cluster, arns).map { service =>
             Logger.info(s"AWS EC2ContainerService describeTaskDefinition projectId[$projectId] taskDefinition[${service.getTaskDefinition}]")
             client.describeTaskDefinition(
               new DescribeTaskDefinitionRequest()
@@ -399,6 +386,8 @@ case class EC2ContainerService @javax.inject.Inject() (
               }
             }
           }
+          Logger.info(s"PaoloDeltaDebug projectId: ${projectId}, paoloVersions: ${paoloVersions}, finalVersions: ${finalVersions}")
+          finalVersions
         }
       }
     }
