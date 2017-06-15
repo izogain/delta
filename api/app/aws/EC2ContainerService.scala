@@ -66,7 +66,8 @@ case class EC2ContainerService @javax.inject.Inject() (
       val cluster = EC2ContainerService.getClusterName(projectId)
       Logger.info(s"ensureContainerAgentHealth for lunch $cluster")
       try {
-        val result = client.describeContainerInstances(new DescribeContainerInstancesRequest().withCluster(cluster))
+        val containerInstanceArns = client.listContainerInstances(new ListContainerInstancesRequest().withCluster(cluster)).getContainerInstanceArns
+        val result = client.describeContainerInstances(new DescribeContainerInstancesRequest().withCluster(cluster).withContainerInstances(containerInstanceArns))
         val badEc2Instances = result.getContainerInstances.asScala.filter(_.getAgentConnected == false).map(_.getEc2InstanceId)
         if (badEc2Instances.nonEmpty) {
           ec2Client.terminateInstances(new TerminateInstancesRequest().withInstanceIds(badEc2Instances.asJava))
