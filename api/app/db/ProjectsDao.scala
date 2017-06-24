@@ -308,7 +308,11 @@ case class ProjectsWriteDao @javax.inject.Inject() (
 
     configsDao.deleteByProjectId(deletedBy, project.id)
 
-    Delete.delete("projects", deletedBy.id, project.id)
+    DB.withConnection { implicit c =>
+      SQL("select delete_project({id})").on(
+        'id -> project.id
+      ).execute()
+    }
 
     mainActor ! MainActor.Messages.ProjectDeleted(project.id)
   }
