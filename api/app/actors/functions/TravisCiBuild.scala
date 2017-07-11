@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import io.flow.delta.actors.BuildEventLog
 import io.flow.delta.config.v0.models.{Build => BuildConfig}
 import io.flow.delta.lib.BuildNames
-import io.flow.delta.v0.models._
+import io.flow.delta.v0.models.{Organization, Project, Build}
 import io.flow.play.util.Config
 import io.flow.travis.ci.v0.Client
 import io.flow.travis.ci.v0.models._
@@ -29,12 +29,51 @@ case class TravisCiBuild(
   }
 
   def buildDockerImage() {
-      val dockerImageName = BuildNames.dockerImageName(org.docker, build)
+    val dockerImageName = BuildNames.dockerImageName(org.docker, build)
+
+    client.requests.get(
+        repositorySlug = travisRepositorySlug(),
+        limit = Option(20),
+        requestHeaders = createRequestHeaders()
+    ).map { requestGetResponse =>
+      
+      val requests = requestGetResponse.requests
+        .filter(_.eventType == EventType.Api)
+        .filter(_.branchName.name.getOrElse("") == version)
+        .filter(_.commit.message.getOrElse("").contains(dockerImageName))
+
+      requests match {
+        case Nil => {
+          // no matching builds, submit new build
+          postBuildRequest()
+        }
+        case requests => {
+          requests.foreach { request =>
+            request.builds.foreach { build =>
+              log.changed(s"Travis CI build [${dockerImageName}:${version}], number: ${build.number}, state: ${build.state}")
+            }
+          }
+        }
+      }
+      
+    }.recover {
+      case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
+        log.error(s"Travis CI returned HTTP $code when fetching requests [${dockerImageName}:${version}]")
+      }
+      case err => {
+        err.printStackTrace(System.err)
+        log.error(s"Error fetching Travis CI requests [${dockerImageName}:${version}]: $err")
+      }
+    }
+  }
+  
+  private def postBuildRequest() {
+    val dockerImageName = BuildNames.dockerImageName(org.docker, build)
 
     client.requests.post(
-        repositorySlug = travisRepositorySlug(),
-        requestPostForm = createRequestPostForm(),
-        requestHeaders = createRequestHeaders()
+      repositorySlug = travisRepositorySlug(),
+      requestPostForm = createRequestPostForm(),
+      requestHeaders = createRequestHeaders()
     ).map { request =>
       log.changed(s"Triggered docker build for ${dockerImageName}:${version}")
     }.recover {
