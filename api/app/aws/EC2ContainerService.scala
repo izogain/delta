@@ -20,7 +20,7 @@ object EC2ContainerService {
     * Name creation helper functions
     **/
   def getClusterName(projectId: String): String = {
-    return s"$projectId-cluster"
+    return s"${projectId.replaceAll("_","-")}-cluster"
   }
 
 }
