@@ -86,7 +86,7 @@
 	{ "name": "id", "type": "string" },
 	{ "name": "user", "type": "user_summary", "description": "The user that created this organization" },
         { "name": "docker", "type": "docker", "description": "Required information to locate docker images for projects associated with this organization." },
-        { "name": "travis", "type": "travis" }
+        { "name": "travis", "type": "travis", "required": false }
       ]
     },
 

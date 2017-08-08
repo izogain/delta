@@ -96,6 +96,8 @@ case class Filters(auth: Authorization) {
       case Authorization.Organization(id) => {
         Clause.single(s"$userIdColumn in (select user_id from memberships where organization_id = '$id')")
       }
+      case _: Authorization.Partner => sys.error("Invalid Authorization.Partner")
+      case _: Authorization.Session => sys.error("Invalid Authorization.Session")
     }
   }
 
