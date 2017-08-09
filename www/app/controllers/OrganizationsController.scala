@@ -116,7 +116,7 @@ class OrganizationsController @javax.inject.Inject() (
               OrganizationsController.UiForm(
                 id = organization.id,
                 docker_organization = organization.docker.organization,
-                travis_organization = organization.travis.map(_.organization).getOrElse(organization.docker.organization),
+                travis_organization = organization.travis.organization,
                 returnUrl = None
               )
             )
