@@ -339,8 +339,8 @@ case class EC2ContainerService @javax.inject.Inject() (
                     Seq(
                       new Ulimit()
                         .withName(UlimitName.Nofile)
-                        .withSoftLimit(100000)
-                        .withHardLimit(100000)
+                        .withSoftLimit(1000000)
+                        .withHardLimit(1000000)
                     ).asJava
                   )
                   .withPortMappings(

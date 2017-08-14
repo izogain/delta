@@ -205,7 +205,7 @@ class AutoScalingGroup @javax.inject.Inject() (
 
   def lcUserData(id: String): String = {
     val ecsClusterName = EC2ContainerService.getClusterName(id)
-    val nofileMax = 100000
+    val nofileMax = 1000000
 
     return Seq(
       """#!/bin/bash""",
