@@ -335,6 +335,14 @@ case class EC2ContainerService @javax.inject.Inject() (
                   .withName(containerName)
                   .withImage(imageName + ":" + imageVersion)
                   .withMemory(settings.containerMemory)
+                  .withUlimits(
+                    Seq(
+                      new Ulimit()
+                        .withName(UlimitName.Nofile)
+                        .withSoftLimit(100000)
+                        .withHardLimit(100000)
+                    ).asJava
+                  )
                   .withPortMappings(
                     Seq(
                       new PortMapping()
