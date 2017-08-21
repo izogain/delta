@@ -8,6 +8,7 @@ builds:
       version: 1.2
   - www:
       dockerfile: www/Dockerfile
+      instance.type: t2.small
       port.container: 9000
       port.host: 6090
       version: 1.2
