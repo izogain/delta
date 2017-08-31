@@ -58,7 +58,7 @@ class AutoScalingGroup @javax.inject.Inject() (
   def getLaunchConfigurationName(settings: Settings, id: String) =
     if (settings.version == BuildVersion13) {
       // create a new LC for v1.3 for Opsworks
-      s"${id.replaceAll("_", "-")}-ecs-lc-ami-d61027ad-${settings.launchConfigInstanceType}"
+      s"${id.replaceAll("_", "-")}-ecs-lc-ami-9eb4b1e5-${settings.launchConfigInstanceType}"
     } else {
       s"${id.replaceAll("_", "-")}-ecs-lc-${settings.launchConfigImageId}-${settings.launchConfigInstanceType}"
     }
@@ -67,7 +67,7 @@ class AutoScalingGroup @javax.inject.Inject() (
 
   def createLaunchConfiguration(settings: Settings, id: String): String = {
     val name = getLaunchConfigurationName(settings, id)
-    val imageId = if (settings.version == BuildVersion13) { "ami-d61027ad" } else { settings.launchConfigImageId }
+    val imageId = if (settings.version == BuildVersion13) { "ami-9eb4b1e5" } else { settings.launchConfigImageId }
 
     try {
       Logger.info(s"AWS AutoScalingGroup createLaunchConfiguration id[$id]")
