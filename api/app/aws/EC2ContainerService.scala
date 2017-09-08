@@ -333,7 +333,7 @@ case class EC2ContainerService @javax.inject.Inject() (
     // get max of either 95% of the max container memory or 100 less
     val jvmMemory: Int = Seq(
       BigDecimal(ecsContainerMemory * 0.95).setScale(0, BigDecimal.RoundingMode.UP).toInt,
-      ecsContainerMemory - 100
+      ecsContainerMemory - 200
     ).max
 
     val jvmMemorySetting = s"-Xms${jvmMemory}m -Xmx${jvmMemory}m"
