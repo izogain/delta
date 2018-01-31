@@ -1,10 +1,10 @@
-import play.PlayImport.PlayKeys._
+import play.sbt.PlayScala._
 
 name := "delta"
 
 organization := "io.flow"
 
-scalaVersion in ThisBuild := "2.11.12"
+scalaVersion in ThisBuild := "2.12.4"
 
 val awsVersion = "1.11.267"
 
@@ -43,12 +43,13 @@ lazy val api = project
     libraryDependencies ++= Seq(
       ws,
       jdbc,
-      "io.flow" %% "lib-postgresql" % "0.0.60",
+      guice,
+      "io.flow" %% "lib-postgresql-play26" % "0.0.60",
       "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
-      "com.sendgrid"   %  "sendgrid-java" % "4.1.2",
+      "com.sendgrid" %  "sendgrid-java" % "4.1.2",
       "org.postgresql" % "postgresql" % "42.2.0"
     )
   )
@@ -82,9 +83,8 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name ~= ("delta-" + _),
   libraryDependencies ++= Seq(
-    "io.flow" %% "lib-play" % "0.1.37",
-    "org.scalatestplus" %% "play" % "1.4.0" % "test",
-    specs2 % Test
+    "io.flow" %% "lib-play-play26" % "0.4.35",
+    "io.flow" %% "lib-test-utils" % "0.0.4" % Test
   ),
   sources in (Compile,doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
