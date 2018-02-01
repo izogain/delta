@@ -4,17 +4,17 @@ import db.{TagsDao, TagsWriteDao}
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.Tag
 import io.flow.delta.v0.models.json._
-import io.flow.play.util.Config
+import io.flow.play.controllers.FlowControllerComponents
 import io.flow.postgresql.Authorization
-import play.api.mvc._
 import play.api.libs.json._
+import play.api.mvc._
 
 @javax.inject.Singleton
 class Tags @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client,
-  tagsWriteDao: TagsWriteDao  
-) extends Controller with BaseIdentifiedRestController {
+  tagsWriteDao: TagsWriteDao,
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   def get(
     id: Option[Seq[String]],

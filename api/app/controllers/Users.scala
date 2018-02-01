@@ -1,22 +1,22 @@
 package controllers
 
+import db.{UserIdentifiersDao, UsersDao, UsersWriteDao}
+import io.flow.common.v0.models.json._
+import io.flow.common.v0.models.{User, UserReference}
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.v0.models.json._
-import db.{UserIdentifiersDao, UsersDao, UsersWriteDao}
-import io.flow.common.v0.models.{User, UserReference}
-import io.flow.common.v0.models.json._
-import io.flow.play.controllers.IdentifiedRestController
-import io.flow.play.util.{Config, Validation}
-import play.api.mvc._
+import io.flow.play.controllers.{FlowController, FlowControllerComponents}
+import io.flow.play.util.Validation
 import play.api.libs.json._
-
+import play.api.mvc._
+import io.flow.error.v0.models.json._
 import scala.concurrent.Future
 
 class Users @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client,
-  usersWriteDao: UsersWriteDao
-) extends Controller with IdentifiedRestController {
+  usersWriteDao: UsersWriteDao,
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends FlowController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -60,8 +60,8 @@ class Users @javax.inject.Inject() (
         UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
       }
       case s: JsSuccess[UserForm] => {
-        request.user.map { userOption =>
-          usersWriteDao.create(userOption, s.get) match {
+        Future {
+          usersWriteDao.create(request.user, s.get) match {
             case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
             case Right(user) => Created(Json.toJson(user))
           }

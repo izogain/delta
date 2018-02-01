@@ -1,5 +1,6 @@
 package io.flow.delta.aws
 
+import akka.actor.ActorSystem
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
 import io.flow.delta.v0.models.Version
@@ -30,10 +31,11 @@ object EC2ContainerService {
 case class EC2ContainerService @javax.inject.Inject() (
   credentials: Credentials,
   configuration: Configuration,
-  elb: ElasticLoadBalancer
+  elb: ElasticLoadBalancer,
+  system: ActorSystem
 ) {
 
-  private[this] implicit val executionContext = Akka.system.dispatchers.lookup("ec2-context")
+  private[this] implicit val executionContext = system.dispatchers.lookup("ec2-context")
 
   private[this] lazy val ec2Client = new AmazonEC2Client(credentials.aws, configuration.aws)
 

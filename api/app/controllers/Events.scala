@@ -1,17 +1,17 @@
 package controllers
 
 import db.EventsDao
-import io.flow.delta.v0.models.{Event, EventType}
 import io.flow.delta.v0.models.json._
-import io.flow.play.util.Config
-import play.api.mvc._
+import io.flow.delta.v0.models.{Event, EventType}
+import io.flow.play.controllers.FlowControllerComponents
 import play.api.libs.json._
+import play.api.mvc._
 
 @javax.inject.Singleton
 class Events @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client
-) extends Controller with BaseIdentifiedRestController {
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   def get(
     id: Option[Seq[String]],

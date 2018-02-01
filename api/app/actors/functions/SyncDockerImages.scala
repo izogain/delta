@@ -8,6 +8,8 @@ import io.flow.docker.registry.v0.Client
 import io.flow.delta.v0.models.{Build, Docker, ImageForm}
 import io.flow.postgresql.Authorization
 import play.api.Logger
+import play.api.libs.ws.WSClient
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -31,7 +33,9 @@ case class SyncDockerImages(build: Build) {
 
   private[this] def imagesWriteDao = play.api.Play.current.injector.instanceOf[ImagesWriteDao]
   private[this] def dockerHubToken = play.api.Play.current.injector.instanceOf[DockerHubToken]
-  private[this] val client = new Client()
+  private[this] def wsClient = play.api.Play.current.injector.instanceOf[WSClient]
+
+  private[this] val client = new Client(ws = wsClient)
 
   def run(
     implicit ec: ExecutionContext

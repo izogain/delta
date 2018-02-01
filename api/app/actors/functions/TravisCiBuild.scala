@@ -5,14 +5,17 @@ import io.flow.delta.actors.BuildEventLog
 import io.flow.delta.api.lib.BuildLockUtil
 import io.flow.delta.config.v0.models.{Build => BuildConfig}
 import io.flow.delta.lib.BuildNames
-import io.flow.delta.v0.models.{Organization, Project, Build, EventType => DeltaEventType, Visibility}
+import io.flow.delta.v0.models.{Build, Organization, Project, Visibility, EventType => DeltaEventType}
 import io.flow.play.util.Config
 import io.flow.travis.ci.v0.Client
 import io.flow.travis.ci.v0.models._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
+
+import play.api.libs.ws.WSClient
 
 case class TravisCiBuild(
     version: String,
@@ -20,7 +23,8 @@ case class TravisCiBuild(
     project: Project,
     build: Build,
     buildConfig: BuildConfig,
-    config: Config
+    config: Config,
+    wSClient: WSClient
 ) extends BuildEventLog {
 
   private[this] val client = createClient()
@@ -186,7 +190,7 @@ case class TravisCiBuild(
       "https://api.travis-ci.com"
     }
 
-    new Client(baseUrl, None, createRequestHeaders())
+    new Client(wSClient, baseUrl, None, createRequestHeaders())
   }
 
   private def travisRepositorySlug(): String = {

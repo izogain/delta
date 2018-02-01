@@ -2,8 +2,8 @@ package controllers
 
 import db.{OrganizationsDao, ProjectsDao, UsersDao}
 import io.flow.common.v0.models.{User, UserReference}
-import io.flow.common.v0.models.json._
 import io.flow.delta.v0.models.{Organization, Project}
+import io.flow.error.v0.models.json._
 import io.flow.play.util.Validation
 import io.flow.postgresql.{Authorization, OrderBy}
 import play.api.libs.json.Json

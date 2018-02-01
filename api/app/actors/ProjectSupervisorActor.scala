@@ -1,14 +1,14 @@
 package io.flow.delta.actors
 
-import akka.actor.Actor
-import db.{BuildsDao, BuildDesiredStatesDao, ConfigsDao}
-import io.flow.delta.api.lib.StateDiff
-import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
-import io.flow.delta.v0.models.{Project, Version}
+import javax.inject.Inject
+
+import akka.actor.{Actor, ActorSystem}
+import db.{BuildsDao, ConfigsDao}
+import io.flow.delta.config.v0.models.ConfigProject
+import io.flow.delta.v0.models.Project
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
 import play.api.Logger
-import play.libs.Akka
 
 object ProjectSupervisorActor {
 
@@ -29,9 +29,11 @@ object ProjectSupervisorActor {
 
 }
 
-class ProjectSupervisorActor extends Actor with ErrorHandler with DataProject with EventLog {
+class ProjectSupervisorActor @Inject()(
+  system: ActorSystem
+) extends Actor with ErrorHandler with DataProject with EventLog {
 
-  private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
+  private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
 
   override lazy val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
 

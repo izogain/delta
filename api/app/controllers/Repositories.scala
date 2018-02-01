@@ -1,24 +1,24 @@
 package controllers
 
 import db.{OrganizationsDao, ProjectsDao}
-import io.flow.common.v0.models.json._
-import io.flow.delta.config.v0.models.json._
 import io.flow.delta.api.lib.Github
+import io.flow.delta.config.v0.models.json._
 import io.flow.delta.lib.config.{Defaults, Parser}
 import io.flow.github.v0.models.json._
-import io.flow.play.util.{Config, Validation}
-import play.api.mvc._
+import io.flow.play.controllers.FlowControllerComponents
+import io.flow.play.util.Validation
 import play.api.libs.json._
-
+import play.api.mvc._
+import io.flow.error.v0.models.json._
 import scala.concurrent.Future
 
 @javax.inject.Singleton
 class Repositories @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client,
   val github: Github,
-  parser: Parser
-) extends Controller with BaseIdentifiedRestController {
+  parser: Parser,
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

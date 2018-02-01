@@ -1,23 +1,24 @@
 package controllers
 
-import db.{BuildDesiredStatesDao, BuildLastStatesDao, BuildsDao, ImagesDao, ProjectsDao, ProjectsWriteDao}
-import io.flow.postgresql.Authorization
+import db._
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
-import io.flow.delta.v0.models.{Build, BuildState, ProjectForm}
 import io.flow.delta.v0.models.json._
-import io.flow.play.util.{Config, Validation}
-import io.flow.common.v0.models.json._
-import play.api.mvc._
+import io.flow.delta.v0.models.{Build, BuildState, ProjectForm}
+import io.flow.play.controllers.FlowControllerComponents
+import io.flow.play.util.Validation
+import io.flow.postgresql.Authorization
 import play.api.libs.json._
+import play.api.mvc._
+import io.flow.error.v0.models.json._
 
 @javax.inject.Singleton
 class Projects @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
-  projectsWriteDao: ProjectsWriteDao
-) extends Controller with BaseIdentifiedRestController {
+  projectsWriteDao: ProjectsWriteDao,
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   def get(
     id: Option[Seq[String]],

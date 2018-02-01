@@ -1,27 +1,29 @@
 package io.flow.delta.actors
 
-import io.flow.postgresql.Authorization
 import java.util.concurrent.TimeUnit
 
+import akka.actor.{Actor, ActorSystem}
+import io.flow.delta.v0.models.VariableForm
 import io.flow.docker.hub.v0.Client
 import io.flow.docker.hub.v0.models.{Jwt, JwtForm}
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
-import akka.actor.{Actor, ActorSystem}
-import io.flow.delta.v0.models.{Variable, VariableForm}
+import io.flow.postgresql.Authorization
 import play.api.Logger
+import play.api.libs.ws.WSClient
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @javax.inject.Singleton
 class DockerHubToken @javax.inject.Inject() (
-  config: Config
+  config: Config,
+  wSClient: WSClient
 ) {
 
   private[this] val tokenKey = "DOCKER_JWT_TOKEN"
-  private[this] val jwtClient = new Client()
+  private[this] val jwtClient = new Client(ws = wSClient)
   private[this] val auth = Authorization.All
 
   /**

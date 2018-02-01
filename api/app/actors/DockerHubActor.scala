@@ -1,21 +1,21 @@
 package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
-import db.{ConfigsDao, ImagesDao, ImagesWriteDao, UsersDao}
+import db.{ConfigsDao, ImagesDao, ImagesWriteDao}
 import io.flow.delta.actors.functions.{SyncDockerImages, TravisCiBuild}
+import io.flow.delta.config.v0.models.{Build => BuildConfig}
 import io.flow.delta.lib.BuildNames
 import io.flow.delta.v0.models._
-import io.flow.delta.config.v0.models.{Build => BuildConfig}
-import io.flow.docker.registry.v0.models.{BuildForm => DockerBuildForm, BuildTag => DockerBuildTag}
 import io.flow.docker.registry.v0.Client
+import io.flow.docker.registry.v0.models.{BuildForm => DockerBuildForm, BuildTag => DockerBuildTag}
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.Config
 import org.joda.time.DateTime
 import play.api.Logger
+import play.api.libs.ws.WSClient
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
-import scala.util.{Failure, Success, Try}
 
 object DockerHubActor {
 
@@ -48,12 +48,13 @@ class DockerHubActor @javax.inject.Inject() (
   dockerHubToken: DockerHubToken,
   override val configsDao: ConfigsDao,
   @com.google.inject.assistedinject.Assisted buildId: String,
-  config: Config
+  config: Config,
+  wSClient: WSClient
 ) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("dockerhub-actor-context")
 
-  private[this] val client = new Client()
+  private[this] val client = new Client(ws = wSClient)
 
   private[this] val IntervalSeconds = 30
   private[this] val TimeoutSeconds = 1500
@@ -68,7 +69,7 @@ class DockerHubActor @javax.inject.Inject() (
         withProject { project =>
           withEnabledBuild { build =>
             withBuildConfig { buildConfig =>
-              TravisCiBuild(version, org, project, build, buildConfig, config).buildDockerImage()
+              TravisCiBuild(version, org, project, build, buildConfig, config, wSClient).buildDockerImage()
               self ! DockerHubActor.Messages.Monitor(version, new DateTime())
             }
           }

@@ -1,22 +1,22 @@
 package controllers
 
 import db.{SubscriptionsDao, UsersDao}
-import io.flow.play.util.{Config, Validation}
 import io.flow.common.v0.models.UserReference
-import io.flow.delta.v0.models.{Publication, Subscription, SubscriptionForm}
 import io.flow.delta.v0.models.json._
-import io.flow.common.v0.models.json._
+import io.flow.delta.v0.models.{Publication, Subscription, SubscriptionForm}
+import io.flow.play.controllers.FlowControllerComponents
+import io.flow.play.util.Validation
 import play.api.Logger
-import play.api.mvc._
 import play.api.libs.json._
-
+import play.api.mvc._
+import io.flow.error.v0.models.json._
 import scala.concurrent.{ExecutionContext, Future}
 
 @javax.inject.Singleton
 class Subscriptions @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client
-) extends Controller with BaseIdentifiedRestController {
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   /**
    * If we find an 'identifier' query string parameter, use that to

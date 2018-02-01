@@ -1,21 +1,20 @@
 package controllers
 
 import db.{InternalTokenForm, TokensDao}
-import io.flow.delta.v0.models.{Token, TokenForm}
-import io.flow.delta.v0.models.json._
 import io.flow.common.v0.models.UserReference
-import io.flow.common.v0.models.json._
-import io.flow.play.util.{Config, Validation}
+import io.flow.delta.v0.models.json._
+import io.flow.delta.v0.models.{Token, TokenForm}
+import io.flow.play.controllers.FlowControllerComponents
+import io.flow.play.util.Validation
 import io.flow.postgresql.Authorization
-import play.api.mvc._
 import play.api.libs.json._
+import play.api.mvc._
+import io.flow.error.v0.models.json._
 
 class Tokens @javax.inject.Inject() (
-  override val config: Config,
-  override val tokenClient: io.flow.token.v0.interfaces.Client
-) extends Controller with BaseIdentifiedRestController {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+  val controllerComponents: ControllerComponents,
+  val flowControllerComponents: FlowControllerComponents
+) extends BaseIdentifiedRestController {
 
   def get(
     id: Option[Seq[String]],
