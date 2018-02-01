@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
-import db.{ConfigsDao, ImagesDao, ImagesWriteDao}
+import db._
 import io.flow.delta.actors.functions.{SyncDockerImages, TravisCiBuild, TravisCiDockerImageBuilder}
 import io.flow.delta.api.lib.EventLogProcessor
 import io.flow.delta.config.v0.models.{Build => BuildConfig}
@@ -43,12 +43,13 @@ object DockerHubActor {
 
 }
 
-abstract class DockerHubActor @javax.inject.Inject() (
+class DockerHubActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted buildId: String,
-  configsDao: ConfigsDao,
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
   config: Config,
-  dataBuild: DataBuild,
-  dataProject: DataProject,
   dockerHubToken: DockerHubToken,
   imagesDao: ImagesDao,
   imagesWriteDao: ImagesWriteDao,
@@ -57,7 +58,7 @@ abstract class DockerHubActor @javax.inject.Inject() (
   system: ActorSystem,
   travisCiDockerImageBuilder: TravisCiDockerImageBuilder,
   wSClient: WSClient
-) extends Actor with ErrorHandler with BuildEventLog {
+) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("dockerhub-actor-context")
 
@@ -68,14 +69,14 @@ abstract class DockerHubActor @javax.inject.Inject() (
 
   def receive = {
     case msg @ DockerHubActor.Messages.Setup => withErrorHandler(msg) {
-      dataBuild.setBuildId(buildId)
+      setBuildId(buildId)
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withErrorHandler(msg) {
-      dataProject.withOrganization { org =>
+      withOrganization { org =>
         withProject { project =>
-          dataBuild.withEnabledBuild { build =>
-            dataBuild.withBuildConfig { buildConfig =>
+          withEnabledBuild { build =>
+            withBuildConfig { buildConfig =>
               travisCiDockerImageBuilder.buildDockerImage(TravisCiBuild(version, org, project, build, buildConfig, wSClient))
               self ! DockerHubActor.Messages.Monitor(version, new DateTime())
             }
@@ -85,8 +86,8 @@ abstract class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg @ DockerHubActor.Messages.Monitor(version, start) => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
-        dataProject.withOrganization { org =>
+      withEnabledBuild { build =>
+        withOrganization { org =>
           val imageFullName = BuildNames.dockerImageName(org.docker, build, version)
 
           Await.result(

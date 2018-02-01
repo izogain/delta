@@ -1,7 +1,5 @@
 package io.flow.delta.actors
 
-import javax.inject.Inject
-
 import db.{ConfigsDao, OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.{GithubUtil, Repo}
 import io.flow.delta.config.v0.models.{ConfigError, ConfigProject, ConfigUndefinedType}
@@ -9,11 +7,12 @@ import io.flow.delta.v0.models.{Organization, Project}
 import io.flow.postgresql.Authorization
 import play.api.Logger
 
-class DataProject @Inject()(
-  configsDao: ConfigsDao,
-  organizationsDao: OrganizationsDao,
-  projectsDao: ProjectsDao
-) {
+trait DataProject {
+
+  def configsDao: ConfigsDao
+  def organizationsDao: OrganizationsDao
+  def projectsDao: ProjectsDao
+
   private[this] var dataProject: Option[Project] = None
 
   /**

@@ -13,6 +13,10 @@ class UrlsSpec extends FunSpec with Matchers with Factories {
         case other => sys.error(s"Need to mock config variable[$other]")
       }
     }
+
+    override def optionalList(name: String): Option[Seq[String]] = ???
+
+    override def get(name: String): Option[String] = ???
   }
 
   private[this] lazy val urls = Urls(mockConfig)

@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
-import db.{BuildDesiredStatesDao, ConfigsDao}
+import db._
 import io.flow.delta.actors.functions.SyncDockerImages
 import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
 import io.flow.delta.config.v0.{models => config}
@@ -30,14 +30,17 @@ object BuildSupervisorActor {
 
 }
 
-abstract class BuildSupervisorActor @Inject()(
-  configsDao: ConfigsDao,
+class BuildSupervisorActor @Inject()(
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
   buildDesiredStatesDao: BuildDesiredStatesDao,
   dataBuild: DataBuild,
   eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
   system: ActorSystem
-) extends Actor with ErrorHandler with BuildEventLog {
+) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
 

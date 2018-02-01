@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
-import db.{BuildsDao, ConfigsDao}
+import db.{BuildsDao, ConfigsDao, OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.EventLogProcessor
 import io.flow.delta.config.v0.models.ConfigProject
 import io.flow.delta.v0.models.Project
@@ -30,25 +30,27 @@ object ProjectSupervisorActor {
 
 }
 
-abstract class ProjectSupervisorActor @Inject()(
-  buildsDao: BuildsDao,
-  dataProject: DataProject,
+class ProjectSupervisorActor @Inject()(
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
   eventLogProcessor: EventLogProcessor,
   system: ActorSystem
-) extends Actor with ErrorHandler with EventLog {
+) extends Actor with ErrorHandler with DataBuild with DataProject with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
     case msg @ ProjectSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
-      dataProject.setProjectId(id)
+      setProjectId(id)
     }
 
     case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
       withProject { project =>
         Logger.info(s"PursueDesiredState project[${project.id}]")
-        dataProject.withConfig { config =>
+        withConfig { config =>
           Logger.info(s"  - config: $config")
           eventLogProcessor.runSync("PursueDesiredState", log = log) {
             run(project, config, ProjectSupervisorActor.Functions)

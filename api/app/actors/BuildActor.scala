@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
-import db.{BuildLastStatesDao, UsersDao}
+import db._
 import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
 import io.flow.delta.aws.{AutoScalingGroup, DefaultSettings, EC2ContainerService, ElasticLoadBalancer}
 import io.flow.delta.config.v0.models.BuildStage
@@ -46,26 +46,28 @@ object BuildActor {
 
 }
 
-abstract class BuildActor @javax.inject.Inject() (
+class BuildActor @javax.inject.Inject() (
   asg: AutoScalingGroup,
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
   buildLastStatesDao: BuildLastStatesDao,
   config: Config,
-  dataBuild: DataBuild,
-  dataProject: DataProject,
   ecs: EC2ContainerService,
   elb: ElasticLoadBalancer,
   eventLogProcessor: EventLogProcessor,
   usersDao: UsersDao,
   system: ActorSystem,
   @com.google.inject.assistedinject.Assisted buildId: String
-) extends Actor with ErrorHandler with BuildEventLog {
+) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   implicit private[this] val ec = system.dispatchers.lookup("build-actor-context")
 
   def receive = {
 
     case msg @ BuildActor.Messages.Setup => withErrorHandler(msg) {
-      dataBuild.setBuildId(buildId)
+      setBuildId(buildId)
 
       if (isScaleEnabled) {
         self ! BuildActor.Messages.ConfigureAWS
@@ -87,39 +89,39 @@ abstract class BuildActor @javax.inject.Inject() (
     }
 
     case msg @ BuildActor.Messages.CheckLastState => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         captureLastState(build)
       }
     }
 
     case msg @ BuildActor.Messages.EnsureContainerAgentHealth => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         ensureContainerAgentHealth(build)
       }
     }
 
     case msg @ BuildActor.Messages.UpdateContainerAgent => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         updateContainerAgent(build)
       }
     }
 
     case msg @ BuildActor.Messages.RemoveOldServices => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         removeOldServices(build)
       }
     }
 
     // Configure EC2 LC, ELB, ASG for a build (id: user, fulfillment, splashpage, etc)
     case msg @ BuildActor.Messages.ConfigureAWS => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         configureAWS(build)
       }
     }
 
     case msg @ BuildActor.Messages.Scale(diffs) => withErrorHandler(msg) {
-      dataProject.withOrganization { org =>
-        dataBuild.withEnabledBuild { build =>
+      withOrganization { org =>
+        withEnabledBuild { build =>
           diffs.foreach { diff =>
             scale(org.docker, build, diff)
           }
@@ -132,7 +134,7 @@ abstract class BuildActor @javax.inject.Inject() (
   }
 
   private[this] def isScaleEnabled(): Boolean = {
-    dataBuild.withBuildConfig { buildConfig =>
+    withBuildConfig { buildConfig =>
       buildConfig.stages.contains(BuildStage.Scale)
     }.getOrElse(false)
   }
@@ -259,7 +261,7 @@ abstract class BuildActor @javax.inject.Inject() (
     }
   }
 
-  private[this] def awsSettings() = dataBuild.withBuildConfig { bc =>
+  private[this] def awsSettings() = withBuildConfig { bc =>
     val instanceType = bc.instanceType
     val instanceMemorySettings = InstanceTypeDefaults.memory(instanceType)
 

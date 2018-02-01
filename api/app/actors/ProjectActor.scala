@@ -1,7 +1,7 @@
 package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
-import db.{BuildsDao, ConfigsDao, EventsDao}
+import db._
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.api.lib.{GitHubHelper, Github, Repo}
 import io.flow.delta.lib.config.{Defaults, Parser}
@@ -33,29 +33,30 @@ object ProjectActor {
 
 }
 
-abstract class ProjectActor @javax.inject.Inject() (
+class ProjectActor @javax.inject.Inject() (
   config: Config,
-  buildsDao: BuildsDao,
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
   system: ActorSystem,
   github: Github,
   parser: Parser,
-  configsDao: ConfigsDao,
   gitHubHelper: GitHubHelper,
   eventsDao: EventsDao,
-  dataProject: DataProject,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   @com.google.inject.assistedinject.Assisted projectId: String
-) extends Actor with ErrorHandler with EventLog {
+) extends Actor with ErrorHandler with DataBuild with DataProject with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("project-actor-context")
 
   def receive = {
 
     case msg @ ProjectActor.Messages.Setup => withErrorHandler(msg) {
-      dataProject.setProjectId(projectId)
+      setProjectId(projectId)
 
       withProject { project =>
-        dataProject.withRepo { repo =>
+        withRepo { repo =>
           createHooks(project, repo)
         }
       }
@@ -78,7 +79,7 @@ abstract class ProjectActor @javax.inject.Inject() (
 
     case msg @ ProjectActor.Messages.SyncConfig => withErrorHandler(msg) {
       withProject { project =>
-        dataProject.withRepo { repo =>
+        withRepo { repo =>
           github.dotDeltaFile(UserReference(project.user.id), repo.owner, repo.project).map { configOption =>
             val currentConfig = configOption match {
               case None => Defaults.Config
