@@ -8,6 +8,7 @@ import play.api.mvc._
 
 @javax.inject.Singleton
 class DashboardBuilds @javax.inject.Inject() (
+  dashboardBuildsDao: DashboardBuildsDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
 ) extends BaseIdentifiedRestController {
@@ -18,7 +19,7 @@ class DashboardBuilds @javax.inject.Inject() (
   ) = Identified { request =>
     Ok(
       Json.toJson(
-        DashboardBuildsDao.findAll(
+        dashboardBuildsDao.findAll(
           authorization(request),
           limit = limit,
           offset = offset

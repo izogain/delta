@@ -2,7 +2,8 @@ package io.flow.delta.actors
 
 import akka.actor.{Actor, ActorSystem}
 import db.{ConfigsDao, ImagesDao, ImagesWriteDao}
-import io.flow.delta.actors.functions.{SyncDockerImages, TravisCiBuild}
+import io.flow.delta.actors.functions.{SyncDockerImages, TravisCiBuild, TravisCiDockerImageBuilder}
+import io.flow.delta.api.lib.EventLogProcessor
 import io.flow.delta.config.v0.models.{Build => BuildConfig}
 import io.flow.delta.lib.BuildNames
 import io.flow.delta.v0.models._
@@ -42,15 +43,21 @@ object DockerHubActor {
 
 }
 
-class DockerHubActor @javax.inject.Inject() (
-  imagesWriteDao: ImagesWriteDao,
-  system: ActorSystem,
-  dockerHubToken: DockerHubToken,
-  override val configsDao: ConfigsDao,
+abstract class DockerHubActor @javax.inject.Inject() (
   @com.google.inject.assistedinject.Assisted buildId: String,
+  configsDao: ConfigsDao,
   config: Config,
+  dataBuild: DataBuild,
+  dataProject: DataProject,
+  dockerHubToken: DockerHubToken,
+  imagesDao: ImagesDao,
+  imagesWriteDao: ImagesWriteDao,
+  eventLogProcessor: EventLogProcessor,
+  syncDockerImages: SyncDockerImages,
+  system: ActorSystem,
+  travisCiDockerImageBuilder: TravisCiDockerImageBuilder,
   wSClient: WSClient
-) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
+) extends Actor with ErrorHandler with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("dockerhub-actor-context")
 
@@ -61,15 +68,15 @@ class DockerHubActor @javax.inject.Inject() (
 
   def receive = {
     case msg @ DockerHubActor.Messages.Setup => withErrorHandler(msg) {
-      setBuildId(buildId)
+      dataBuild.setBuildId(buildId)
     }
 
     case msg @ DockerHubActor.Messages.Build(version) => withErrorHandler(msg) {
-      withOrganization { org =>
+      dataProject.withOrganization { org =>
         withProject { project =>
-          withEnabledBuild { build =>
-            withBuildConfig { buildConfig =>
-              TravisCiBuild(version, org, project, build, buildConfig, config, wSClient).buildDockerImage()
+          dataBuild.withEnabledBuild { build =>
+            dataBuild.withBuildConfig { buildConfig =>
+              travisCiDockerImageBuilder.buildDockerImage(TravisCiBuild(version, org, project, build, buildConfig, wSClient))
               self ! DockerHubActor.Messages.Monitor(version, new DateTime())
             }
           }
@@ -78,18 +85,18 @@ class DockerHubActor @javax.inject.Inject() (
     }
 
     case msg @ DockerHubActor.Messages.Monitor(version, start) => withErrorHandler(msg) {
-      withEnabledBuild { build =>
-        withOrganization { org =>
+      dataBuild.withEnabledBuild { build =>
+        dataProject.withOrganization { org =>
           val imageFullName = BuildNames.dockerImageName(org.docker, build, version)
 
           Await.result(
-            SyncDockerImages(build).run,
+            syncDockerImages.run(build),
             Duration.Inf
           )
 
-          ImagesDao.findByBuildIdAndVersion(build.id, version) match {
+          imagesDao.findByBuildIdAndVersion(build.id, version) match {
             case Some(image) => {
-              log.completed(s"Docker hub image $imageFullName is ready - id[${image.id}]")
+              eventLogProcessor.completed(s"Docker hub image $imageFullName is ready - id[${image.id}]", log = log)
               // Don't fire an event; the ImagesDao will already have
               // raised ImageCreated
             }
@@ -97,10 +104,10 @@ class DockerHubActor @javax.inject.Inject() (
             case None => {
               if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
                 val ex = new java.util.concurrent.TimeoutException()
-                log.error(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built")
+                eventLogProcessor.error(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built", log = log)
 
               } else {
-                log.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds")
+                eventLogProcessor.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds", log = log)
                 system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
                   self ! DockerHubActor.Messages.Monitor(version, start)
                 }
@@ -122,19 +129,19 @@ class DockerHubActor @javax.inject.Inject() (
       requestHeaders = dockerHubToken.requestHeaders(org.id)
     ).map { dockerHubBuild =>
       // TODO: Log the docker hub URL and not the VCS url
-      log.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.")
+      eventLogProcessor.completed(s"Docker Hub repository and automated build [${dockerHubBuild.repoWebUrl}] created.", log = log)
     }.recover {
       case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
         code match {
           case 400 => // automated build already exists
           case _ => {
-            log.completed(s"Docker Hub returned HTTP $code when trying to create automated build")
+            eventLogProcessor.completed(s"Docker Hub returned HTTP $code when trying to create automated build", log = log)
           }
         }
       }
       case err => {
         err.printStackTrace(System.err)
-        log.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err))
+        eventLogProcessor.completed(s"Error creating Docker Hub repository and automated build: $err", Some(err), log = log)
       }
     }
   }

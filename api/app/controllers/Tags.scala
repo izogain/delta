@@ -11,6 +11,8 @@ import play.api.mvc._
 
 @javax.inject.Singleton
 class Tags @javax.inject.Inject() (
+  helpers: Helpers,
+  tagsDao: TagsDao,
   tagsWriteDao: TagsWriteDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
@@ -24,10 +26,10 @@ class Tags @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = Identified { request =>
-    withOrderBy(sort) { orderBy =>
+    helpers.withOrderBy(sort) { orderBy =>
       Ok(
         Json.toJson(
-          TagsDao.findAll(
+          tagsDao.findAll(
             authorization(request),
             ids = optionals(id),
             projectId = project,
@@ -57,7 +59,7 @@ class Tags @javax.inject.Inject() (
   def withTag(user: UserReference, id: String)(
     f: Tag => Result
   ): Result = {
-    TagsDao.findById(Authorization.User(user.id), id) match {
+    tagsDao.findById(Authorization.User(user.id), id) match {
       case None => {
         Results.NotFound
       }

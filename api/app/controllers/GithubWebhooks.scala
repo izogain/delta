@@ -10,12 +10,13 @@ import play.api.mvc._
 @javax.inject.Singleton
 class GithubWebhooks @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
+  projectsDao: ProjectsDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
 ) extends FlowController {
 
   def postByProjectId(projectId: String) = Action { request =>
-    ProjectsDao.findById(Authorization.All, projectId) match {
+    projectsDao.findById(Authorization.All, projectId) match {
       case None => {
         NotFound
       }

@@ -10,6 +10,8 @@ import play.api.mvc._
 
 @javax.inject.Singleton
 class Images @javax.inject.Inject() (
+  helpers: Helpers,
+  imagesDao: ImagesDao,
   imagesWriteDao: ImagesWriteDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
@@ -23,10 +25,10 @@ class Images @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = Identified { request =>
-    withOrderBy(sort) { orderBy =>
+    helpers.withOrderBy(sort) { orderBy =>
       Ok(
         Json.toJson(
-          ImagesDao.findAll(
+          imagesDao.findAll(
             ids = optionals(id),
             buildId = build,
             names = name.map { n => Seq(n) },
@@ -55,7 +57,7 @@ class Images @javax.inject.Inject() (
   def withImage(user: UserReference, id: String)(
     f: Image => Result
   ): Result = {
-    ImagesDao.findById(id) match {
+    imagesDao.findById(id) match {
       case None => {
         Results.NotFound
       }

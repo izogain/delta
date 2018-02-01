@@ -11,6 +11,8 @@ import play.api.mvc._
 
 @javax.inject.Singleton
 class Shas @javax.inject.Inject() (
+  helpers: Helpers,
+  shasDao: ShasDao,
   shasWriteDao: ShasWriteDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
@@ -25,10 +27,10 @@ class Shas @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = Identified { request =>
-    withOrderBy(sort) { orderBy =>
+    helpers.withOrderBy(sort) { orderBy =>
       Ok(
         Json.toJson(
-          ShasDao.findAll(
+          shasDao.findAll(
             authorization(request),
             ids = optionals(id),
             projectId = project,
@@ -59,7 +61,7 @@ class Shas @javax.inject.Inject() (
   def withSha(user: UserReference, id: String)(
     f: Sha => Result
   ): Result = {
-    ShasDao.findById(Authorization.User(user.id), id) match {
+    shasDao.findById(Authorization.User(user.id), id) match {
       case None => {
         Results.NotFound
       }

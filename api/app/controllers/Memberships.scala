@@ -4,15 +4,17 @@ import db.MembershipsDao
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.json._
 import io.flow.delta.v0.models.{Membership, MembershipForm, Role}
+import io.flow.error.v0.models.json._
 import io.flow.play.controllers.FlowControllerComponents
 import io.flow.play.util.Validation
 import io.flow.postgresql.Authorization
 import play.api.libs.json._
 import play.api.mvc._
-io.flow.error.v0.models
 
 @javax.inject.Singleton
 class Memberships @javax.inject.Inject() (
+  helpers: Helpers,
+  membershipsDao: MembershipsDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
 ) extends BaseIdentifiedRestController {
@@ -26,10 +28,10 @@ class Memberships @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = Identified { request =>
-    withOrderBy(sort) { orderBy =>
+    helpers.withOrderBy(sort) { orderBy =>
       Ok(
         Json.toJson(
-          MembershipsDao.findAll(
+          membershipsDao.findAll(
             authorization(request),
             ids = optionals(id),
             organizationId = organization,
@@ -56,7 +58,7 @@ class Memberships @javax.inject.Inject() (
         UnprocessableEntity(Json.toJson(Validation.invalidJson(e)))
       }
       case s: JsSuccess[MembershipForm] => {
-        MembershipsDao.create(request.user, s.get) match {
+        membershipsDao.create(request.user, s.get) match {
           case Left(errors) => UnprocessableEntity(Json.toJson(Validation.errors(errors)))
           case Right(membership) => Created(Json.toJson(membership))
         }
@@ -66,7 +68,7 @@ class Memberships @javax.inject.Inject() (
 
   def deleteById(id: String) = Identified { request =>
     withMembership(request.user, id) { membership =>
-      MembershipsDao.delete(request.user, membership)
+      membershipsDao.delete(request.user, membership)
       NoContent
     }
   }
@@ -74,7 +76,7 @@ class Memberships @javax.inject.Inject() (
   def withMembership(user: UserReference, id: String)(
     f: Membership => Result
   ): Result = {
-    MembershipsDao.findById(Authorization.User(user.id), id) match {
+    membershipsDao.findById(Authorization.User(user.id), id) match {
       case None => {
         Results.NotFound
       }

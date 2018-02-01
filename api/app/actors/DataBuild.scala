@@ -1,12 +1,17 @@
 package io.flow.delta.actors
 
+import javax.inject.Inject
+
 import db.BuildsDao
 import io.flow.delta.v0.models.{Build, Status}
 import io.flow.delta.config.v0.{models => config}
 import io.flow.postgresql.Authorization
 import play.api.Logger
 
-trait DataBuild extends DataProject {
+class DataBuild @Inject()(
+  buildsDao: BuildsDao,
+  dataProject: DataProject
+) {
 
   private[this] var dataBuild: Option[Build] = None
 
@@ -15,13 +20,13 @@ trait DataBuild extends DataProject {
     * dataBuild var to that build
     */
   def setBuildId(id: String) {
-    BuildsDao.findById(Authorization.All, id) match {
+    buildsDao.findById(Authorization.All, id) match {
       case None => {
         dataBuild = None
         Logger.warn(s"Could not find build with id[$id]")
       }
       case Some(b) => {
-        setProjectId(b.project.id)
+        dataProject.setProjectId(b.project.id)
         dataBuild = Some(b)
       }
     }
@@ -58,7 +63,7 @@ trait DataBuild extends DataProject {
       }
 
       case Some(build) => {
-        withConfig { config =>
+        dataProject.withConfig { config =>
           val bc = config.builds.find(_.name == build.name).getOrElse {
             sys.error(s"Build[${build.id}] does not have a configuration matching name[${build.name}]")
           }

@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
 import db.{BuildsDao, ConfigsDao}
+import io.flow.delta.api.lib.EventLogProcessor
 import io.flow.delta.config.v0.models.ConfigProject
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.ErrorHandler
@@ -29,29 +30,30 @@ object ProjectSupervisorActor {
 
 }
 
-class ProjectSupervisorActor @Inject()(
+abstract class ProjectSupervisorActor @Inject()(
+  buildsDao: BuildsDao,
+  dataProject: DataProject,
+  eventLogProcessor: EventLogProcessor,
   system: ActorSystem
-) extends Actor with ErrorHandler with DataProject with EventLog {
+) extends Actor with ErrorHandler with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
-
-  override lazy val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
 
   def receive = {
 
     case msg @ ProjectSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
-      setProjectId(id)
+      dataProject.setProjectId(id)
     }
 
     case msg @ ProjectSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
       withProject { project =>
         Logger.info(s"PursueDesiredState project[${project.id}]")
-        withConfig { config =>
+        dataProject.withConfig { config =>
           Logger.info(s"  - config: $config")
-          log.runSync("PursueDesiredState") {
+          eventLogProcessor.runSync("PursueDesiredState", log = log) {
             run(project, config, ProjectSupervisorActor.Functions)
 
-            BuildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
+            buildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
               sender ! MainActor.Messages.BuildSync(build.id)
             }
           }
@@ -61,7 +63,7 @@ class ProjectSupervisorActor @Inject()(
 
     case msg @ ProjectSupervisorActor.Messages.CheckTag(name: String) => withErrorHandler(msg) {
       withProject { project =>
-        BuildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
+        buildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
           sender ! MainActor.Messages.BuildCheckTag(build.id, name)
         }
       }
@@ -83,33 +85,33 @@ class ProjectSupervisorActor @Inject()(
       case Some(f) => {
         config.stages.contains(f.stage) match {
           case false => {
-            log.skipped(s"Stage ${f.stage} is disabled")
+            eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log)
             run(project, config, functions.drop(1))
           }
           case true => {
-            log.started(format(f))
+            eventLogProcessor.started(format(f), log = log)
             f.run(project, config).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
-                  log.changed(format(f, desc))
+                  eventLogProcessor.changed(format(f, desc), log = log)
                 }
                 case SupervisorResult.Checkpoint(desc) => {
-                  log.checkpoint(format(f, desc))
+                  eventLogProcessor.checkpoint(format(f, desc), log = log)
                 }
                 case SupervisorResult.Error(desc, ex)=> {
                   val err = ex.getOrElse {
                     new Exception(desc)
                   }
-                  log.completed(format(f, desc), Some(err))
+                  eventLogProcessor.completed(format(f, desc), Some(err), log = log)
                 }
                 case SupervisorResult.Ready(desc)=> {
-                  log.completed(format(f, desc))
+                  eventLogProcessor.completed(format(f, desc), log = log)
                   run(project, config, functions.drop(1))
                 }
               }
 
             }.recover {
-              case ex: Throwable => log.completed(format(f, ex.getMessage), Some(ex))
+              case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log)
             }
           }
         }

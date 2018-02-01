@@ -1,19 +1,18 @@
 package io.flow.delta.actors
 
+import akka.actor.{Actor, ActorSystem}
 import db.{BuildsDao, ConfigsDao, EventsDao}
-import io.flow.postgresql.Authorization
-import io.flow.delta.api.lib.{Github, GithubHelper, Repo}
-import io.flow.delta.lib.config.{Defaults, Parser}
 import io.flow.common.v0.models.UserReference
+import io.flow.delta.api.lib.{GitHubHelper, Github, Repo}
+import io.flow.delta.lib.config.{Defaults, Parser}
 import io.flow.delta.v0.models.Project
 import io.flow.github.v0.models.{HookConfig, HookEvent, HookForm}
 import io.flow.play.actors.ErrorHandler
 import io.flow.play.util.{Config, Constants}
+import io.flow.postgresql.Authorization
 import play.api.Logger
-import akka.actor.{Actor, ActorSystem}
-import scala.util.{Failure, Success, Try}
+
 import scala.concurrent.duration._
-import scala.concurrent.Future
 
 object ProjectActor {
 
@@ -34,25 +33,29 @@ object ProjectActor {
 
 }
 
-class ProjectActor @javax.inject.Inject() (
+abstract class ProjectActor @javax.inject.Inject() (
   config: Config,
+  buildsDao: BuildsDao,
   system: ActorSystem,
   github: Github,
   parser: Parser,
-  override val configsDao: ConfigsDao,
+  configsDao: ConfigsDao,
+  gitHubHelper: GitHubHelper,
+  eventsDao: EventsDao,
+  dataProject: DataProject,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   @com.google.inject.assistedinject.Assisted projectId: String
-) extends Actor with ErrorHandler with DataProject with EventLog {
+) extends Actor with ErrorHandler with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("project-actor-context")
 
   def receive = {
 
     case msg @ ProjectActor.Messages.Setup => withErrorHandler(msg) {
-      setProjectId(projectId)
+      dataProject.setProjectId(projectId)
 
       withProject { project =>
-        withRepo { repo =>
+        dataProject.withRepo { repo =>
           createHooks(project, repo)
         }
       }
@@ -67,7 +70,7 @@ class ProjectActor @javax.inject.Inject() (
 
     case msg @ ProjectActor.Messages.SyncBuilds => withErrorHandler(msg) {
       withProject { project =>
-        BuildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
+        buildsDao.findAllByProjectId(Authorization.All, projectId).foreach { build =>
           mainActor ! MainActor.Messages.BuildDesiredStateUpdated(build.id)
         }
       }
@@ -75,7 +78,7 @@ class ProjectActor @javax.inject.Inject() (
 
     case msg @ ProjectActor.Messages.SyncConfig => withErrorHandler(msg) {
       withProject { project =>
-        withRepo { repo =>
+        dataProject.withRepo { repo =>
           github.dotDeltaFile(UserReference(project.user.id), repo.owner, repo.project).map { configOption =>
             val currentConfig = configOption match {
               case None => Defaults.Config
@@ -89,7 +92,7 @@ class ProjectActor @javax.inject.Inject() (
 
     case msg @ ProjectActor.Messages.SyncIfInactive => withErrorHandler(msg) {
       withProject { project =>
-        EventsDao.findAll(
+        eventsDao.findAll(
           projectId = Some(project.id),
           numberMinutesSinceCreation = Some(5),
           limit = 1
@@ -109,7 +112,7 @@ class ProjectActor @javax.inject.Inject() (
   private[this] val HookEvents = Seq(HookEvent.Push)
 
   private[this] def createHooks(project: Project, repo: Repo) {
-    GithubHelper.apiClientFromUser(project.user.id) match {
+    gitHubHelper.apiClientFromUser(project.user.id) match {
       case None => {
         Logger.warn(s"Could not create github client for user[${project.user.id}]")
       }

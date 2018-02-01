@@ -9,6 +9,8 @@ import play.api.mvc._
 
 @javax.inject.Singleton
 class Events @javax.inject.Inject() (
+  eventsDao: EventsDao,
+  helpers: Helpers,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
 ) extends BaseIdentifiedRestController {
@@ -23,10 +25,10 @@ class Events @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = Identified { request =>
-    withOrderBy(sort) { orderBy =>
+    helpers.withOrderBy(sort) { orderBy =>
       Ok(
         Json.toJson(
-          EventsDao.findAll(
+          eventsDao.findAll(
             ids = optionals(id),
             projectId = project,
             `type` = `type`,
@@ -50,7 +52,7 @@ class Events @javax.inject.Inject() (
   def withEvent(id: String)(
     f: Event => Result
   ): Result = {
-    EventsDao.findById(id) match {
+    eventsDao.findById(id) match {
       case None => {
         Results.NotFound
       }

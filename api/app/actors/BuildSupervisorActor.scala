@@ -5,7 +5,7 @@ import javax.inject.Inject
 import akka.actor.{Actor, ActorSystem}
 import db.{BuildDesiredStatesDao, ConfigsDao}
 import io.flow.delta.actors.functions.SyncDockerImages
-import io.flow.delta.api.lib.StateDiff
+import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
 import io.flow.delta.config.v0.{models => config}
 import io.flow.delta.v0.models.{Build, Version}
 import io.flow.play.actors.ErrorHandler
@@ -22,7 +22,7 @@ object BuildSupervisorActor {
   }
 
   val Functions = Seq(
-    functions.SetDesiredState,
+    functions.SetDesireState,
     functions.SyncDockerImages,
     functions.BuildDockerImage,
     functions.Scale
@@ -30,24 +30,27 @@ object BuildSupervisorActor {
 
 }
 
-class BuildSupervisorActor @Inject()(
+abstract class BuildSupervisorActor @Inject()(
   configsDao: ConfigsDao,
+  buildDesiredStatesDao: BuildDesiredStatesDao,
+  dataBuild: DataBuild,
+  eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
   system: ActorSystem
-) extends Actor with ErrorHandler with DataBuild with BuildEventLog {
+) extends Actor with ErrorHandler with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
     case msg @ BuildSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
-      setBuildId(id)
+      dataBuild.setBuildId(id)
     }
 
     case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
-      withEnabledBuild { build =>
-        withBuildConfig { buildConfig =>
-          log.runSync("PursueDesiredState") {
+      dataBuild.withEnabledBuild { build =>
+        dataBuild.withBuildConfig { buildConfig =>
+          eventLogProcessor.runSync("PursueDesiredState", log = log) {
             run(build, buildConfig.stages, BuildSupervisorActor.Functions)
           }
         }
@@ -60,9 +63,9 @@ class BuildSupervisorActor @Inject()(
       * desired state (or ahead of the desired state), triggers
       * PursueDesiredState. Otherwise a no-op.
       */
-    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {  
-      withEnabledBuild { build =>
-        BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
+    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {
+      dataBuild.withEnabledBuild { build =>
+        buildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
             // Might be first tag
             self ! BuildSupervisorActor.Messages.PursueDesiredState
@@ -98,33 +101,33 @@ class BuildSupervisorActor @Inject()(
       case Some(f) => {
         stages.contains(f.stage) match {
           case false => {
-            log.skipped(s"Stage ${f.stage} is disabled")
+            eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log)
             run(build, stages, functions.drop(1))
           }
           case true => {
-            log.started(format(f))
+            eventLogProcessor.started(format(f), log = log)
             f.run(build).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
-                  log.changed(format(f, desc))
+                  eventLogProcessor.changed(format(f, desc), log = log)
                 }
                 case SupervisorResult.Checkpoint(desc) => {
-                  log.checkpoint(format(f, desc))
+                  eventLogProcessor.checkpoint(format(f, desc), log = log)
                 }
                 case SupervisorResult.Error(desc, ex)=> {
                   val err = ex.getOrElse {
                     new Exception(desc)
                   }
-                  log.completed(format(f, desc), Some(err))
+                  eventLogProcessor.completed(format(f, desc), Some(err), log = log)
                 }
                case SupervisorResult.Ready(desc)=> {
-                  log.completed(format(f, desc))
+                 eventLogProcessor.completed(format(f, desc), log = log)
                   run(build, stages, functions.drop(1))
                 }
               }
 
             }.recover {
-              case ex: Throwable => log.completed(format(f, ex.getMessage), Some(ex))
+              case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log)
             }
           }
         }

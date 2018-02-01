@@ -5,14 +5,17 @@ import io.flow.common.v0.models.json._
 import io.flow.common.v0.models.{User, UserReference}
 import io.flow.delta.v0.models.UserForm
 import io.flow.delta.v0.models.json._
+import io.flow.error.v0.models.json._
 import io.flow.play.controllers.{FlowController, FlowControllerComponents}
 import io.flow.play.util.Validation
 import play.api.libs.json._
 import play.api.mvc._
-import io.flow.error.v0.models.json._
+
 import scala.concurrent.Future
 
 class Users @javax.inject.Inject() (
+  usersDao: UsersDao,
+  userIdentifiersDao: UserIdentifiersDao,
   usersWriteDao: UsersWriteDao,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
@@ -30,7 +33,7 @@ class Users @javax.inject.Inject() (
     } else {
       Ok(
         Json.toJson(
-          UsersDao.findAll(
+          usersDao.findAll(
             id = id,
             email = email,
             identifier = identifier,
@@ -50,7 +53,7 @@ class Users @javax.inject.Inject() (
 
   def getIdentifierById(id: String) = Identified { request =>
     withUser(id) { user =>
-      Ok(Json.toJson(UserIdentifiersDao.latestForUser(request.user, UserReference(id = user.id))))
+      Ok(Json.toJson(userIdentifiersDao.latestForUser(request.user, UserReference(id = user.id))))
     }
   }
 
@@ -73,7 +76,7 @@ class Users @javax.inject.Inject() (
   def withUser(id: String)(
     f: User => Result
   ) = {
-    UsersDao.findById(id) match {
+    usersDao.findById(id) match {
       case None => {
         NotFound
       }

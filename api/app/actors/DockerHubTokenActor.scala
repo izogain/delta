@@ -3,6 +3,7 @@ package io.flow.delta.actors
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorSystem}
+import db.{OrganizationsDao, UsersDao, VariablesDao}
 import io.flow.delta.v0.models.VariableForm
 import io.flow.docker.hub.v0.Client
 import io.flow.docker.hub.v0.models.{Jwt, JwtForm}
@@ -19,6 +20,9 @@ import scala.util.{Failure, Success, Try}
 @javax.inject.Singleton
 class DockerHubToken @javax.inject.Inject() (
   config: Config,
+  organizationsDao: OrganizationsDao,
+  usersDao: UsersDao,
+  variablesDao: VariablesDao,
   wSClient: WSClient
 ) {
 
@@ -33,12 +37,12 @@ class DockerHubToken @javax.inject.Inject() (
     */
   private[this] lazy val orgTokenMap = {
     val map = scala.collection.mutable.HashMap.empty[String, String]
-    db.OrganizationsDao.findAll(auth = auth).foreach { organization =>
-      val token = db.VariablesDao.findByOrganizationAndKey(auth = auth, organization = organization.id, key = tokenKey) match {
+    organizationsDao.findAll(auth = auth).foreach { organization =>
+      val token = variablesDao.findByOrganizationAndKey(auth = auth, organization = organization.id, key = tokenKey) match {
         case None => {
           val jwt = generate
           val form = VariableForm(organization.id, tokenKey, jwt)
-          db.VariablesDao.upsert(Authorization.All, db.UsersDao.systemUser, form)
+          variablesDao.upsert(Authorization.All, usersDao.systemUser, form)
           jwt
         }
         case Some(variable) => variable.value
@@ -80,10 +84,10 @@ class DockerHubToken @javax.inject.Inject() (
     * Should iterate through organizations and update their tokens
     */
   def refresh()(implicit ec: ExecutionContext) {
-    db.OrganizationsDao.findAll(Authorization.All).foreach { organization =>
+    organizationsDao.findAll(Authorization.All).foreach { organization =>
       generateTokenFuture.map { jwt =>
         val form = VariableForm(organization.id, tokenKey, jwt.token)
-        db.VariablesDao.upsert(Authorization.All, db.UsersDao.systemUser, form) match {
+        variablesDao.upsert(Authorization.All, usersDao.systemUser, form) match {
           case Left(errors) => Logger.error(s"Error refreshing docker hub JWT token: $errors")
           case Right(variable) => {
             orgTokenMap += (organization.id -> variable.value)
