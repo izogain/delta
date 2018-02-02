@@ -22,7 +22,7 @@ object BuildSupervisorActor {
   }
 
   val Functions = Seq(
-    functions.SetDesireState,
+    functions.SetDesiredState,
     functions.SyncDockerImages,
     functions.BuildDockerImage,
     functions.Scale

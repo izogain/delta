@@ -12,7 +12,7 @@ import io.flow.postgresql.{Authorization, OrderBy}
 
 import scala.concurrent.Future
 
-object SetDesireState extends BuildSupervisorFunction {
+object SetDesiredState extends BuildSupervisorFunction {
 
   private[this] val setDesiredState = play.api.Play.current.injector.instanceOf[SetDesiredState]
 
