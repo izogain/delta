@@ -3,6 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
+import com.google.inject.assistedinject.Assisted
 import db.{BuildsDao, ConfigsDao, OrganizationsDao, ProjectsDao}
 import io.flow.delta.api.lib.EventLogProcessor
 import io.flow.delta.config.v0.models.ConfigProject
@@ -28,6 +29,10 @@ object ProjectSupervisorActor {
     functions.Tag
   )
 
+  trait Factory {
+    def apply(id: String): Actor
+  }
+
 }
 
 class ProjectSupervisorActor @Inject()(
@@ -37,7 +42,8 @@ class ProjectSupervisorActor @Inject()(
   override val organizationsDao: OrganizationsDao,
   eventLogProcessor: EventLogProcessor,
   system: ActorSystem,
-  implicit val app: Application
+  implicit val app: Application,
+  @Assisted id: String
 ) extends Actor with ErrorHandler with DataBuild with DataProject with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")

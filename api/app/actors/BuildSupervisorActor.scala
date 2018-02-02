@@ -3,6 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
+import com.google.inject.assistedinject.Assisted
 import db._
 import io.flow.delta.actors.functions.SyncDockerImages
 import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
@@ -29,6 +30,10 @@ object BuildSupervisorActor {
     functions.Scale
   )
 
+  trait Factory {
+    def apply(id: String): Actor
+  }
+
 }
 
 class BuildSupervisorActor @Inject()(
@@ -41,7 +46,8 @@ class BuildSupervisorActor @Inject()(
   eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
   system: ActorSystem,
-  implicit val app: Application
+  implicit val app: Application,
+  @Assisted id: String
 ) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
