@@ -1,5 +1,7 @@
 package io.flow.delta.api.lib
 
+import javax.inject.Inject
+
 import db._
 import io.flow.common.v0.models.{Name, User, UserReference}
 import io.flow.delta.v0.models.{GithubUserForm, UserForm}
@@ -81,7 +83,7 @@ trait Github {
     * Given an auth validation code, pings the github UI to access the
     * user data, upserts that user with the delta database, and
     * returns the user (or a list of errors).
-    * 
+    *
     * @param code The oauth authorization code from github
     */
   def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], User]]
@@ -104,7 +106,7 @@ trait Github {
   ) (
     implicit ec: ExecutionContext
   ): Future[Option[String]]
-  
+
   /**
     * Fetches the specified file, if it exists, from this repo
     */
@@ -113,7 +115,7 @@ trait Github {
   ) (
     implicit ec: ExecutionContext
   ) = file(user, owner, repo, DotDeltaPath)
-  
+
   /**
     * Recursively calls the github API until we either:
     *  - consume all records
@@ -147,7 +149,7 @@ trait Github {
       }
     }
   }
-  
+
   /**
     * For this user, returns the oauth token if available
     */
@@ -312,24 +314,74 @@ class DefaultGithub @javax.inject.Inject() (
       }
     }
   }
-  
+
   override def oauthToken(user: UserReference): Option[String] = {
     tokensDao.getCleartextGithubOauthTokenByUserId(user.id)
   }
 
 }
 
-class MockGithub() extends Github {
+class MockGithub @Inject()(
+  gitHubHelper: GitHubHelper,
+  githubUsersDao: GithubUsersDao,
+  tokensDao: TokensDao,
+  usersDao: UsersDao,
+  usersWriteDao: UsersWriteDao
+) extends Github {
 
   override def getUserFromCode(code: String)(implicit ec: ExecutionContext): Future[Either[Seq[String], User]] = {
-    Future {
-      MockGithubData.getUserByCode(code) match {
-        case None => Left(Seq("Invalid access code"))
-        case Some(u) => Right(User(
-          id = u.githubId.toString,
-          email = Some(u.emails.mkString(", ")),
-          name = Name(first = u.name)
-        ))
+    getGithubUserFromCode(code).map {
+      case Left(errors) => Left(errors)
+      case Right(githubUserWithToken) => {
+        val userResult: Either[Seq[String], User] = usersDao.findByGithubUserId(githubUserWithToken.githubId) match {
+          case Some(user) => {
+            Right(user)
+          }
+          case None => {
+            githubUserWithToken.emails.headOption flatMap { email =>
+              usersDao.findByEmail(email)
+            } match {
+              case Some(user) => {
+                Right(user)
+              }
+              case None => {
+                usersWriteDao.create(
+                  createdBy = None,
+                  form = UserForm(
+                    email = githubUserWithToken.emails.headOption,
+                    name = githubUserWithToken.name.map(gitHubHelper.parseName(_))
+                  )
+                )
+              }
+            }
+          }
+        }
+
+        userResult match {
+          case Left(errors) => {
+            Left(errors)
+          }
+          case Right(user) => {
+            githubUsersDao.upsertById(
+              createdBy = None,
+              form = GithubUserForm(
+                userId = user.id,
+                githubUserId = githubUserWithToken.githubId,
+                login = githubUserWithToken.login
+              )
+            )
+
+            tokensDao.setLatestByTag(
+              createdBy = UserReference(id = user.id),
+              form = InternalTokenForm.GithubOauth(
+                userId = user.id,
+                token = githubUserWithToken.token
+              )
+            )
+
+            Right(user)
+          }
+        }
       }
     }
   }
@@ -364,7 +416,6 @@ class MockGithub() extends Github {
 }
 
 object MockGithubData {
-
   private[this] var githubUserByCodes = scala.collection.mutable.Map[String, GithubUserData]()
   private[this] var userTokens = scala.collection.mutable.Map[String, String]()
   private[this] var repositories = scala.collection.mutable.Map[String, GithubRepository]()
