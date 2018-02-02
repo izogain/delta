@@ -10,21 +10,23 @@ import io.flow.delta.v0.models.{Build, Docker, ImageForm}
 import io.flow.docker.registry.v0.Client
 import io.flow.play.util.Constants
 import io.flow.postgresql.Authorization
+import play.api.Application
 import play.api.libs.ws.WSClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object SyncDockerImages extends BuildSupervisorFunction {
 
-  private[this] val syncDockerImages = play.api.Play.current.injector.instanceOf[SyncDockerImages]
-
   override val stage = BuildStage.SyncDockerImage
 
   override def run(
     build: Build
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
-  ): Future[SupervisorResult] = syncDockerImages.run(build)
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
+  ): Future[SupervisorResult] = {
+    val syncDockerImages = app.injector.instanceOf[SyncDockerImages]
+    syncDockerImages.run(build)
+  }
 
 }
 

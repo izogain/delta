@@ -8,20 +8,20 @@ import io.flow.delta.config.v0.models.BuildStage
 import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Build, EventType}
 import io.flow.postgresql.Authorization
+import play.api.Application
 
 import scala.concurrent.Future
 
 object BuildDockerImage extends BuildSupervisorFunction {
-
-  private[this] val buildDockerImage = play.api.Play.current.injector.instanceOf[BuildDockerImage]
 
   override val stage = BuildStage.BuildDockerImage
 
   override def run(
     build: Build
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
   ): Future[SupervisorResult] = Future {
+    val buildDockerImage = app.injector.instanceOf[BuildDockerImage]
     buildDockerImage.run(build)
   }
 

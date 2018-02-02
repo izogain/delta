@@ -10,6 +10,7 @@ import io.flow.delta.config.v0.{models => config}
 import io.flow.delta.v0.models.{Build, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
+import play.api.Application
 
 object BuildSupervisorActor {
 
@@ -39,7 +40,8 @@ class BuildSupervisorActor @Inject()(
   dataBuild: DataBuild,
   eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
-  system: ActorSystem
+  system: ActorSystem,
+  implicit val app: Application
 ) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")

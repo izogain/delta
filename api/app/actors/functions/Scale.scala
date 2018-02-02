@@ -8,20 +8,20 @@ import io.flow.delta.config.v0.models.BuildStage
 import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Build
 import org.joda.time.DateTime
+import play.api.Application
 
 import scala.concurrent.Future
 
 object Scale extends BuildSupervisorFunction {
-
-  private[this] val scale = play.api.Play.current.injector.instanceOf[Scale]
 
   override val stage = BuildStage.Scale
 
   override def run(
     build: Build
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
   ): Future[SupervisorResult] = Future {
+    val scale = app.injector.instanceOf[Scale]
     scale.run(build)
   }
 

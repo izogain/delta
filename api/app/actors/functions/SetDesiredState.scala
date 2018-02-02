@@ -9,20 +9,20 @@ import io.flow.delta.lib.StateFormatter
 import io.flow.delta.v0.models.{Build, StateForm, Version}
 import io.flow.play.util.Constants
 import io.flow.postgresql.{Authorization, OrderBy}
+import play.api.Application
 
 import scala.concurrent.Future
 
 object SetDesiredState extends BuildSupervisorFunction {
-
-  private[this] val setDesiredState = play.api.Play.current.injector.instanceOf[SetDesiredState]
 
   override val stage = BuildStage.SetDesiredState
 
   override def run(
     build: Build
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
   ): Future[SupervisorResult] = Future {
+    val setDesiredState = app.injector.instanceOf[SetDesiredState]
     setDesiredState.run(build)
   }
 
