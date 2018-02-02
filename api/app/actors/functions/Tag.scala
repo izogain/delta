@@ -45,7 +45,8 @@ object Tag extends ProjectSupervisorFunction {
 class Tag @Inject()(
   github: Github,
   shasDao: ShasDao,
-  tagsWriteDao: TagsWriteDao
+  tagsWriteDao: TagsWriteDao,
+  email: Email
 ) {
 
   private[this] case class Tag(semver: Semver, sha: String)
@@ -53,8 +54,6 @@ class Tag @Inject()(
   private[this] def projectRepo(project: Project): Repo = GithubUtil.parseUri(project.uri).right.getOrElse {
     sys.error(s"Project id[${project.id}] uri[${project.uri}]: Could not parse")
   }
-
-  private[this] val email = play.api.Play.current.injector.instanceOf[Email]
 
   def run(project: Project, branchName: String)(
     implicit ec: scala.concurrent.ExecutionContext
