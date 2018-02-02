@@ -50,6 +50,7 @@ case class Deployer(build: Build, last: State, desired: State) {
   }
 
   private[this] def scaleDiff(): SupervisorResult = {
+    println(s"LAST! ${last.versions} DESIRED ${desired.versions}")
     StateDiff.up(last.versions, desired.versions).toList match {
       case Nil => {
         StateDiff.down(last.versions, desired.versions).toList match {

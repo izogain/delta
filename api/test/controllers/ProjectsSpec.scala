@@ -2,8 +2,6 @@ package controllers
 
 import java.util.UUID
 
-import play.api.test._
-
 class ProjectsSpec extends MockClient {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,85 +10,85 @@ class ProjectsSpec extends MockClient {
   lazy val project1 = createProject(org)()
   lazy val project2 = createProject(org)()
 
-  "GET /projects by id" in new WithServer(port=port) {
+  "GET /projects by id" in {
     await(
-      identifiedClient().projects.get(id = Some(Seq(project1.id)))
+      identifiedClientSystemUser().projects.get(id = Some(Seq(project1.id)))
     ).map(_.id) must be(
       Seq(project1.id)
     )
 
     await(
-      identifiedClient().projects.get(id = Some(Seq(UUID.randomUUID.toString)))
+      identifiedClientSystemUser().projects.get(id = Some(Seq(UUID.randomUUID.toString)))
     ).map(_.id) must be(
       Nil
     )
   }
 
-  "GET /projects by name" in new WithServer(port=port) {
+  "GET /projects by name" in {
     await(
-      identifiedClient().projects.get(name = Some(project1.name))
+      identifiedClientSystemUser().projects.get(name = Some(project1.name))
     ).map(_.name) must be(
       Seq(project1.name)
     )
 
     await(
-      identifiedClient().projects.get(name = Some(project1.name.toUpperCase))
+      identifiedClientSystemUser().projects.get(name = Some(project1.name.toUpperCase))
     ).map(_.name) must be(
       Seq(project1.name)
     )
 
     await(
-      identifiedClient().projects.get(name = Some(UUID.randomUUID.toString))
+      identifiedClientSystemUser().projects.get(name = Some(UUID.randomUUID.toString))
     ) must be(
       Nil
     )
   }
 
-  "GET /projects/:id" in new WithServer(port=port) {
-    await(identifiedClient().projects.getById(project1.id)).id must be(project1.id)
-    await(identifiedClient().projects.getById(project2.id)).id must be(project2.id)
+  "GET /projects/:id" in {
+    await(identifiedClientSystemUser().projects.getById(project1.id)).id must be(project1.id)
+    await(identifiedClientSystemUser().projects.getById(project2.id)).id must be(project2.id)
 
     expectNotFound {
-      identifiedClient().projects.getById(UUID.randomUUID.toString)
+      identifiedClientSystemUser().projects.getById(UUID.randomUUID.toString)
     }
   }
 
-  "POST /projects" in new WithServer(port=port) {
+  "POST /projects" in {
     val form = createProjectForm(org)
-    val project = await(identifiedClient().projects.post(form))
+    val project = await(identifiedClientSystemUser().projects.post(form))
     project.name must be(form.name)
     project.scms must be(form.scms)
     project.uri must be(form.uri)
   }
 
-  "POST /projects validates duplicate name" in new WithServer(port=port) {
+  "POST /projects validates duplicate name" in {
     expectErrors(
-      identifiedClient().projects.post(createProjectForm(org).copy(name = project1.name))
-    ).errors.map(_.message) must be(
+      identifiedClientSystemUser().projects.post(createProjectForm(org).copy(name = project1.name))
+    ).genericError.messages must be(
       Seq("Project with this name already exists")
     )
   }
 
-  "PUT /projects/:id" in new WithServer(port=port) {
+  "PUT /projects/:id" in {
     val form = createProjectForm(org)
     val project = createProject(org)(form)
     val newUri = "http://github.com/mbryzek/test"
-    await(identifiedClient().projects.putById(project.id, form.copy(uri = newUri)))
-    await(identifiedClient().projects.getById(project.id)).uri must be(newUri)
+    await(identifiedClientSystemUser().projects.putById(project.id, form.copy(uri = newUri)))
+    await(identifiedClientSystemUser().projects.getById(project.id)).uri must be(newUri)
   }
 
-  "DELETE /projects" in new WithServer(port=port) {
+  "DELETE /projects" in {
     val project = createProject(org)()
     await(
-      identifiedClient().projects.deleteById(project.id)
+      identifiedClientSystemUser().projects.deleteById(project.id)
     ) must be(())
 
     expectNotFound(
-      identifiedClient().projects.getById(project.id)
+      identifiedClientSystemUser().projects.getById(project.id)
     )
 
     expectNotFound(
-      identifiedClient().projects.deleteById(project.id)
+      identifiedClientSystemUser().projects.deleteById(project.id)
     )
   }
 

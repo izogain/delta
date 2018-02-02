@@ -162,6 +162,7 @@ class DefaultGithub @javax.inject.Inject() (
   githubUsersDao: GithubUsersDao,
   tokensDao: TokensDao,
   usersDao: UsersDao,
+  usersWriteDao: UsersWriteDao,
   wSClient: WSClient
 ) extends Github {
 
@@ -192,7 +193,7 @@ class DefaultGithub @javax.inject.Inject() (
                 Right(user)
               }
               case None => {
-                play.api.Play.current.injector.instanceOf[UsersWriteDao].create(
+                usersWriteDao.create(
                   createdBy = None,
                   form = UserForm(
                     email = githubUserWithToken.emails.headOption,

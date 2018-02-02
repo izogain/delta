@@ -3,7 +3,6 @@ package controllers
 import io.flow.delta.api.lib.MockGithubData
 import io.flow.delta.v0.models.GithubAuthenticationForm
 import io.flow.github.v0.models.{OwnerType, User => GithubUser}
-import play.api.test._
 
 class GithubUsersSpec extends MockClient {
 
@@ -24,13 +23,14 @@ class GithubUsersSpec extends MockClient {
     )
   }
 
-  "POST /authentications/github with valid token" in new WithServer(port=port) {
+  "POST /authentications/github with valid token" in {
     val githubUser = createLocalGithubUser()
     val code = "test"
 
     MockGithubData.addUser(githubUser, code)
 
     val user = await(anonClient.githubUsers.postGithub(GithubAuthenticationForm(code = code)))
+
     user.email must be(githubUser.email)
 
     githubUsersDao.findAll(userId = Some(user.id), limit = 1).headOption.map(_.user.id) must be(Some(user.id))
@@ -40,7 +40,7 @@ class GithubUsersSpec extends MockClient {
     user2.email must be(githubUser.email)
   }
 
-  "POST /authentications/github accepts account w/out email" in new WithServer(port=port) {
+  "POST /authentications/github accepts account w/out email" in {
     val githubUser = createLocalGithubUser().copy(email = None)
     val code = "test"
 

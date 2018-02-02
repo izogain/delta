@@ -2,12 +2,12 @@ package controllers
 
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.Client
-import io.flow.play.util.{AuthHeaders, FlowSession}
+import io.flow.play.util.{AuthHeaders, Constants, FlowSession}
 import io.flow.test.utils.{FlowMockClient, FlowPlaySpec}
 
 trait MockClient extends FlowPlaySpec with db.Helpers with FlowMockClient[
     io.flow.delta.v0.Client,
-    io.flow.delta.v0.errors.ErrorsResponse,
+    io.flow.delta.v0.errors.GenericErrorResponse,
     io.flow.delta.v0.errors.UnitResponse
   ] {
 
@@ -24,4 +24,9 @@ trait MockClient extends FlowPlaySpec with db.Helpers with FlowMockClient[
       defaultHeaders = authHeaders.headers(auth)
     )
   }
+
+  def identifiedClientSystemUser() = createIdentifiedClient(
+    s"http://localhost:$port",
+    Constants.SystemUser
+  )
 }

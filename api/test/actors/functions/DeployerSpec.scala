@@ -26,7 +26,7 @@ class DeployerSpec extends FlowPlaySpec with db.Helpers {
 
     val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
     setLastStates(build, Nil)
-    SetDesiredState.run(build) must be(
+    await(SetDesiredState.run(build)) must be(
       SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances")
     )
     Deployer(build, last(build), desired(build)).scale() must be(
@@ -34,7 +34,7 @@ class DeployerSpec extends FlowPlaySpec with db.Helpers {
     )
     
     val tag2 = createTag(createTagForm(project).copy(name = "0.0.2"))
-    SetDesiredState.run(build) must be(
+    await(SetDesiredState.run(build)) must be(
       SupervisorResult.Change("Desired state changed to: 0.0.2: 2 instances")
     )
     Deployer(build, last(build), desired(build)).scale() must be(
@@ -43,7 +43,7 @@ class DeployerSpec extends FlowPlaySpec with db.Helpers {
     setLastStates(build, Seq(Version("0.0.1", 2), Version("0.0.2", 2)))
 
     val tag3 = createTag(createTagForm(project).copy(name = "0.0.3"))
-    SetDesiredState.run(build) must be(
+    await(SetDesiredState.run(build)) must be(
       SupervisorResult.Change("Desired state changed to: 0.0.3: 2 instances")
     )
 

@@ -1,12 +1,7 @@
 package io.flow.delta.actors.functions
 
 import io.flow.delta.actors.SupervisorResult
-import io.flow.postgresql.Authorization
 import io.flow.test.utils.FlowPlaySpec
-import org.scalatest._
-import play.api.test._
-import play.api.test.Helpers._
-import org.scalatestplus.play._
 
 class SetDesiredStateSpec extends FlowPlaySpec with db.Helpers {
 
@@ -14,7 +9,7 @@ class SetDesiredStateSpec extends FlowPlaySpec with db.Helpers {
 
   "no-op if no tags" in {
     val build = upsertBuild()
-    SetDesiredState.run(build) must be(SupervisorResult.Checkpoint("Project does not have any tags"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Checkpoint("Project does not have any tags")))
   }
 
   "sets desired state to latest tag" in {
@@ -22,13 +17,13 @@ class SetDesiredStateSpec extends FlowPlaySpec with db.Helpers {
     val build = upsertBuild(project)
 
     val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
-    SetDesiredState.run(build) must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances")))
 
     val tag2 = createTag(createTagForm(project).copy(name = "0.0.2"))
-    SetDesiredState.run(build) must be(SupervisorResult.Change("Desired state changed to: 0.0.2: 2 instances"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Change("Desired state changed to: 0.0.2: 2 instances")))
 
     // No-op if no change
-    SetDesiredState.run(build) must be(SupervisorResult.Ready("Desired versions remain: 0.0.2"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Ready("Desired versions remain: 0.0.2")))
   }
 
   "once set, desired state does not reset number of instances" in {
@@ -37,12 +32,12 @@ class SetDesiredStateSpec extends FlowPlaySpec with db.Helpers {
     val build = upsertBuild(project)
 
     val tag1 = createTag(createTagForm(project).copy(name = "0.0.1"))
-    SetDesiredState.run(build) must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Change("Desired state changed to: 0.0.1: 2 instances")))
 
     setLastState(build, "0.0.1", 10)
 
     // No-op if no change
-    SetDesiredState.run(build) must be(SupervisorResult.Ready("Desired versions remain: 0.0.1"))
+    SetDesiredState.run(build).map(_ must be(SupervisorResult.Ready("Desired versions remain: 0.0.1")))
   }
 
 }
