@@ -3,7 +3,7 @@ package io.flow.delta.actors.functions
 import javax.inject.Inject
 
 import db.{BuildDesiredStatesDao, EventsDao, ImagesDao}
-import io.flow.delta.actors.{BuildSupervisorFunction, MainActor, MainActorProvider, SupervisorResult}
+import io.flow.delta.actors.{BuildSupervisorFunction, MainActor, SupervisorResult}
 import io.flow.delta.config.v0.models.BuildStage
 import io.flow.delta.lib.Text
 import io.flow.delta.v0.models.{Build, EventType}
@@ -36,7 +36,8 @@ object BuildDockerImage extends BuildSupervisorFunction {
 class BuildDockerImage @Inject()(
   buildDesiredStatesDao: BuildDesiredStatesDao,
   eventsDao: EventsDao,
-  imagesDao: ImagesDao
+  imagesDao: ImagesDao,
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
   def run(build: Build)(
     implicit ec: scala.concurrent.ExecutionContext
@@ -49,11 +50,11 @@ class BuildDockerImage @Inject()(
       case Some(state) => {
         val versions = state.versions.flatMap { version =>
           imagesDao.findByBuildIdAndVersion(build.id, version.name) match {
-            case Some(i) => {
+            case Some(_) => {
               None
             }
             case None => {
-              MainActorProvider.ref ! MainActor.Messages.BuildDockerImage(build.id, version.name)
+              mainActor ! MainActor.Messages.BuildDockerImage(build.id, version.name)
               Some(version.name)
             }
           }

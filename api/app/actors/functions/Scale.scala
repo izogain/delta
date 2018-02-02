@@ -3,10 +3,10 @@ package io.flow.delta.actors.functions
 import javax.inject.Inject
 
 import db.{BuildDesiredStatesDao, BuildLastStatesDao}
-import io.flow.delta.actors.{BuildActor, BuildSupervisorFunction, MainActor, MainActorProvider, SupervisorResult}
+import io.flow.delta.actors.{BuildActor, BuildSupervisorFunction, MainActor, SupervisorResult}
 import io.flow.delta.config.v0.models.BuildStage
-import io.flow.postgresql.Authorization
 import io.flow.delta.v0.models.Build
+import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
 import play.api.Application
 
@@ -35,7 +35,8 @@ object Scale extends BuildSupervisorFunction {
   */
 class Scale @Inject()(
   buildDesiredStatesDao: BuildDesiredStatesDao,
-  buildLastStatesDao: BuildLastStatesDao
+  buildLastStatesDao: BuildLastStatesDao,
+  @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef
 ) {
 
   private[this] val SecondsUntilStale = (BuildActor.CheckLastStateIntervalSeconds * 2.5).toInt
@@ -54,18 +55,18 @@ class Scale @Inject()(
       }
 
       case (None, Some(_)) => {
-        MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
+        mainActor ! MainActor.Messages.CheckLastState(build.id)
         SupervisorResult.Checkpoint(s"Requested CheckLastState as last state is not known")
       }
 
       case (Some(last), Some(desired)) => {
         isRecent(last.timestamp) match {
           case false => {
-            MainActorProvider.ref ! MainActor.Messages.CheckLastState(build.id)
+            mainActor ! MainActor.Messages.CheckLastState(build.id)
             SupervisorResult.Error(s"Requested CheckLastState as last state is too old[${last.timestamp}]")
           }
           case true => {
-            Deployer(build, last, desired).scale()
+            Deployer(build, last, desired, mainActor).scale()
           }
         }
       }
