@@ -59,6 +59,9 @@ class MainActor @javax.inject.Inject() (
   dockerHubFactory: DockerHubActor.Factory,
   dockerHubTokenFactory: DockerHubTokenActor.Factory,
   projectFactory: ProjectActor.Factory,
+  userActorFactory: UserActor.Factory,
+  projectSupervisorActorFactory: ProjectSupervisorActor.Factory,
+  buildSupervisorActorFactory: BuildSupervisorActor.Factory,
   override val config: io.flow.play.util.Config,
   system: ActorSystem,
   playEnv: Environment,
@@ -269,7 +272,7 @@ class MainActor @javax.inject.Inject() (
   def upsertUserActor(id: String): ActorRef = {
     this.synchronized {
       userActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[UserActor], name = randomName())
+        val ref = injectedChild(userActorFactory(id), name = randomName())
         ref ! UserActor.Messages.Data(id)
         userActors += (id -> ref)
         ref
@@ -302,7 +305,7 @@ class MainActor @javax.inject.Inject() (
   def upsertProjectSupervisorActor(id: String): ActorRef = {
     this.synchronized {
       projectSupervisorActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[ProjectSupervisorActor], name = randomName())
+        val ref = injectedChild(projectSupervisorActorFactory(id), name = randomName())
         ref ! ProjectSupervisorActor.Messages.Data(id)
         projectSupervisorActors += (id -> ref)
         ref
@@ -313,7 +316,7 @@ class MainActor @javax.inject.Inject() (
   def upsertBuildSupervisorActor(id: String): ActorRef = {
     this.synchronized {
       buildSupervisorActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[BuildSupervisorActor], name = randomName())
+        val ref = injectedChild(buildSupervisorActorFactory(id), name = randomName())
         ref ! BuildSupervisorActor.Messages.Data(id)
         buildSupervisorActors += (id -> ref)
         ref

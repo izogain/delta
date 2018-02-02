@@ -3,6 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.Actor
+import com.google.inject.assistedinject.Assisted
 import db.{SubscriptionsDao, UserIdentifiersDao, UsersDao}
 import io.flow.common.v0.models.{User, UserReference}
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
@@ -17,12 +18,17 @@ object UserActor {
     case object Created extends Message
   }
 
+  trait Factory {
+    def apply(id: String): Actor
+  }
+
 }
 
 class UserActor @Inject()(
   subscriptionsDao: SubscriptionsDao,
   usersDao: UsersDao,
-  userIdentifiersDao: UserIdentifiersDao
+  userIdentifiersDao: UserIdentifiersDao,
+  @Assisted id: String
 ) extends Actor with ErrorHandler {
 
   var dataUser: Option[User] = None
