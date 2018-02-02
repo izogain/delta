@@ -192,10 +192,13 @@ case class EC2ContainerService @javax.inject.Inject() (
     */
   private[this] case class ElbHealthyInstances(projectId: String) {
 
+    @volatile
     private[this] var initialized = false
+
+    @volatile
     private[this] var instances: Seq[String] = Nil
 
-    def instances(): Seq[String] = {
+    def getInstances(): Seq[String] = {
       this.synchronized {
         if (!initialized) {
           instances = elb.getHealthyInstances(projectId)
@@ -206,7 +209,7 @@ case class EC2ContainerService @javax.inject.Inject() (
     }
 
     def contains(name: String): Boolean = {
-      instances().contains(name)
+      getInstances().contains(name)
     }
 
   }
