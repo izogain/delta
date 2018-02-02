@@ -42,7 +42,6 @@ class BuildSupervisorActor @Inject()(
   override val projectsDao: ProjectsDao,
   override val organizationsDao: OrganizationsDao,
   buildDesiredStatesDao: BuildDesiredStatesDao,
-  dataBuild: DataBuild,
   eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
   system: ActorSystem,
@@ -55,12 +54,12 @@ class BuildSupervisorActor @Inject()(
   def receive = {
 
     case msg @ BuildSupervisorActor.Messages.Data(id) => withErrorHandler(msg) {
-      dataBuild.setBuildId(id)
+      setBuildId(id)
     }
 
     case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
-        dataBuild.withBuildConfig { buildConfig =>
+      withEnabledBuild { build =>
+        withBuildConfig { buildConfig =>
           eventLogProcessor.runSync("PursueDesiredState", log = log) {
             run(build, buildConfig.stages, BuildSupervisorActor.Functions)
           }
@@ -75,7 +74,7 @@ class BuildSupervisorActor @Inject()(
       * PursueDesiredState. Otherwise a no-op.
       */
     case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {
-      dataBuild.withEnabledBuild { build =>
+      withEnabledBuild { build =>
         buildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
             // Might be first tag
