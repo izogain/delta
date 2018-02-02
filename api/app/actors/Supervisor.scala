@@ -95,7 +95,7 @@ trait ProjectSupervisorFunction {
     project: Project,
     config: ConfigProject
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
   ): Future[SupervisorResult]
 
 }

@@ -9,7 +9,7 @@ import io.flow.delta.config.v0.models.ConfigProject
 import io.flow.delta.v0.models.Project
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
-import play.api.Logger
+import play.api.{Application, Logger}
 
 object ProjectSupervisorActor {
 
@@ -36,7 +36,8 @@ class ProjectSupervisorActor @Inject()(
   override val projectsDao: ProjectsDao,
   override val organizationsDao: OrganizationsDao,
   eventLogProcessor: EventLogProcessor,
-  system: ActorSystem
+  system: ActorSystem,
+  implicit val app: Application
 ) extends Actor with ErrorHandler with DataBuild with DataProject with EventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
@@ -65,7 +66,7 @@ class ProjectSupervisorActor @Inject()(
 
     case msg @ ProjectSupervisorActor.Messages.CheckTag(name: String) => withErrorHandler(msg) {
       withProject { project =>
-        buildsDao.findAllByProjectId(Authorization.All, project.id).map { build =>
+        buildsDao.findAllByProjectId(Authorization.All, project.id).foreach { build =>
           sender ! MainActor.Messages.BuildCheckTag(build.id, name)
         }
       }
@@ -85,37 +86,32 @@ class ProjectSupervisorActor @Inject()(
         SupervisorResult.Ready("All functions returned without modification")
       }
       case Some(f) => {
-        config.stages.contains(f.stage) match {
-          case false => {
-            eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log)
-            run(project, config, functions.drop(1))
-          }
-          case true => {
-            eventLogProcessor.started(format(f), log = log)
-            f.run(project, config).map { result =>
-              result match {
-                case SupervisorResult.Change(desc) => {
-                  eventLogProcessor.changed(format(f, desc), log = log)
-                }
-                case SupervisorResult.Checkpoint(desc) => {
-                  eventLogProcessor.checkpoint(format(f, desc), log = log)
-                }
-                case SupervisorResult.Error(desc, ex)=> {
-                  val err = ex.getOrElse {
-                    new Exception(desc)
-                  }
-                  eventLogProcessor.completed(format(f, desc), Some(err), log = log)
-                }
-                case SupervisorResult.Ready(desc)=> {
-                  eventLogProcessor.completed(format(f, desc), log = log)
-                  run(project, config, functions.drop(1))
-                }
-              }
-
-            }.recover {
-              case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log)
+        if (config.stages.contains(f.stage)) {
+          eventLogProcessor.started(format(f), log = log)
+          f.run(project, config).map {
+            case SupervisorResult.Change(desc) => {
+              eventLogProcessor.changed(format(f, desc), log = log)
             }
+            case SupervisorResult.Checkpoint(desc) => {
+              eventLogProcessor.checkpoint(format(f, desc), log = log)
+            }
+            case SupervisorResult.Error(desc, ex)=> {
+              val err = ex.getOrElse {
+                new Exception(desc)
+              }
+              eventLogProcessor.completed(format(f, desc), Some(err), log = log)
+            }
+            case SupervisorResult.Ready(desc)=> {
+              eventLogProcessor.completed(format(f, desc), log = log)
+              run(project, config, functions.drop(1))
+            }
+
+          }.recover {
+            case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log)
           }
+        } else {
+          eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log)
+          run(project, config, functions.drop(1))
         }
       }
     }

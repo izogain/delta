@@ -9,12 +9,11 @@ import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
 import io.flow.delta.v0.models.Project
 import io.flow.play.util.Constants
 import io.flow.postgresql.Authorization
+import play.api.Application
 
 import scala.concurrent.Future
 
 object SyncShas extends ProjectSupervisorFunction {
-
-  private[this] val syncShas = play.api.Play.current.injector.instanceOf[SyncShas]
 
   override val stage = ProjectStage.SyncShas
 
@@ -22,13 +21,14 @@ object SyncShas extends ProjectSupervisorFunction {
     project: Project,
     config: ConfigProject
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
-  ): Future[SupervisorResult] = Future.sequence {
-    config.branches.map { branch =>
-      syncShas.run(project, branch.name)
-    }
-  }.map {
-    SupervisorResult.merge(_)
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
+  ): Future[SupervisorResult] = {
+    val syncShas = app.injector.instanceOf[SyncShas]
+    Future.sequence {
+      config.branches.map { branch =>
+        syncShas.run(project, branch.name)
+      }
+    }.map(SupervisorResult.merge)
   }
 }
 

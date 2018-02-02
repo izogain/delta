@@ -9,12 +9,11 @@ import io.flow.delta.config.v0.models.{ConfigProject, ProjectStage}
 import io.flow.delta.v0.models.Project
 import io.flow.play.util.Constants
 import io.flow.postgresql.Authorization
+import play.api.Application
 
 import scala.concurrent.Future
 
 object SyncTags extends ProjectSupervisorFunction {
-
-  private[this] val syncTags = play.api.Play.current.injector.instanceOf[SyncTags]
 
   override val stage = ProjectStage.SyncTags
 
@@ -22,8 +21,11 @@ object SyncTags extends ProjectSupervisorFunction {
     project: Project,
     config: ConfigProject
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
-  ): Future[SupervisorResult] = syncTags.run(project)
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
+  ): Future[SupervisorResult] = {
+    val syncTags = app.injector.instanceOf[SyncTags]
+    syncTags.run(project)
+  }
 
 }
 

@@ -12,6 +12,7 @@ import io.flow.github.v0.models.{RefForm, TagForm, Tagger}
 import io.flow.play.util.Constants
 import io.flow.postgresql.Authorization
 import org.joda.time.DateTime
+import play.api.Application
 
 import scala.concurrent.Future
 
@@ -25,21 +26,18 @@ object Tag extends ProjectSupervisorFunction {
 
   override val stage = ProjectStage.Tag
 
-  private[this] val tag = play.api.Play.current.injector.instanceOf[Tag]
-
   override def run(
     project: Project,
     config: ConfigProject
   ) (
-    implicit ec: scala.concurrent.ExecutionContext
+    implicit ec: scala.concurrent.ExecutionContext, app: Application
   ): Future[SupervisorResult] = {
+    val tag = app.injector.instanceOf[Tag]
     Future.sequence {
       config.branches.map { branch =>
         tag.run(project, branch.name)
       }
-    }.map {
-      SupervisorResult.merge(_)
-    }
+    }.map(SupervisorResult.merge)
   }
 
 }
