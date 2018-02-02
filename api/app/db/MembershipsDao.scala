@@ -1,6 +1,7 @@
 package db
 
 import anorm._
+import com.google.inject.Provider
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.v0.models.{Membership, MembershipForm, Role}
 import io.flow.postgresql.{Authorization, OrderBy, Query}
@@ -10,8 +11,8 @@ import play.api.db._
 class MembershipsDao @javax.inject.Inject() (
   @NamedDatabase("default") db: Database,
   delete: Delete,
-  membershipsDao: MembershipsDao,
-  organizationsDao: OrganizationsDao
+  membershipsDao: Provider[MembershipsDao],
+  organizationsDao: Provider[OrganizationsDao]
 ) {
 
   val DefaultUserNameLength = 8
@@ -37,7 +38,7 @@ class MembershipsDao @javax.inject.Inject() (
   """
 
   def isMember(orgId: String, user: UserReference): Boolean = {
-    membershipsDao.findByOrganizationIdAndUserId(Authorization.All, orgId, user.id) match {
+    membershipsDao.get().findByOrganizationIdAndUserId(Authorization.All, orgId, user.id) match {
       case None => false
       case Some(_) => true
     }
@@ -50,7 +51,7 @@ class MembershipsDao @javax.inject.Inject() (
     val roleErrors = form.role match {
       case Role.UNDEFINED(_) => Seq("Invalid role. Must be one of: " + Role.all.map(_.toString).mkString(", "))
       case _ => {
-        membershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, form.userId) match {
+        membershipsDao.get().findByOrganizationIdAndUserId(Authorization.All, form.organization, form.userId) match {
           case None => Seq.empty
           case Some(membership) => {
             Seq("User is already a member")
@@ -59,7 +60,7 @@ class MembershipsDao @javax.inject.Inject() (
       }
     }
 
-    val organizationErrors = membershipsDao.findByOrganizationIdAndUserId(Authorization.All, form.organization, user.id) match {
+    val organizationErrors = membershipsDao.get().findByOrganizationIdAndUserId(Authorization.All, form.organization, user.id) match {
       case None => Seq("Organization does not exist or you are not authorized to access this organization")
       case Some(_) => Nil
     }
@@ -84,7 +85,7 @@ class MembershipsDao @javax.inject.Inject() (
   }
 
   private[db] def create(implicit c: java.sql.Connection, createdBy: UserReference, form: MembershipForm): String = {
-    val org = organizationsDao.findById(Authorization.All, form.organization).getOrElse {
+    val org = organizationsDao.get().findById(Authorization.All, form.organization).getOrElse {
       sys.error("Could not find organization with id[${form.organization}]")
     }
 

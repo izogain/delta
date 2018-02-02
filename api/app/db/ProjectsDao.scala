@@ -1,6 +1,7 @@
 package db
 
 import anorm._
+import com.google.inject.Provider
 import io.flow.common.v0.models.UserReference
 import io.flow.delta.actors.MainActor
 import io.flow.delta.api.lib.GithubUtil
@@ -129,15 +130,15 @@ case class ProjectsWriteDao @javax.inject.Inject() (
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   @NamedDatabase("default") db: Database,
   buildsDao: BuildsDao,
-  buildsWriteDao: BuildsWriteDao,
+  buildsWriteDao: Provider[BuildsWriteDao],
   configsDao: ConfigsDao,
-  membershipsDao: MembershipsDao,
-  organizationsDao: OrganizationsDao,
-  projectsDao: ProjectsDao,
+  membershipsDao: Provider[MembershipsDao],
+  organizationsDao: Provider[OrganizationsDao],
+  projectsDao: Provider[ProjectsDao],
   shasDao: ShasDao,
-  shasWriteDao: ShasWriteDao,
+  shasWriteDao: Provider[ShasWriteDao],
   tagsDao: TagsDao,
-  tagsWriteDao: TagsWriteDao
+  tagsWriteDao: Provider[TagsWriteDao]
 ) {
 
   private[this] val InsertQuery = """
@@ -196,7 +197,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
       Seq("Name cannot be empty")
 
     } else {
-      projectsDao.findByOrganizationIdAndName(Authorization.All, form.organization, form.name) match {
+      projectsDao.get().findByOrganizationIdAndName(Authorization.All, form.organization, form.name) match {
         case None => Seq.empty
         case Some(p) => {
           Some(p.id) == existing.map(_.id) match {
@@ -207,7 +208,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
       }
     }
 
-    val organizationErrors = membershipsDao.isMember(form.organization, user) match  {
+    val organizationErrors = membershipsDao.get().isMember(form.organization, user) match  {
       case false => Seq("You do not have access to this organization")
       case true => Nil
     }
@@ -219,7 +220,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     validate(createdBy, form) match {
       case Nil => {
 
-        val org = organizationsDao.findById(Authorization.All, form.organization).getOrElse {
+        val org = organizationsDao.get().findById(Authorization.All, form.organization).getOrElse {
           sys.error("Could not find organization with id[${form.organization}]")
         }
         
@@ -242,7 +243,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
           }
 
           form.config.getOrElse(Defaults.Config).builds.foreach { buildConfig =>
-            buildsWriteDao.upsert(c, createdBy, id, Status.Enabled, buildConfig)
+            buildsWriteDao.get().upsert(c, createdBy, id, Status.Enabled, buildConfig)
           }
         }
 
@@ -253,7 +254,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         }
 
         Right(
-          projectsDao.findById(Authorization.All, id).getOrElse {
+          projectsDao.get().findById(Authorization.All, id).getOrElse {
             sys.error("Failed to create project")
           }
         )
@@ -286,7 +287,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
         mainActor ! MainActor.Messages.ProjectUpdated(project.id)
 
         Right(
-          projectsDao.findById(Authorization.All, project.id).getOrElse {
+          projectsDao.get().findById(Authorization.All, project.id).getOrElse {
             sys.error("Failed to create project")
           }
         )
@@ -299,19 +300,19 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     Pager.create { offset =>
       shasDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { sha =>
-      shasWriteDao.delete(deletedBy, sha)
+      shasWriteDao.get().delete(deletedBy, sha)
     }
 
     Pager.create { offset =>
       tagsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { tag =>
-      tagsWriteDao.delete(deletedBy, tag)
+      tagsWriteDao.get().delete(deletedBy, tag)
     }
 
     Pager.create { offset =>
       buildsDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { build =>
-      buildsWriteDao.delete(deletedBy, build)
+      buildsWriteDao.get().delete(deletedBy, build)
     }
 
     configsDao.deleteByProjectId(deletedBy, project.id)
