@@ -1,7 +1,5 @@
 package io.flow.delta.actors
 
-import javax.inject.Inject
-
 import akka.actor.Actor
 import db.{ItemsDao, ProjectsDao}
 import io.flow.play.actors.ErrorHandler
@@ -17,7 +15,7 @@ object SearchActor {
 
 }
 
-class SearchActor @Inject()(
+class SearchActor(
   projectsDao: ProjectsDao,
   itemsDao: ItemsDao
 ) extends Actor with ErrorHandler {

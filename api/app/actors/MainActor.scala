@@ -3,7 +3,7 @@ package io.flow.delta.actors
 import java.util.UUID
 
 import akka.actor._
-import db.{BuildsDao, ProjectsDao}
+import db.{BuildsDao, ItemsDao, ProjectsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.play.actors.{ErrorHandler, Scheduler}
 import io.flow.play.util.Constants
@@ -63,14 +63,15 @@ class MainActor @javax.inject.Inject() (
   system: ActorSystem,
   playEnv: Environment,
   buildsDao: BuildsDao,
-  projectsDao: ProjectsDao
-) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
+  projectsDao: ProjectsDao,
+  itemsDao: ItemsDao
+) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport {
 
   private[this] implicit val ec = system.dispatchers.lookup("main-actor-context")
 
   private[this] val name = "main"
 
-  private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
+  private[this] val searchActor = system.actorOf(Props[SearchActor](new SearchActor(projectsDao, itemsDao)), name = s"$name:SearchActor")
   private[this] val dockerHubTokenActor = injectedChild(dockerHubTokenFactory(), name = s"main:DockerHubActor")
 
   private[this] val buildActors = scala.collection.mutable.Map[String, ActorRef]()
