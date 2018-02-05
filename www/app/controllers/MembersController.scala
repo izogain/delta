@@ -25,7 +25,7 @@ class MembersController @javax.inject.Inject() (
 
   override def section = None
 
-  def index(orgId: String, page: Int = 0) = Identified.async { implicit request =>
+  def index(orgId: String, page: Int = 0) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, orgId) { org =>
       for {
         memberships <- deltaClient(request).memberships.get(
@@ -45,7 +45,7 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def create(orgId: String) = Identified.async { implicit request =>
+  def create(orgId: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, orgId) { org =>
       Future {
         Ok(
@@ -59,7 +59,7 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def postCreate(orgId: String) = Identified.async { implicit request =>
+  def postCreate(orgId: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, orgId) { org =>
       val boundForm = MembersController.uiForm.bindFromRequest
 
@@ -103,7 +103,7 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def postDelete(orgId: String, id: String) = Identified.async { implicit request =>
+  def postDelete(orgId: String, id: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, orgId) { org =>
       deltaClient(request).memberships.deleteById(id).map { response =>
         Redirect(routes.MembersController.index(org.id)).flashing("success" -> s"Membership deleted")
@@ -115,11 +115,11 @@ class MembersController @javax.inject.Inject() (
     }
   }
 
-  def postMakeMember(orgId: String, id: String) = Identified.async { implicit request =>
+  def postMakeMember(orgId: String, id: String) = IdentifiedCookie.async { implicit request =>
     makeRole(request, orgId, id, Role.Member)
   }
 
-  def postMakeAdmin(orgId: String, id: String) = Identified.async { implicit request =>
+  def postMakeAdmin(orgId: String, id: String) = IdentifiedCookie.async { implicit request =>
     makeRole(request, orgId, id, Role.Admin)
   }
 

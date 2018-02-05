@@ -25,7 +25,7 @@ class TokensController @javax.inject.Inject() (
 
   override def section = None
 
-  def index(page: Int = 0) = Identified.async { implicit request =>
+  def index(page: Int = 0) = IdentifiedCookie.async { implicit request =>
     for {
       tokens <- deltaClient(request).tokens.get(
         limit = Pagination.DefaultLimit+1,
@@ -36,7 +36,7 @@ class TokensController @javax.inject.Inject() (
     }
   }
 
-  def show(id: String) = Identified.async { implicit request =>
+  def show(id: String) = IdentifiedCookie.async { implicit request =>
     withToken(request, id) { token =>
       Future {
         Ok(views.html.tokens.show(uiData(request), token))
@@ -48,7 +48,7 @@ class TokensController @javax.inject.Inject() (
     Ok(views.html.tokens.create(uiData(request), TokensController.tokenForm))
   }
 
-  def postCreate = Identified.async { implicit request =>
+  def postCreate = IdentifiedCookie.async { implicit request =>
     val form = TokensController.tokenForm.bindFromRequest
     form.fold (
 
@@ -74,7 +74,7 @@ class TokensController @javax.inject.Inject() (
     )
   }
 
-  def postDelete(id: String) = Identified.async { implicit request =>
+  def postDelete(id: String) = IdentifiedCookie.async { implicit request =>
     deltaClient(request).tokens.deleteById(id).map { response =>
       Redirect(routes.TokensController.index()).flashing("success" -> s"Token deleted")
     }.recover {

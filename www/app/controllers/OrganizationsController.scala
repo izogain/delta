@@ -29,7 +29,7 @@ class OrganizationsController @javax.inject.Inject() (
     Redirect(routes.ApplicationController.index(organization = Some(org)))
   }
 
-  def index(page: Int = 0) = Identified.async { implicit request =>
+  def index(page: Int = 0) = IdentifiedCookie.async { implicit request =>
     for {
       organizations <- deltaClient(request).organizations.get(
         limit = Pagination.DefaultLimit+1,
@@ -45,7 +45,7 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def show(id: String, projectsPage: Int = 0) = Identified.async { implicit request =>
+  def show(id: String, projectsPage: Int = 0) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, id) { org =>
       for {
         projects <- deltaClient(request).projects.get(
@@ -81,7 +81,7 @@ class OrganizationsController @javax.inject.Inject() (
     )
   }
 
-  def postCreate() = Identified.async { implicit request =>
+  def postCreate() = IdentifiedCookie.async { implicit request =>
     val boundForm = OrganizationsController.uiForm.bindFromRequest
     boundForm.fold (
 
@@ -110,7 +110,7 @@ class OrganizationsController @javax.inject.Inject() (
     )
   }
 
-  def edit(id: String) = Identified.async { implicit request =>
+  def edit(id: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, id) { organization =>
       Future {
         Ok(
@@ -131,7 +131,7 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def postEdit(id: String) = Identified.async { implicit request =>
+  def postEdit(id: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, id) { organization =>
       val boundForm = OrganizationsController.uiForm.bindFromRequest
       boundForm.fold (
@@ -153,7 +153,7 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def postDelete(id: String) = Identified.async { implicit request =>
+  def postDelete(id: String) = IdentifiedCookie.async { implicit request =>
     withOrganization(request, id) { org =>
       deltaClient(request).organizations.deleteById(org.id).map { response =>
         Redirect(routes.OrganizationsController.index()).flashing("success" -> s"Organization deleted")

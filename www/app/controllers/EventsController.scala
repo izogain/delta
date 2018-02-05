@@ -27,7 +27,7 @@ class EventsController @javax.inject.Inject() (
     projectId: Option[String],
     `type`: Option[EventType],
     hasError: Option[Boolean]
-  ) = Identified.async { implicit request =>
+  ) = IdentifiedCookie.async { implicit request =>
     for {
       events <- deltaClient(request).events.get(
         projectId = projectId,

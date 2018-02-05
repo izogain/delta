@@ -22,7 +22,7 @@ class SearchController @javax.inject.Inject() (
   def index(
     q: Option[String],
     page: Int
-  ) = Identified.async { implicit request =>
+  ) = IdentifiedCookie.async { implicit request =>
     for {
       items <- deltaClient(request).items.get(
         q = q,
