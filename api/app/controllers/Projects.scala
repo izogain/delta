@@ -9,6 +9,7 @@ import io.flow.error.v0.models.json._
 import io.flow.play.controllers.FlowControllerComponents
 import io.flow.play.util.Validation
 import io.flow.postgresql.Authorization
+import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
 
@@ -34,7 +35,10 @@ class Projects @javax.inject.Inject() (
     offset: Long,
     sort: String
   ) = IdentifiedCookie { request =>
+    Logger.info(s"Request user [${request.user}]")
     helpers.withOrderBy(sort) { orderBy =>
+
+      Logger.info(s"Request [${request}]")
       Ok(
         Json.toJson(
           projectsDao.findAll(
