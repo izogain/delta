@@ -1,11 +1,12 @@
 package controllers
 
+import io.flow.common.v0.models.{Environment, Role}
 import io.flow.delta.config.v0.models.{ConfigError, ConfigProject, ConfigUndefinedType}
 import io.flow.delta.v0.errors.UnitResponse
 import io.flow.delta.v0.models._
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.controllers.{FlowControllerComponents, IdentifiedRequest}
-import io.flow.play.util.{Config, PaginatedCollection, Pagination}
+import io.flow.play.util._
 import play.api.Logger
 import play.api.data.Forms._
 import play.api.data._
@@ -20,7 +21,8 @@ class ProjectsController @javax.inject.Inject() (
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider,
   override val controllerComponents: ControllerComponents,
-  override val flowControllerComponents: FlowControllerComponents
+  override val flowControllerComponents: FlowControllerComponents,
+  authHeaders: AuthHeaders
 ) extends BaseController(tokenClient, deltaClientProvider, controllerComponents, flowControllerComponents) {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,7 +35,13 @@ class ProjectsController @javax.inject.Inject() (
     for {
       projects <- deltaClient(request).projects.get(
         limit = Pagination.DefaultLimit+1,
-        offset = page * Pagination.DefaultLimit
+        offset = page * Pagination.DefaultLimit,
+        requestHeaders = authHeaders.headers(
+          AuthHeaders.user(
+            user = request.user,
+            requestId = request.auth.requestId
+          )
+        )
       )
     } yield {
       Logger.info(s"Projects [${projects}]")

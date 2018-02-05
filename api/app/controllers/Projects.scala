@@ -34,7 +34,7 @@ class Projects @javax.inject.Inject() (
     limit: Long,
     offset: Long,
     sort: String
-  ) = IdentifiedCookie { request =>
+  ) = Identified { request =>
     Logger.info(s"Request user [${request.user}]")
     helpers.withOrderBy(sort) { orderBy =>
 
@@ -55,7 +55,7 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getById(id: String) = IdentifiedCookie { request =>
+  def getById(id: String) = Identified { request =>
     helpers.withProject(request.user, id) { project =>
       Ok(Json.toJson(project))
     }
