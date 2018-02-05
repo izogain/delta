@@ -1,13 +1,17 @@
 package io.flow.delta.actors
 
-import akka.actor.Actor
-import db.{BuildsDao, BuildDesiredStatesDao, ConfigsDao}
-import io.flow.delta.api.lib.StateDiff
-import io.flow.delta.v0.models.{Build, Version}
+import javax.inject.Inject
+
+import akka.actor.{Actor, ActorSystem}
+import com.google.inject.assistedinject.Assisted
+import db._
+import io.flow.delta.actors.functions.SyncDockerImages
+import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
 import io.flow.delta.config.v0.{models => config}
+import io.flow.delta.v0.models.{Build, Version}
 import io.flow.play.actors.ErrorHandler
 import io.flow.postgresql.Authorization
-import play.libs.Akka
+import play.api.Application
 
 object BuildSupervisorActor {
 
@@ -26,12 +30,26 @@ object BuildSupervisorActor {
     functions.Scale
   )
 
+  trait Factory {
+    def apply(id: String): Actor
+  }
+
 }
 
-class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with BuildEventLog {
+class BuildSupervisorActor @Inject()(
+  override val buildsDao: BuildsDao,
+  override val configsDao: ConfigsDao,
+  override val projectsDao: ProjectsDao,
+  override val organizationsDao: OrganizationsDao,
+  buildDesiredStatesDao: BuildDesiredStatesDao,
+  eventLogProcessor: EventLogProcessor,
+  syncDockerImages: SyncDockerImages,
+  system: ActorSystem,
+  implicit val app: Application,
+  @Assisted id: String
+) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
-  private[this] implicit val ec = Akka.system.dispatchers.lookup("supervisor-actor-context")
-  override lazy val configsDao = play.api.Play.current.injector.instanceOf[ConfigsDao]
+  private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
 
   def receive = {
 
@@ -42,7 +60,7 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
     case msg @ BuildSupervisorActor.Messages.PursueDesiredState => withErrorHandler(msg) {
       withEnabledBuild { build =>
         withBuildConfig { buildConfig =>
-          log.runSync("PursueDesiredState") {
+          eventLogProcessor.runSync("PursueDesiredState", log = log) {
             run(build, buildConfig.stages, BuildSupervisorActor.Functions)
           }
         }
@@ -55,9 +73,9 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
       * desired state (or ahead of the desired state), triggers
       * PursueDesiredState. Otherwise a no-op.
       */
-    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {  
+    case msg @ BuildSupervisorActor.Messages.CheckTag(name) => withErrorHandler(msg) {
       withEnabledBuild { build =>
-        BuildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
+        buildDesiredStatesDao.findByBuildId(Authorization.All, build.id) match {
           case None => {
             // Might be first tag
             self ! BuildSupervisorActor.Messages.PursueDesiredState
@@ -93,33 +111,33 @@ class BuildSupervisorActor extends Actor with ErrorHandler with DataBuild with B
       case Some(f) => {
         stages.contains(f.stage) match {
           case false => {
-            log.skipped(s"Stage ${f.stage} is disabled")
+            eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log)
             run(build, stages, functions.drop(1))
           }
           case true => {
-            log.started(format(f))
+            eventLogProcessor.started(format(f), log = log)
             f.run(build).map { result =>
               result match {
                 case SupervisorResult.Change(desc) => {
-                  log.changed(format(f, desc))
+                  eventLogProcessor.changed(format(f, desc), log = log)
                 }
                 case SupervisorResult.Checkpoint(desc) => {
-                  log.checkpoint(format(f, desc))
+                  eventLogProcessor.checkpoint(format(f, desc), log = log)
                 }
                 case SupervisorResult.Error(desc, ex)=> {
                   val err = ex.getOrElse {
                     new Exception(desc)
                   }
-                  log.completed(format(f, desc), Some(err))
+                  eventLogProcessor.completed(format(f, desc), Some(err), log = log)
                 }
                case SupervisorResult.Ready(desc)=> {
-                  log.completed(format(f, desc))
+                 eventLogProcessor.completed(format(f, desc), log = log)
                   run(build, stages, functions.drop(1))
                 }
               }
 
             }.recover {
-              case ex: Throwable => log.completed(format(f, ex.getMessage), Some(ex))
+              case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log)
             }
           }
         }

@@ -2,19 +2,18 @@ package io.flow.delta.actors
 
 import java.util.UUID
 
-import db.{BuildsDao, ProjectsDao}
+import akka.actor._
+import db.{BuildsDao, ItemsDao, ProjectsDao}
 import io.flow.delta.api.lib.StateDiff
 import io.flow.play.actors.{ErrorHandler, Scheduler}
+import io.flow.play.util.Constants
 import io.flow.postgresql.{Authorization, Pager}
-import play.api.libs.concurrent.Akka
-import akka.actor._
-import play.api.{Application, Environment, Logger, Mode}
-import play.api.Play.current
 import play.api.libs.concurrent.InjectedActorSupport
+import play.api.{Environment, Logger, Mode}
 
 object MainActor {
 
-  lazy val SystemUser = db.UsersDao.systemUser
+  lazy val SystemUser = Constants.SystemUser
 
   object Messages {
 
@@ -60,16 +59,22 @@ class MainActor @javax.inject.Inject() (
   dockerHubFactory: DockerHubActor.Factory,
   dockerHubTokenFactory: DockerHubTokenActor.Factory,
   projectFactory: ProjectActor.Factory,
+  userActorFactory: UserActor.Factory,
+  projectSupervisorActorFactory: ProjectSupervisorActor.Factory,
+  buildSupervisorActorFactory: BuildSupervisorActor.Factory,
   override val config: io.flow.play.util.Config,
   system: ActorSystem,
-  playEnv: Environment
-) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport{
+  playEnv: Environment,
+  buildsDao: BuildsDao,
+  projectsDao: ProjectsDao,
+  itemsDao: ItemsDao
+) extends Actor with ActorLogging with ErrorHandler with Scheduler with InjectedActorSupport {
 
   private[this] implicit val ec = system.dispatchers.lookup("main-actor-context")
 
   private[this] val name = "main"
 
-  private[this] val searchActor = system.actorOf(Props[SearchActor], name = s"$name:SearchActor")
+  private[this] val searchActor = system.actorOf(Props[SearchActor](new SearchActor(projectsDao, itemsDao)), name = s"$name:SearchActor")
   private[this] val dockerHubTokenActor = injectedChild(dockerHubTokenFactory(), name = s"main:DockerHubActor")
 
   private[this] val buildActors = scala.collection.mutable.Map[String, ActorRef]()
@@ -91,7 +96,7 @@ class MainActor @javax.inject.Inject() (
 
       scheduleRecurring(system, "main.actor.ensure.container.agent.health.seconds") {
         Pager.create { offset =>
-          BuildsDao.findAll(Authorization.All, offset = offset)
+          buildsDao.findAll(Authorization.All, offset = offset)
         }.foreach { build =>
           self ! MainActor.Messages.EnsureContainerAgentHealth(build.id)
         }
@@ -99,7 +104,7 @@ class MainActor @javax.inject.Inject() (
 
       scheduleRecurring(system, "main.actor.update.container.agent.seconds") {
         Pager.create { offset =>
-          BuildsDao.findAll(Authorization.All, offset = offset)
+          buildsDao.findAll(Authorization.All, offset = offset)
         }.foreach { build =>
           self ! MainActor.Messages.UpdateContainerAgent(build.id)
         }
@@ -107,7 +112,7 @@ class MainActor @javax.inject.Inject() (
 
       scheduleRecurring(system, "main.actor.remove.old.services.seconds") {
         Pager.create { offset =>
-          BuildsDao.findAll(Authorization.All, offset = offset)
+          buildsDao.findAll(Authorization.All, offset = offset)
         }.foreach { build =>
           self ! MainActor.Messages.RemoveOldServices(build.id)
         }
@@ -115,7 +120,7 @@ class MainActor @javax.inject.Inject() (
 
       scheduleRecurring(system, "main.actor.project.sync.seconds") {
         Pager.create { offset =>
-          ProjectsDao.findAll(Authorization.All, offset = offset)
+          projectsDao.findAll(Authorization.All, offset = offset)
         }.foreach { project =>
           self ! MainActor.Messages.ProjectSync(project.id)
         }
@@ -123,7 +128,7 @@ class MainActor @javax.inject.Inject() (
 
       scheduleRecurring(system, "main.actor.project.inactive.check.seconds") {
         Pager.create { offset =>
-          ProjectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
+          projectsDao.findAll(Authorization.All, offset = offset, minutesSinceLastEvent = Some(15))
         }.foreach { project =>
           Logger.info(s"Sending ProjectSync(${project.id}) - no events found in last 15 minutes")
           self ! MainActor.Messages.ProjectSync(project.id)
@@ -267,7 +272,7 @@ class MainActor @javax.inject.Inject() (
   def upsertUserActor(id: String): ActorRef = {
     this.synchronized {
       userActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[UserActor], name = randomName())
+        val ref = injectedChild(userActorFactory(id), name = randomName())
         ref ! UserActor.Messages.Data(id)
         userActors += (id -> ref)
         ref
@@ -300,7 +305,7 @@ class MainActor @javax.inject.Inject() (
   def upsertProjectSupervisorActor(id: String): ActorRef = {
     this.synchronized {
       projectSupervisorActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[ProjectSupervisorActor], name = randomName())
+        val ref = injectedChild(projectSupervisorActorFactory(id), name = randomName())
         ref ! ProjectSupervisorActor.Messages.Data(id)
         projectSupervisorActors += (id -> ref)
         ref
@@ -311,7 +316,7 @@ class MainActor @javax.inject.Inject() (
   def upsertBuildSupervisorActor(id: String): ActorRef = {
     this.synchronized {
       buildSupervisorActors.lift(id).getOrElse {
-        val ref = system.actorOf(Props[BuildSupervisorActor], name = randomName())
+        val ref = injectedChild(buildSupervisorActorFactory(id), name = randomName())
         ref ! BuildSupervisorActor.Messages.Data(id)
         buildSupervisorActors += (id -> ref)
         ref
