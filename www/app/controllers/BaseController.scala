@@ -101,7 +101,10 @@ abstract class BaseController(
   ) (
     implicit ec: ExecutionContext
   ): UiData = {
-    val userReferenceOption = request.user
+    val userReferenceOption = Await.result(
+      Helpers.userFromSession(tokenClient, request.session),
+      Duration(1, "seconds")
+    )
 
     val user = userReferenceOption.flatMap { ref =>
       Await.result(
