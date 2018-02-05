@@ -41,9 +41,7 @@ lazy val api = project
     routesImport += "io.flow.delta.v0.Bindables._",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Seq(
-      ws,
       jdbc,
-      guice,
       "io.flow" %% "lib-postgresql-play26" % "0.0.60",
       "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
       "com.amazonaws" % "aws-java-sdk-ecs" % awsVersion,
@@ -84,6 +82,8 @@ val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   name ~= ("delta-" + _),
   libraryDependencies ++= Seq(
+    ws,
+    guice,
     "io.flow" %% "lib-play-play26" % "0.4.35",
     "io.flow" %% "lib-test-utils" % "0.0.4" % Test
   ),
