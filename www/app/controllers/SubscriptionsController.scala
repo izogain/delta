@@ -27,8 +27,7 @@ class SubscriptionsController @javax.inject.Inject() (
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider,
   override val controllerComponents: ControllerComponents,
-  override val flowControllerComponents: FlowControllerComponents,
-  actionBuilder: DefaultActionBuilder
+  override val flowControllerComponents: FlowControllerComponents
 ) extends BaseController(tokenClient, deltaClientProvider, controllerComponents, flowControllerComponents) with I18nSupport {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,7 +36,7 @@ class SubscriptionsController @javax.inject.Inject() (
 
   lazy val client = deltaClientProvider.newClient(user = None, requestId = None)
 
-  def index() = actionBuilder.async { implicit request =>
+  def index() = Action.async { implicit request =>
     Helpers.userFromSession(tokenClient, request.session).flatMap { userOption =>
       userOption match {
         case None => Future {
@@ -52,7 +51,7 @@ class SubscriptionsController @javax.inject.Inject() (
     }
   }
 
-  def identifier(identifier: String) = actionBuilder.async { implicit request =>
+  def identifier(identifier: String) = Action.async { implicit request =>
     for {
       users <- client.users.get(
         identifier = Some(identifier)
@@ -72,7 +71,7 @@ class SubscriptionsController @javax.inject.Inject() (
     }
   }
 
-  def postToggle(identifier: String, publication: Publication) = actionBuilder.async { implicit request =>
+  def postToggle(identifier: String, publication: Publication) = Action.async { implicit request =>
     client.users.get(identifier = Some(identifier)).flatMap { users =>
       users.headOption match {
         case None => Future {
