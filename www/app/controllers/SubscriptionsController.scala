@@ -35,7 +35,7 @@ class SubscriptionsController @javax.inject.Inject() (
 
   override def section = Some(io.flow.delta.www.lib.Section.Events)
 
-  lazy val client = deltaClientProvider.newClient(user = None)
+  lazy val client = deltaClientProvider.newClient(user = None, requestId = None)
 
   def index() = actionBuilder.async { implicit request =>
     Helpers.userFromSession(tokenClient, request.session).flatMap { userOption =>
@@ -44,7 +44,7 @@ class SubscriptionsController @javax.inject.Inject() (
           Redirect(routes.LoginController.index(return_url = Some(request.path)))
         }
         case Some(user) => {
-          deltaClientProvider.newClient(user = Some(user)).users.getIdentifierById(user.id).map { id =>
+          deltaClientProvider.newClient(user = Some(user), requestId = None).users.getIdentifierById(user.id).map { id =>
             Redirect(routes.SubscriptionsController.identifier(id.value))
           }
         }

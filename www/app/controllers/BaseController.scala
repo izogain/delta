@@ -40,7 +40,7 @@ abstract class BaseController(
   with I18nSupport
 {
 
-  private[this] lazy val client = deltaClientProvider.newClient(user = None)
+  private[this] lazy val client = deltaClientProvider.newClient(user = None, requestId = None)
 
   def section: Option[Section]
 
@@ -121,7 +121,7 @@ abstract class BaseController(
   }
 
   def deltaClient[T](request: IdentifiedRequest[T]): Client = {
-    deltaClientProvider.newClient(user = Some(request.user))
+    deltaClientProvider.newClient(user = Some(request.user), requestId = Some(request.auth.requestId))
   }
 
 }
