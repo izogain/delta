@@ -28,12 +28,16 @@ class ProjectsController @javax.inject.Inject() (
   override def section = Some(io.flow.delta.www.lib.Section.Projects)
 
   def index(page: Int = 0) = IdentifiedCookie.async { implicit request =>
+    Logger.info(s"Request user [${request.user}]")
+
     for {
       projects <- deltaClient(request).projects.get(
         limit = Pagination.DefaultLimit+1,
         offset = page * Pagination.DefaultLimit
       )
     } yield {
+      Logger.info(s"Projects [${projects}]")
+
       Ok(
         views.html.projects.index(
           uiData(request),
