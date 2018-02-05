@@ -2,11 +2,12 @@ package controllers
 
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.controllers.FlowControllerComponents
-import io.flow.play.util.{PaginatedCollection, Pagination}
+import io.flow.play.util.{Config, PaginatedCollection, Pagination}
 import play.api.i18n.MessagesApi
 import play.api.mvc.ControllerComponents
 
 class SearchController @javax.inject.Inject() (
+  override val config: Config,
   override val messagesApi: MessagesApi,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider,

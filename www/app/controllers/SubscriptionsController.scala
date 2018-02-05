@@ -4,6 +4,7 @@ import io.flow.common.v0.models.User
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
 import io.flow.play.controllers.FlowControllerComponents
+import io.flow.play.util.Config
 import play.api.i18n._
 import play.api.mvc._
 
@@ -21,6 +22,7 @@ object Subscriptions {
 }
 
 class SubscriptionsController @javax.inject.Inject() (
+  override val config: Config,
   override val messagesApi: MessagesApi,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider,

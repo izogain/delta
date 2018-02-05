@@ -5,7 +5,7 @@ import io.flow.delta.v0.errors.UnitResponse
 import io.flow.delta.v0.models._
 import io.flow.delta.www.lib.DeltaClientProvider
 import io.flow.play.controllers.{FlowControllerComponents, IdentifiedRequest}
-import io.flow.play.util.{PaginatedCollection, Pagination}
+import io.flow.play.util.{Config, PaginatedCollection, Pagination}
 import play.api.Logger
 import play.api.data.Forms._
 import play.api.data._
@@ -15,6 +15,7 @@ import play.api.mvc._
 import scala.concurrent.Future
 
 class ProjectsController @javax.inject.Inject() (
+  override val config: Config,
   override val messagesApi: MessagesApi,
   override val tokenClient: io.flow.token.v0.interfaces.Client,
   override val deltaClientProvider: DeltaClientProvider,

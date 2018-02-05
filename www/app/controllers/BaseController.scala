@@ -36,13 +36,15 @@ abstract class BaseController(
   val deltaClientProvider: DeltaClientProvider,
   val controllerComponents: ControllerComponents,
   val flowControllerComponents: FlowControllerComponents
-) extends FlowController with I18nSupport {
+) extends FlowController with FlowActionInvokeBlockHelper
+  with I18nSupport
+{
 
   private[this] lazy val client = deltaClientProvider.newClient(user = None)
 
   def section: Option[Section]
 
-  def unauthorized[A](request: Request[A]): Result = {
+  override def unauthorized[A](request: Request[A]): Result = {
     Redirect(routes.LoginController.index(return_url = Some(request.path))).flashing("warning" -> "Please login")
   }
 
@@ -75,17 +77,6 @@ abstract class BaseController(
       userId = Some(request.user.id),
       limit = 100
     )
-  }
-
-  def user(
-    session: play.api.mvc.Session,
-    headers: play.api.mvc.Headers,
-    path: String,
-    queryString: Map[String, Seq[String]]
-  ) (
-    implicit ec: scala.concurrent.ExecutionContext
-  ): scala.concurrent.Future[Option[UserReference]] = {
-    Helpers.userFromSession(tokenClient, session)
   }
 
   def uiData[T](
