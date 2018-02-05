@@ -3,6 +3,7 @@ package controllers
 import io.flow.delta.v0.models.GithubAuthenticationForm
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
 import io.flow.play.controllers.{FlowController, FlowControllerComponents}
+import play.api.Logger
 import play.api.i18n._
 import play.api.mvc.ControllerComponents
 
@@ -38,11 +39,14 @@ class LoginController @javax.inject.Inject() (
           u
         }
       }
+      Logger.info(s"Redirecting to url [$url]")
       Redirect(url).withSession { "user_id" -> user.id.toString }
     }.recover {
       case response: io.flow.delta.v0.errors.GenericErrorResponse => {
         Ok(views.html.login.index(UiData(requestPath = request.path), returnUrl, response.genericError.messages))
       }
+
+      case ex: Throwable => sys.error(s"Github callback failed to authenticate user.")
     }
   }
 

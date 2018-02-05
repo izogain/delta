@@ -263,6 +263,8 @@ class DefaultGithub @javax.inject.Inject() (
           )
         )
       }
+    }.recover {
+      case ex: Throwable => sys.error(s"Failed to post access token to Github OAuth client")
     }
   }
 
