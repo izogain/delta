@@ -1,10 +1,11 @@
 package controllers
 
-import io.flow.common.v0.models.User
+import io.flow.common.v0.models.ExpandableUserDiscriminator.UserReference
+import io.flow.common.v0.models.{User, UserReference}
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
 import io.flow.play.controllers.FlowControllerComponents
-import io.flow.play.util.Config
+import io.flow.play.util.{AuthData, AuthHeaders, Config}
 import play.api.i18n._
 import play.api.mvc._
 
@@ -56,7 +57,8 @@ class SubscriptionsController @javax.inject.Inject() (
       users <- client.users.get(
         identifier = Some(identifier)
       )
-      subscriptions <- client.subscriptions.get(
+      user <- users.headOption.map(u => UserReference(u.id))
+      subscriptions <- deltaClientProvider.newClient(user = Some(user), requestId = None).subscriptions.get(
         identifier = Some(identifier),
         limit = Publication.all.size + 1
       )
@@ -78,13 +80,15 @@ class SubscriptionsController @javax.inject.Inject() (
           Redirect(routes.SubscriptionsController.index()).flashing("warning" -> "User could not be found")
         }
         case Some(user) => {
-          client.subscriptions.get(
+          val identifiedClient = deltaClientProvider.newClient(user = Some(UserReference(user.id)), requestId = None)
+
+          identifiedClient.subscriptions.get(
             identifier = Some(identifier),
             publication = Some(publication)
           ).flatMap { subscriptions =>
             subscriptions.headOption match {
               case None => {
-                client.subscriptions.post(
+                identifiedClient.subscriptions.post(
                   SubscriptionForm(
                     userId = user.id,
                     publication = publication
@@ -95,7 +99,7 @@ class SubscriptionsController @javax.inject.Inject() (
                 }
               }
               case Some(subscription) => {
-                client.subscriptions.deleteById(
+                identifiedClient.subscriptions.deleteById(
                   subscription.id,
                   identifier = Some(identifier)
                 ).map { _ =>
