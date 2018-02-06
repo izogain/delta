@@ -1,11 +1,10 @@
 package controllers
 
-import io.flow.common.v0.models.ExpandableUserDiscriminator.UserReference
 import io.flow.common.v0.models.{User, UserReference}
 import io.flow.delta.v0.models.{Publication, SubscriptionForm}
 import io.flow.delta.www.lib.{DeltaClientProvider, UiData}
 import io.flow.play.controllers.FlowControllerComponents
-import io.flow.play.util.{AuthData, AuthHeaders, Config}
+import io.flow.play.util.Config
 import play.api.i18n._
 import play.api.mvc._
 
@@ -57,8 +56,8 @@ class SubscriptionsController @javax.inject.Inject() (
       users <- client.users.get(
         identifier = Some(identifier)
       )
-      user <- users.headOption.map(u => UserReference(u.id))
-      subscriptions <- deltaClientProvider.newClient(user = Some(user), requestId = None).subscriptions.get(
+      user <- Future { users.headOption.map(u => UserReference(u.id)) }
+      subscriptions <- deltaClientProvider.newClient(user = user, requestId = None).subscriptions.get(
         identifier = Some(identifier),
         limit = Publication.all.size + 1
       )
