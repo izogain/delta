@@ -85,7 +85,7 @@ abstract class BaseController(
     implicit ec: ExecutionContext
   ): UiData = {
     val user = Await.result(
-      client.users.get(id = Some(request.user.id)),
+      deltaClient(request).users.get(id = Some(request.user.id)),
       Duration(1, "seconds")
     ).headOption
 

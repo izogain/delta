@@ -25,7 +25,7 @@ class OrganizationsController @javax.inject.Inject() (
 
   override def section = None
 
-  def redirectToDashboard(org: String) = Identified { implicit request =>
+  def redirectToDashboard(org: String) = IdentifiedCookie { implicit request =>
     Redirect(routes.ApplicationController.index(organization = Some(org)))
   }
 
@@ -65,7 +65,7 @@ class OrganizationsController @javax.inject.Inject() (
     }
   }
 
-  def create(returnUrl: Option[String]) = Identified { implicit request =>
+  def create(returnUrl: Option[String]) = IdentifiedCookie { implicit request =>
     Ok(
       views.html.organizations.create(
         uiData(request),

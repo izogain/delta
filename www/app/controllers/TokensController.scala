@@ -44,7 +44,7 @@ class TokensController @javax.inject.Inject() (
     }
   }
 
-  def create() = Identified { implicit request =>
+  def create() = IdentifiedCookie { implicit request =>
     Ok(views.html.tokens.create(uiData(request), TokensController.tokenForm))
   }
 
