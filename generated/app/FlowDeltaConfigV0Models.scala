@@ -489,11 +489,11 @@ package io.flow.delta.config.v0 {
     import Models._
 
     object Core {
-      implicit val pathBindableDateTimeIso8601: PathBindable[_root_.org.joda.time.DateTime] = ApibuilderPathBindable(ApibuilderTypes.dateTimeIso8601)
-      implicit val queryStringBindableDateTimeIso8601: QueryStringBindable[_root_.org.joda.time.DateTime] = ApibuilderQueryStringBindable(ApibuilderTypes.dateTimeIso8601)
+      implicit def pathBindableDateTimeIso8601(implicit stringBinder: QueryStringBindable[String]): PathBindable[_root_.org.joda.time.DateTime] = ApibuilderPathBindable(ApibuilderTypes.dateTimeIso8601)
+      implicit def queryStringBindableDateTimeIso8601(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[_root_.org.joda.time.DateTime] = ApibuilderQueryStringBindable(ApibuilderTypes.dateTimeIso8601)
 
-      implicit val pathBindableDateIso8601: PathBindable[_root_.org.joda.time.LocalDate] = ApibuilderPathBindable(ApibuilderTypes.dateIso8601)
-      implicit val queryStringBindableDateIso8601: QueryStringBindable[_root_.org.joda.time.LocalDate] = ApibuilderQueryStringBindable(ApibuilderTypes.dateIso8601)
+      implicit def pathBindableDateIso8601(implicit stringBinder: QueryStringBindable[String]): PathBindable[_root_.org.joda.time.LocalDate] = ApibuilderPathBindable(ApibuilderTypes.dateIso8601)
+      implicit def queryStringBindableDateIso8601(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[_root_.org.joda.time.LocalDate] = ApibuilderQueryStringBindable(ApibuilderTypes.dateIso8601)
     }
 
     object Models {
@@ -505,8 +505,8 @@ package io.flow.delta.config.v0 {
         override def example: io.flow.delta.config.v0.models.BuildStage = io.flow.delta.config.v0.models.BuildStage.SetDesiredState
         override def validValues: Seq[io.flow.delta.config.v0.models.BuildStage] = io.flow.delta.config.v0.models.BuildStage.all
       }
-      implicit val pathBindableBuildStage: PathBindable[io.flow.delta.config.v0.models.BuildStage] = ApibuilderPathBindable(buildStageConverter)
-      implicit val queryStringBindableBuildStage: QueryStringBindable[io.flow.delta.config.v0.models.BuildStage] = ApibuilderQueryStringBindable(buildStageConverter)
+      implicit def pathBindableBuildStage(implicit stringBinder: QueryStringBindable[String]): PathBindable[io.flow.delta.config.v0.models.BuildStage] = ApibuilderPathBindable(buildStageConverter)
+      implicit def queryStringBindableBuildStage(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[io.flow.delta.config.v0.models.BuildStage] = ApibuilderQueryStringBindable(buildStageConverter)
 
       val instanceTypeConverter: ApibuilderTypeConverter[io.flow.delta.config.v0.models.InstanceType] = new ApibuilderTypeConverter[io.flow.delta.config.v0.models.InstanceType] {
         override def convert(value: String): io.flow.delta.config.v0.models.InstanceType = io.flow.delta.config.v0.models.InstanceType(value)
@@ -514,8 +514,8 @@ package io.flow.delta.config.v0 {
         override def example: io.flow.delta.config.v0.models.InstanceType = io.flow.delta.config.v0.models.InstanceType.C4Large
         override def validValues: Seq[io.flow.delta.config.v0.models.InstanceType] = io.flow.delta.config.v0.models.InstanceType.all
       }
-      implicit val pathBindableInstanceType: PathBindable[io.flow.delta.config.v0.models.InstanceType] = ApibuilderPathBindable(instanceTypeConverter)
-      implicit val queryStringBindableInstanceType: QueryStringBindable[io.flow.delta.config.v0.models.InstanceType] = ApibuilderQueryStringBindable(instanceTypeConverter)
+      implicit def pathBindableInstanceType(implicit stringBinder: QueryStringBindable[String]): PathBindable[io.flow.delta.config.v0.models.InstanceType] = ApibuilderPathBindable(instanceTypeConverter)
+      implicit def queryStringBindableInstanceType(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[io.flow.delta.config.v0.models.InstanceType] = ApibuilderQueryStringBindable(instanceTypeConverter)
 
       val projectStageConverter: ApibuilderTypeConverter[io.flow.delta.config.v0.models.ProjectStage] = new ApibuilderTypeConverter[io.flow.delta.config.v0.models.ProjectStage] {
         override def convert(value: String): io.flow.delta.config.v0.models.ProjectStage = io.flow.delta.config.v0.models.ProjectStage(value)
@@ -523,8 +523,8 @@ package io.flow.delta.config.v0 {
         override def example: io.flow.delta.config.v0.models.ProjectStage = io.flow.delta.config.v0.models.ProjectStage.SyncShas
         override def validValues: Seq[io.flow.delta.config.v0.models.ProjectStage] = io.flow.delta.config.v0.models.ProjectStage.all
       }
-      implicit val pathBindableProjectStage: PathBindable[io.flow.delta.config.v0.models.ProjectStage] = ApibuilderPathBindable(projectStageConverter)
-      implicit val queryStringBindableProjectStage: QueryStringBindable[io.flow.delta.config.v0.models.ProjectStage] = ApibuilderQueryStringBindable(projectStageConverter)
+      implicit def pathBindableProjectStage(implicit stringBinder: QueryStringBindable[String]): PathBindable[io.flow.delta.config.v0.models.ProjectStage] = ApibuilderPathBindable(projectStageConverter)
+      implicit def queryStringBindableProjectStage(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[io.flow.delta.config.v0.models.ProjectStage] = ApibuilderQueryStringBindable(projectStageConverter)
     }
 
     trait ApibuilderTypeConverter[T] {
