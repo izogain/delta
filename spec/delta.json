@@ -404,6 +404,31 @@
         { "name": "key", "type": "string" },
         { "name": "value", "type": "string" }
       ]
+    },
+
+    "sns_message_ami": {
+      "fields": [
+        { "name": "ECSAmis", "type": "ecs_amis" }
+      ]
+    },
+
+    "ecs_amis": {
+      "fields": [
+        { "name": "Regions", "type": "ecs_ami_regions" }
+      ]
+    },
+
+    "ecs_ami_regions": {
+      "fields": [
+        { "name": "us-east-1", "type": "ecs_ami_region_image" }
+      ]
+    },
+
+    "ecs_ami_region_image": {
+      "fields": [
+        { "name": "Name", "type": "string" },
+        { "name": "ImageId", "type": "string" }
+      ]
     }
 
   },
@@ -1082,6 +1107,18 @@
           "responses": {
             "200": { "type": "[dashboard_build]" },
             "401": { "type": "unit" }
+          }
+        }
+      ]
+    },
+
+    "sns_message_ami": {
+      "operations": [
+        {
+          "method": "POST",
+          "body": { "type": "string" },
+          "responses": {
+            "200": { "type": "unit" }
           }
         }
       ]
