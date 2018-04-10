@@ -40,6 +40,8 @@ class SnsMessageAmis @Inject()(
 
     val manager = new SnsMessageManager(Regions.US_EAST_1.getName)
 
+    logger.info(s"AMI update - got message: ${request.body}")
+
     // the SDK will verify that the message is signed by AWS
     manager.handleMessage(new ByteArrayInputStream(request.body.getBytes), new SnsMessageHandler {
       override def handle(message: SnsNotification): Unit = {
@@ -47,22 +49,24 @@ class SnsMessageAmis @Inject()(
         Json.parse(message.getMessage).validate[SnsMessageAmi] match {
           case JsSuccess(ami, _) =>
 
-            logger.info(s"Latest ECS-optimized AMI for us-east-1 is ${ami.ECSAmis.Regions.usEast1.ImageId}")
+            ami.ECSAmis.foreach { amis =>
+              logger.info(s"Latest ECS-optimized AMI for us-east-1 is ${amis.Regions.usEast1.ImageId}")
 
-            dao.insert(Constants.SystemUser, AmiUpdateForm(
-              ami.ECSAmis.Regions.usEast1.ImageId,
-              ami.ECSAmis.Regions.usEast1.Name
-            ))
+              dao.insert(Constants.SystemUser, AmiUpdateForm(
+                amis.Regions.usEast1.ImageId,
+                amis.Regions.usEast1.Name
+              ))
 
-            emails.publish(AmiUpdateNotification(
-              amiName = ami.ECSAmis.Regions.usEast1.Name,
-              amiId = ami.ECSAmis.Regions.usEast1.ImageId,
-              timestamp = new DateTime()
-            ))
+              emails.publish(AmiUpdateNotification(
+                amiName = amis.Regions.usEast1.Name,
+                amiId = amis.Regions.usEast1.ImageId,
+                timestamp = new DateTime()
+              ))
+            }
 
           case JsError(errors) =>
 
-            logger.error(s"FlowError: Invalid message received: $errors")
+            logger.error(s"FlowError: Invalid message received: body=${request.body}\nparsed message=${message}\nerrors=$errors")
         }
 
       }
