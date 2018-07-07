@@ -6,7 +6,7 @@ organization := "io.flow"
 
 scalaVersion in ThisBuild := "2.12.6"
 
-val awsVersion = "1.11.361"
+val awsVersion = "1.11.362"
 
 lazy val generated = project
   .in(file("generated"))
@@ -95,7 +95,7 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     ws,
     guice,
     "io.flow" %% "lib-play-play26" % "0.4.77",
-    "io.flow" %% "lib-test-utils" % "0.0.13" % Test
+    "io.flow" %% "lib-test-utils" % "0.0.14" % Test
   ),
   sources in (Compile,doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
