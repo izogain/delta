@@ -85,7 +85,7 @@ lazy val www = project
 
 val credsToUse = Option(System.getenv("ARTIFACTORY_USERNAME")) match {
   case None => Credentials(Path.userHome / ".ivy2" / ".artifactory")
-  case _ => Credentials("Artifactory Realm","flow.artifactoryonline.com",System.getenv("ARTIFACTORY_USERNAME"),System.getenv("ARTIFACTORY_PASSWORD"))
+  case _ => Credentials("Artifactory Realm","flow.jfrog.io",System.getenv("ARTIFACTORY_USERNAME"),System.getenv("ARTIFACTORY_PASSWORD"))
 }
 
 
@@ -102,10 +102,10 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   scalacOptions += "-feature",
   resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
   resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases",
-  resolvers += "Artifactory" at "https://flow.artifactoryonline.com/flow/libs-release/",
+  resolvers += "Artifactory" at "https://flow.jfrog.io/flow/libs-release/",
   credentials += Credentials(
     "Artifactory Realm",
-    "flow.artifactoryonline.com",
+    "flow.jfrog.io",
     System.getenv("ARTIFACTORY_USERNAME"),
     System.getenv("ARTIFACTORY_PASSWORD")
   )
