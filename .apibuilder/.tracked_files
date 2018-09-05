@@ -6,6 +6,12 @@ flow:
     - api/app/generated/FlowCommonV0Parsers.scala
     play_2_6_client:
     - generated/app/FlowCommonV0Client.scala
+  healthcheck:
+    anorm_2_6_parsers:
+    - api/app/generated/FlowHealthcheckV0Conversions.scala
+    - api/app/generated/FlowHealthcheckV0Parsers.scala
+    play_2_6_client:
+    - generated/app/FlowHealthcheckV0Client.scala
   docker-registry:
     play_2_6_client:
     - generated/app/FlowDockerRegistryV0Client.scala
