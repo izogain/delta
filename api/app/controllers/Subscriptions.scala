@@ -64,7 +64,7 @@ class Subscriptions @javax.inject.Inject() (
     }
   }
 
-  def deleteById(id: String, identifier: Option[String]) = Identified { request =>
+  def deleteById(id: String) = Identified { request =>
     withSubscription(id) { subscription =>
       subscriptionsDao.delete(request.user, subscription)
       NoContent

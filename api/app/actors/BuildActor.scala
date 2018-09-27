@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 
 object BuildActor {
 
-  val CheckLastStateIntervalSeconds = 45
+  val CheckLastStateIntervalSeconds = 45l
   val ScaleIntervalSeconds = 5
 
   trait Message
@@ -192,25 +192,25 @@ class BuildActor @javax.inject.Inject() (
     }
   }
 
-  def ensureContainerAgentHealth(build: Build): Unit = {
+  def ensureContainerAgentHealth(build: Build): Future[Unit] = {
     eventLogProcessor.runAsync("ECS ensure container agent health", log = log(build.project.id)) {
       ecs.ensureContainerAgentHealth(BuildNames.projectName(build))
     }
   }
 
-  def updateContainerAgent(build: Build) {
+  def updateContainerAgent(build: Build): Future[Seq[String]] = {
     eventLogProcessor.runAsync("ECS updating container agent", log = log(build.project.id)) {
       ecs.updateContainerAgent(BuildNames.projectName(build))
     }
   }
 
-  def removeOldServices(build: Build): Unit = {
+  def removeOldServices(build: Build): Future[Unit] = {
     eventLogProcessor.runAsync("ECS cleanup old services", log = log(build.project.id)) {
       ecs.removeOldServices(BuildNames.projectName(build))
     }
   }
 
-  def scale(docker: Docker, build: Build, diff: StateDiff) {
+  def scale(docker: Docker, build: Build, diff: StateDiff): Unit = {
     val projectName = BuildNames.projectName(build)
     val imageName = BuildNames.dockerImageName(docker, build)
     val imageVersion = diff.versionName
@@ -218,14 +218,13 @@ class BuildActor @javax.inject.Inject() (
     // only need to run scale once with delta 1.1
     if (diff.lastInstances == 0) {
       self ! BuildActor.Messages.ConfigureAWS
-      val instances = diff.desiredInstances - diff.lastInstances
-
       Logger.info(s"DeltaDebug project $projectName, scale up ${diff.desiredInstances} of ${diff.versionName}")
 
       eventLogProcessor.runAsync(s"Bring up ${Text.pluralize(diff.desiredInstances, "instance", "instances")} of ${diff.versionName}", log = log(build.project.id)) {
         ecs.scale(awsSettings, imageName, imageVersion, projectName, diff.desiredInstances)
       }
     }
+    ()
   }
 
   def captureLastState(build: Build): Future[String] = {

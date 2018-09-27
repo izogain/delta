@@ -423,7 +423,7 @@ object MockGithubData {
   private[this] var repositories = scala.collection.mutable.Map[String, GithubRepository]()
   private[this] var files = scala.collection.mutable.Map[String, String]()
 
-  def addUser(githubUser: GithubUser, code: String, token: Option[String] = None) {
+  def addUser(githubUser: GithubUser, code: String, token: Option[String] = None): Unit = {
     githubUserByCodes +== (
       code -> GithubUserData(
         githubId = githubUser.id,
@@ -440,7 +440,7 @@ object MockGithubData {
     githubUserByCodes.lift(code)
   }
 
-  def addUserOauthToken(token: String, user: UserReference) {
+  def addUserOauthToken(token: String, user: UserReference): Unit = {
     userTokens +== (user.id -> token)
   }
 

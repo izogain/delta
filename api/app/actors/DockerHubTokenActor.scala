@@ -83,7 +83,7 @@ class DockerHubToken @javax.inject.Inject() (
     * Function called when periodically trying to refresh
     * Should iterate through organizations and update their tokens
     */
-  def refresh()(implicit ec: ExecutionContext) {
+  def refresh()(implicit ec: ExecutionContext): Unit = {
     organizationsDao.findAll(Authorization.All).foreach { organization =>
       generateTokenFuture.map { jwt =>
         val form = VariableForm(organization.id, tokenKey, jwt.token)

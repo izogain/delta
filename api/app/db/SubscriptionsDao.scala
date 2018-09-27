@@ -87,7 +87,7 @@ class SubscriptionsDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, subscription: Subscription) {
+  def delete(deletedBy: UserReference, subscription: Subscription): Unit = {
     delete.delete("subscriptions", deletedBy.id, subscription.id)
   }
 

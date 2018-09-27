@@ -41,7 +41,7 @@ class Email @javax.inject.Inject() (
     recipient: Recipient,
     subject: String,
     body: String
-  ) {
+  ): Unit = {
     val prefixedSubject = subjectWithPrefix(subject)
 
     val from = new com.sendgrid.Email(fromEmail)

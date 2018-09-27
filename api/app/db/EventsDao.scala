@@ -66,7 +66,7 @@ class EventsDao @javax.inject.Inject() (
     id
   }
 
-  def delete(deletedBy: UserReference, event: Event) {
+  def delete(deletedBy: UserReference, event: Event): Unit = {
     delete.delete("events", deletedBy.id, event.id)
   }
 

@@ -190,7 +190,7 @@ case class OrganizationsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, organization: Organization) {
+  def delete(deletedBy: UserReference, organization: Organization): Unit = {
     Pager.create { offset =>
       projectsDao.findAll(Authorization.All, organizationId = Some(organization.id), offset = offset)
     }.foreach { project =>

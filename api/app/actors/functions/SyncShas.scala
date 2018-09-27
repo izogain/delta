@@ -42,7 +42,7 @@ class SyncShas @Inject()(
     implicit ec: scala.concurrent.ExecutionContext
   ): Future[SupervisorResult] = {
     GithubUtil.parseUri(project.uri) match {
-      case Left(error) => {
+      case Left(_) => {
         Future {
           SupervisorResult.Error(s"Could not parse project uri[${project.uri}]")
         }

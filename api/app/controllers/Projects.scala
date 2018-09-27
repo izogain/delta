@@ -123,11 +123,23 @@ class Projects @javax.inject.Inject() (
     }
   }
 
-  def getBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
+  def getBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String): Action[AnyContent] = {
+    locally(id)
+    locally(buildName)
+    TODO
+  }
 
-  def postBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String) = TODO
+  def postBuildsAndStatesAndDesiredByIdAndBuildName(id: String, buildName: String): Action[AnyContent] = {
+    locally(id)
+    locally(buildName)
+    TODO
+  }
 
-  def getBuildsAndStatesAndLastByIdAndBuildName(id: String, buildName: String) = TODO
+  def getBuildsAndStatesAndLastByIdAndBuildName(id: String, buildName: String): Action[AnyContent] = {
+    locally(id)
+    locally(buildName)
+    TODO
+  }
 
   def withBuild(user: UserReference, projectId: String, name: String)(
     f: Build => Result

@@ -38,7 +38,7 @@ class SetDesiredState @Inject()(
   tagsDao: TagsDao
 ) {
 
-  val DefaultNumberInstances = 2
+  val DefaultNumberInstances = 2l
 
   def run(build: Build): SupervisorResult = {
     tagsDao.findAll(

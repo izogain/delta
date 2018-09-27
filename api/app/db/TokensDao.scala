@@ -158,14 +158,14 @@ class TokensDao @javax.inject.Inject() (
 
   private[this] def incrementNumberViews(createdBy: UserReference, tokenId: String)(
     implicit c: java.sql.Connection
-  ) {
+  ): Unit = {
     SQL(IncrementNumberViewsQuery).on(
       'id -> tokenId,
       'updated_by_user_id -> createdBy.id
     ).execute()
   }
 
-  def delete(deletedBy: UserReference, token: Token) {
+  def delete(deletedBy: UserReference, token: Token): Unit = {
     delete.delete("tokens", deletedBy.id, token.id)
   }
 

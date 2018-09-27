@@ -7,14 +7,12 @@ import io.flow.play.controllers.{FlowControllerComponents, IdentifiedRequest}
 import io.flow.play.util.{Config, PaginatedCollection, Pagination}
 import play.api.data.Forms._
 import play.api.data._
-import play.api.i18n.MessagesApi
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class MembersController @javax.inject.Inject() (
   val config: Config,
-  messagesApi: MessagesApi,
   deltaClientProvider: DeltaClientProvider,
   controllerComponents: ControllerComponents,
   flowControllerComponents: FlowControllerComponents
@@ -28,8 +26,8 @@ class MembersController @javax.inject.Inject() (
       for {
         memberships <- deltaClient(request).memberships.get(
           organization = Some(org.id),
-          limit = Pagination.DefaultLimit+1,
-          offset = page * Pagination.DefaultLimit
+          limit = (Pagination.DefaultLimit+1).toLong,
+          offset = (page * Pagination.DefaultLimit).toLong
         )
       } yield {
         Ok(

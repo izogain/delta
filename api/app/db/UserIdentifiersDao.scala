@@ -82,7 +82,7 @@ class UserIdentifiersDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, identifier: UserIdentifier) {
+  def delete(deletedBy: UserReference, identifier: UserIdentifier): Unit = {
     delete.delete("user_identifiers", deletedBy.id, identifier.id)
   }
 

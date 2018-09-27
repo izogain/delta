@@ -62,7 +62,7 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
     name
   }
 
-  def createLoadBalancer(settings: Settings, name: String, externalPort: Int) {
+  def createLoadBalancer(settings: Settings, name: String, externalPort: Int): Unit = {
     val sslCertificate = if (name.contains("apibuilder")) {
       settings.apibuilderSslCertificateId
     } else {
@@ -108,12 +108,13 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
               )
           )
       )
+      ()
     } catch {
       case e: Throwable => Logger.error(s"Error setting ELB connection drain settings: ${e.getMessage}")
     }
   }
 
-  def configureHealthCheck(name: String, externalPort: Long, healthcheckUrl: String) {
+  def configureHealthCheck(name: String, externalPort: Long, healthcheckUrl: String): Unit = {
     try {
       Logger.info(s"AWS ElasticLoadBalancer configureHealthCheck name[$name]")
       client.configureHealthCheck(
@@ -129,7 +130,7 @@ case class ElasticLoadBalancer @javax.inject.Inject() (
           )
       )
     } catch {
-      case _: LoadBalancerNotFoundException => sys.error("Cannot find load balancer $name: $e")
+      case e: LoadBalancerNotFoundException => sys.error(s"Cannot find load balancer $name: $e")
     }
   }
 

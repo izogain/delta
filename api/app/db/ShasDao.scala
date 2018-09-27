@@ -179,7 +179,7 @@ case class ShasWriteDao @javax.inject.Inject() (
     sha
   }
 
-  def delete(deletedBy: UserReference, sha: Sha) {
+  def delete(deletedBy: UserReference, sha: Sha): Unit = {
     delete.delete("shas", deletedBy.id, sha.id)
   }
 

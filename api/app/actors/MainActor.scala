@@ -157,7 +157,7 @@ class MainActor @javax.inject.Inject() (
       }
 
       case msg @ MainActor.Messages.BuildDeleted(id) => withErrorHandler(msg) {
-        (buildActors -= id).map { case (id, actor) =>
+        (buildActors -= id).map { case (_, actor) =>
           actor ! BuildActor.Messages.Delete
           actor ! PoisonPill
         }
@@ -187,11 +187,11 @@ class MainActor @javax.inject.Inject() (
       case msg @ MainActor.Messages.ProjectDeleted(id) => withErrorHandler(msg) {
         searchActor ! SearchActor.Messages.SyncProject(id)
 
-        (projectActors -= id).map { case (id, actor) =>
+        (projectActors -= id).map { case (_, actor) =>
           actor ! PoisonPill
         }
 
-        (projectSupervisorActors -= id).map { case (id, actor) =>
+        (projectSupervisorActors -= id).map { case (_, actor) =>
           actor ! PoisonPill
         }
       }
@@ -209,19 +209,19 @@ class MainActor @javax.inject.Inject() (
         upsertBuildActor(buildId) ! BuildActor.Messages.Scale(diffs)
       }
 
-      case msg @ MainActor.Messages.ShaUpserted(projectId, id) => withErrorHandler(msg) {
+      case msg @ MainActor.Messages.ShaUpserted(projectId, _) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.PursueDesiredState
       }
 
-      case msg @ MainActor.Messages.TagCreated(projectId, id, name) => withErrorHandler(msg) {
+      case msg @ MainActor.Messages.TagCreated(projectId, _, name) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
       }
 
-      case msg @ MainActor.Messages.TagUpdated(projectId, id, name) => withErrorHandler(msg) {
+      case msg @ MainActor.Messages.TagUpdated(projectId, _, name) => withErrorHandler(msg) {
         upsertProjectSupervisorActor(projectId) ! ProjectSupervisorActor.Messages.CheckTag(name)
       }
 
-      case msg @ MainActor.Messages.ImageCreated(buildId, id, version) => withErrorHandler(msg) {
+      case msg @ MainActor.Messages.ImageCreated(buildId, _, version) => withErrorHandler(msg) {
         upsertBuildSupervisorActor(buildId) ! BuildSupervisorActor.Messages.CheckTag(version)
       }
 

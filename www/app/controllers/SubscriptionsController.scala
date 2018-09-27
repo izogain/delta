@@ -23,7 +23,6 @@ object Subscriptions {
 
 class SubscriptionsController @javax.inject.Inject() (
   val config: Config,
-  messagesApi: MessagesApi,
   deltaClientProvider: DeltaClientProvider,
   controllerComponents: ControllerComponents,
   flowControllerComponents: FlowControllerComponents
@@ -48,7 +47,7 @@ class SubscriptionsController @javax.inject.Inject() (
       user <- Future { users.headOption.map(u => UserReference(u.id)) }
       subscriptions <- deltaClientProvider.newClient(user = user, requestId = None).subscriptions.get(
         identifier = Some(identifier),
-        limit = Publication.all.size + 1
+        limit = (Publication.all.size + 1).toLong
       )
     } yield {
       val userPublications = Publication.all.map { p =>

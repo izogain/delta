@@ -128,7 +128,7 @@ class ItemsDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, item: Item) {
+  def delete(deletedBy: UserReference, item: Item): Unit = {
     db.withConnection { implicit c =>
       deleteWithConnection(deletedBy, item)(c)
     }
@@ -136,11 +136,11 @@ class ItemsDao @javax.inject.Inject() (
 
   private[this] def deleteWithConnection(deletedBy: UserReference, item: Item)(
     implicit c: java.sql.Connection
-  ) {
+  ): Unit = {
     delete.delete("items", deletedBy.id, item.id)
   }
 
-  def deleteByObjectId(auth: Authorization, deletedBy: UserReference, objectId: String) {
+  def deleteByObjectId(auth: Authorization, deletedBy: UserReference, objectId: String): Unit = {
     findByObjectId(auth, objectId).map { item =>
       delete(deletedBy, item)
     }

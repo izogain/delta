@@ -1,8 +1,7 @@
 @(
-  data: io.flow.delta.www.lib.UiData,
   organization: io.flow.delta.v0.models.Organization,
   projects: io.flow.play.util.PaginatedCollection[io.flow.delta.v0.models.Project]
-)(implicit flash: Flash, messages: Messages)
+)(implicit flash: Flash)
 
 @main(data.copy(title = Some(organization.id))) {
 <section class="col-xs-12 px0">

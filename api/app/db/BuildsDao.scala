@@ -123,7 +123,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     build
   }
 
-  private[db] def upsert(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, status: Status, config: BuildConfig) {
+  private[db] def upsert(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, status: Status, config: BuildConfig): Unit = {
     SQL(UpsertQuery).on(
       'id -> idGenerator.randomId(),
       'project_id -> projectId,
@@ -149,7 +149,7 @@ case class BuildsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, build: Build) {
+  def delete(deletedBy: UserReference, build: Build): Unit = {
     Pager.create { offset =>
       imagesDao.findAll(buildId = Some(build.id), offset = offset)
     }.foreach { image =>

@@ -1,7 +1,6 @@
 package controllers
 
 import db.HealthchecksDao
-import io.flow.delta.aws.Credentials
 import io.flow.error.v0.models.json._
 import io.flow.healthcheck.v0.models.Healthcheck
 import io.flow.healthcheck.v0.models.json._
@@ -12,7 +11,6 @@ import play.api.mvc._
 
 @Singleton
 class Healthchecks @Inject() (
-  credentials: Credentials,
   healthchecksDao: HealthchecksDao,
   @javax.inject.Named("main-actor") mainActor: akka.actor.ActorRef,
   val controllerComponents: ControllerComponents
@@ -25,7 +23,7 @@ class Healthchecks @Inject() (
       "db" -> healthchecksDao.isHealthy()
     )
 
-    checks.filter { case (name, check) => !check }.keys.toList match {
+    checks.filter { case (_, check) => !check }.keys.toList match {
       case Nil => Ok(HealthyJson)
       case unhealthy => UnprocessableEntity(Json.toJson(Validation.errors(unhealthy.map { name => s"$name failed check" })))
     }

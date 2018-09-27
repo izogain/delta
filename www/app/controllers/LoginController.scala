@@ -24,7 +24,6 @@ class LoginController @javax.inject.Inject() (
 
   def githubCallback(
     code: String,
-    state: Option[String],
     returnUrl: Option[String]
   ) = Action.async { implicit request =>
     provider.newClient(user = None, requestId = None).githubUsers.postGithub(
@@ -48,7 +47,7 @@ class LoginController @javax.inject.Inject() (
         Ok(views.html.login.index(UiData(requestPath = request.path), returnUrl, response.genericError.messages))
       }
 
-      case ex: Throwable => sys.error(s"Github callback failed to authenticate user.")
+      case ex: Throwable => sys.error(s"Github callback failed to authenticate user - ${ex.getMessage}.")
     }
   }
 

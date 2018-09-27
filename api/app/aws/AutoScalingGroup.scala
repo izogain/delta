@@ -88,7 +88,7 @@ class AutoScalingGroup @javax.inject.Inject() (
           .withUserData(encoder.encode(lcUserData(id, settings).getBytes))
       )
     } catch {
-      case e: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
+      case _: AlreadyExistsException => println(s"Launch Configuration '$name' already exists")
     }
 
     name
@@ -146,7 +146,7 @@ class AutoScalingGroup @javax.inject.Inject() (
     name
   }
 
-  def createAutoScalingGroup(settings: Settings, name: String, launchConfigName: String, loadBalancerName: String) {
+  def createAutoScalingGroup(settings: Settings, name: String, launchConfigName: String, loadBalancerName: String): Unit = {
     try {
       Logger.info(s"AWS AutoScalingGroup createAutoScalingGroup $name")
       client.createAutoScalingGroup(
@@ -181,8 +181,11 @@ class AutoScalingGroup @javax.inject.Inject() (
           .withTopicARN(awsOpsworksSnsTopicArn)
           .withNotificationTypes(Seq("autoscaling:EC2_INSTANCE_TERMINATE").asJava)
       )
+      ()
     } catch {
-      case e: Throwable => Logger.error(s"Error creating autoscaling group $name with launch config $launchConfigName and load balancer $loadBalancerName. Error: ${e.getMessage}")
+      case e: Throwable =>
+        Logger.error(s"Error creating autoscaling group $name with launch config $launchConfigName and load balancer $loadBalancerName. Error: ${e.getMessage}")
+        ()
     }
   }
 
@@ -192,41 +195,12 @@ class AutoScalingGroup @javax.inject.Inject() (
     * will need to be manually rotated for the LC to take affect. There is
     * a helper script for rotations in the infra-tools/aws repo.
     */
-  def updateAutoScalingGroup(name: String, newlaunchConfigName: String, oldLaunchConfigurationName: String, instances: java.util.Collection[String]) {
+  def updateAutoScalingGroup(name: String, newlaunchConfigName: String): Unit = {
     try {
       updateGroupLaunchConfiguration(name, newlaunchConfigName)
     } catch {
       case e: Throwable => Logger.error(s"FlowError Error updating autoscaling group $name with launch config $newlaunchConfigName. Error: ${e.getMessage}")
     }
-  }
-
-  private[this] def terminateInstances(instances: java.util.Collection[String]): Unit = {
-    /**
-      * terminate the old instances to allow new ones to come
-      * up with updated launch config and load balancer
-      */
-    ec2Client.terminateInstances(
-      new TerminateInstancesRequest()
-        .withInstanceIds(instances)
-    )
-  }
-
-  private[this] def deleteOldLaunchConfiguration(oldLaunchConfigurationName: String): Unit = {
-    // delete the old launch configuration
-    client.deleteLaunchConfiguration(
-      new DeleteLaunchConfigurationRequest()
-        .withLaunchConfigurationName(oldLaunchConfigurationName)
-    )
-  }
-
-  private[this] def detachOldInstances(name: String, instances: java.util.Collection[String]): Unit = {
-    // detach the old instances
-    client.detachInstances(
-      new DetachInstancesRequest()
-        .withAutoScalingGroupName(name)
-        .withInstanceIds(instances)
-        .withShouldDecrementDesiredCapacity(false)
-    )
   }
 
   private[this] def updateGroupLaunchConfiguration(name: String, newlaunchConfigName: String): Unit = {

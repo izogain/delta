@@ -210,7 +210,7 @@ case class ImagesWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, image: Image) {
+  def delete(deletedBy: UserReference, image: Image): Unit = {
     delete.delete("images", deletedBy.id, image.id)
   }
 

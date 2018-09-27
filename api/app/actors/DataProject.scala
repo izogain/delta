@@ -19,7 +19,7 @@ trait DataProject {
     * Looks up the project with the specified ID, setting the local
     * dataProject var to that project
     */
-  def setProjectId(id: String) {
+  def setProjectId(id: String): Unit = {
     dataProject = projectsDao.findById(Authorization.All, id)
     if (dataProject.isEmpty) {
       Logger.warn(s"Could not find project with id[$id]")

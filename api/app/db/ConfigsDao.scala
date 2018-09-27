@@ -92,7 +92,7 @@ class ConfigsDao @javax.inject.Inject() (
     }
   }
 
-  def updateIfChanged(createdBy: UserReference, projectId: String, newConfig: Config) {
+  def updateIfChanged(createdBy: UserReference, projectId: String, newConfig: Config): Unit = {
     val existing: Option[Config] = findByProjectId(Authorization.All, projectId).map(_.config)
     Logger.info(s"upsertIfChanged[$projectId] existing: $existing")
     Logger.info(s"upsertIfChanged[$projectId] newConfig: $newConfig")
@@ -127,7 +127,7 @@ class ConfigsDao @javax.inject.Inject() (
     }
   }
 
-  private[db] def upsertWithConnection(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, config: Config) {
+  private[db] def upsertWithConnection(implicit c: java.sql.Connection, createdBy: UserReference, projectId: String, config: Config): Unit = {
     SQL(UpsertQuery).on(
       'id -> idGenerator.randomId(),
       'project_id -> projectId,
@@ -136,13 +136,13 @@ class ConfigsDao @javax.inject.Inject() (
     ).execute()
   }
 
-  def deleteByProjectId(deletedBy: UserReference, projectId: String) {
+  def deleteByProjectId(deletedBy: UserReference, projectId: String): Unit = {
     findByProjectId(Authorization.All, projectId).map { internal =>
       delete(deletedBy, internal)
     }
   }
 
-  def delete(deletedBy: UserReference, internal: InternalConfig) {
+  def delete(deletedBy: UserReference, internal: InternalConfig): Unit = {
     delete.delete("configs", deletedBy.id, internal.id)
   }
 

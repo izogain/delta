@@ -16,7 +16,7 @@ trait DataBuild extends DataProject {
     * Looks up the build with the specified ID, setting the local
     * dataBuild var to that build
     */
-  def setBuildId(id: String) {
+  def setBuildId(id: String): Unit = {
     buildsDao.findById(Authorization.All, id) match {
       case None => {
         dataBuild = None

@@ -129,7 +129,7 @@ class EventLogProcessor @Inject()(
     }
   }
 
-  private[this] def process(typ: EventType, message: String, ex: Option[Throwable] = None, log: EventLog) {
+  private[this] def process(typ: EventType, message: String, ex: Option[Throwable] = None, log: EventLog): Unit = {
     val formatted = s"${log.prefix}: $message"
     val ts = new DateTime()
 

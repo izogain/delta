@@ -3,9 +3,7 @@ package io.flow.delta.actors
 import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem}
-import com.google.inject.assistedinject.Assisted
 import db._
-import io.flow.delta.actors.functions.SyncDockerImages
 import io.flow.delta.api.lib.{EventLogProcessor, StateDiff}
 import io.flow.delta.config.v0.{models => config}
 import io.flow.delta.v0.models.{Build, Version}
@@ -43,10 +41,8 @@ class BuildSupervisorActor @Inject()(
   override val organizationsDao: OrganizationsDao,
   buildDesiredStatesDao: BuildDesiredStatesDao,
   eventLogProcessor: EventLogProcessor,
-  syncDockerImages: SyncDockerImages,
   system: ActorSystem,
-  implicit val app: Application,
-  @Assisted id: String
+  implicit val app: Application
 ) extends Actor with ErrorHandler with DataBuild with DataProject with BuildEventLog {
 
   private[this] implicit val ec = system.dispatchers.lookup("supervisor-actor-context")
@@ -103,10 +99,11 @@ class BuildSupervisorActor @Inject()(
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Ready at the end of all the functions.
     */
-  private[this] def run(build: Build, stages: Seq[config.BuildStage], functions: Seq[BuildSupervisorFunction]) {
+  private[this] def run(build: Build, stages: Seq[config.BuildStage], functions: Seq[BuildSupervisorFunction]): Unit = {
     functions.headOption match {
       case None => {
         SupervisorResult.Ready("All functions returned without modification")
+        ()
       }
       case Some(f) => {
         val projectId = build.project.id
@@ -137,9 +134,11 @@ class BuildSupervisorActor @Inject()(
                   run(build, stages, functions.drop(1))
                 }
               }
-
+              ()
             }.recover {
-              case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log(projectId))
+              case ex: Throwable =>
+                eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log(projectId))
+                ()
             }
           }
         }

@@ -22,7 +22,7 @@ class BuildLastStatesDao @Inject()(
   @NamedDatabase("default") db: Database
 ) {
 
-  def onChange(mainActor: ActorRef, buildId: String) {
+  def onChange(mainActor: ActorRef, buildId: String): Unit = {
     mainActor ! MainActor.Messages.BuildDesiredStateUpdated(buildId)
   }
 
@@ -72,7 +72,7 @@ class BuildLastStatesDao @Inject()(
   ): Seq[String] = {
     buildsDao.findById(Authorization.All, build.id) match {
       case None => Seq("Build not found")
-      case Some(build) => Nil
+      case Some(_) => Nil
     }
   }
 
@@ -186,7 +186,7 @@ class BuildLastStatesDao @Inject()(
       }
   }
 
-  def delete(deletedBy: UserReference, build: Build) {
+  def delete(deletedBy: UserReference, build: Build): Unit = {
     lookupId(build.id).map { id =>
       delete.delete("build_last_states", deletedBy.id, id)
     }

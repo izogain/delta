@@ -229,7 +229,7 @@ case class TagsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, tag: Tag) {
+  def delete(deletedBy: UserReference, tag: Tag): Unit = {
     delete.delete("tags", deletedBy.id, tag.id)
   }
 

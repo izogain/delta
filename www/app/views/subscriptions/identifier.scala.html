@@ -2,7 +2,7 @@
   data: io.flow.delta.www.lib.UiData,
   identifier: String,
   userPublications: Seq[controllers.Subscriptions.UserPublication]
-)(implicit flash: Flash, messages: Messages)
+)(implicit flash: Flash)
 
 @main(data.copy(title = Some("Subscriptions"))) {
 <section class="col-xs-12 px0">

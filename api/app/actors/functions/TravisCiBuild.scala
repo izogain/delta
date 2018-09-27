@@ -47,7 +47,7 @@ class TravisCiDockerImageBuilder @Inject()(
   implicit val ec: ExecutionContext
 ) extends DataBuild with DataProject with BuildEventLog {
 
-  def buildDockerImage(travisCiBuild: TravisCiBuild) {
+  def buildDockerImage(travisCiBuild: TravisCiBuild): Unit = {
     val dockerImageName = BuildNames.dockerImageName(travisCiBuild.org.docker, travisCiBuild.build)
     val projectId = travisCiBuild.project.id
 
@@ -95,7 +95,7 @@ class TravisCiDockerImageBuilder @Inject()(
         }
 
       } catch {
-        case err: TimeoutException => {
+        case _: TimeoutException => {
           eventLogProcessor.error(s"Timeout expired fetching Travis CI requests [${dockerImageName}:${travisCiBuild.version}]", log = log(projectId))
         }
         case io.flow.docker.registry.v0.errors.UnitResponse(code) => {
@@ -109,7 +109,7 @@ class TravisCiDockerImageBuilder @Inject()(
     })
   }
 
-  private def postBuildRequest(travisCiBuild: TravisCiBuild, client: Client) {
+  private def postBuildRequest(travisCiBuild: TravisCiBuild, client: Client): Unit = {
     val dockerImageName = BuildNames.dockerImageName(travisCiBuild.org.docker, travisCiBuild.build)
     val projectId = travisCiBuild.project.id
 
@@ -123,7 +123,7 @@ class TravisCiDockerImageBuilder @Inject()(
       eventLogProcessor.changed(travisChangedMessage(dockerImageName, travisCiBuild.version), log = log(projectId))
 
     } catch {
-      case err: TimeoutException => {
+      case _: TimeoutException => {
         eventLogProcessor.error(s"Timeout expired triggering Travis CI build [${dockerImageName}:${travisCiBuild.version}]", log = log(projectId))
       }
       case io.flow.docker.registry.v0.errors.UnitResponse(code) => {

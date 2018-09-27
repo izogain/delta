@@ -2,7 +2,6 @@ package io.flow.delta.aws
 
 import akka.actor.ActorSystem
 import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
 import com.amazonaws.services.ecs.model._
 import io.flow.delta.v0.models.Version
@@ -32,12 +31,6 @@ case class EC2ContainerService @javax.inject.Inject() (
 ) {
 
   private[this] implicit val executionContext = system.dispatchers.lookup("ec2-context")
-
-  private[this] lazy val ec2Client = AmazonEC2ClientBuilder.
-    standard().
-    withCredentials(new AWSStaticCredentialsProvider(credentials.aws)).
-    withClientConfiguration(configuration.aws).
-    build()
 
   private[this] lazy val client = AmazonECSClientBuilder.
     standard().
@@ -113,6 +106,7 @@ case class EC2ContainerService @javax.inject.Inject() (
                     Logger.info(s"AWS EC2ContainerService deleteService projectId[$projectId], service: ${service.getServiceName}")
                     client.deleteService(new DeleteServiceRequest().withCluster(cluster).withService(service.getServiceName))
                   }
+                  ()
                 }
               }
             }
@@ -139,12 +133,6 @@ case class EC2ContainerService @javax.inject.Inject() (
         // call update for each container instance
         containerInstanceArns.map{ containerInstanceArn =>
           Logger.info(s"AWS EC2ContainerService updateContainerAgent projectId[$projectId]")
-          val result = client.updateContainerAgent(
-            new UpdateContainerAgentRequest()
-            .withCluster(cluster)
-            .withContainerInstance(containerInstanceArn)
-          )
-
           containerInstanceArn
         }
       } catch {
@@ -258,7 +246,7 @@ case class EC2ContainerService @javax.inject.Inject() (
 
               // healthy instances = count of service instances actually in the elb which are healthy
               val healthyInstances = serviceInstances.filter(elbHealthyInstances.contains)
-              Version(version, healthyInstances.size)
+              Version(version, healthyInstances.size.toLong)
             }
           }
 
@@ -271,13 +259,13 @@ case class EC2ContainerService @javax.inject.Inject() (
   }
   
   private[this] def getServiceArns(cluster: String): Seq[String] = {
-    var serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
+    val serviceArns = scala.collection.mutable.ListBuffer.empty[List[String]]
     var hasMore = true
     var nextToken: String = null // null nextToken gets the first page
 
     while (hasMore) {
       Logger.info(s"AWS EC2ContainerService listServices cluster[$cluster] nextToken[$nextToken]")
-      var result = client.listServices(
+      val result = client.listServices(
         new ListServicesRequest()
           .withCluster(cluster)
           .withNextToken(nextToken)

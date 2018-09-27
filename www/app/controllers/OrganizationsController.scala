@@ -7,14 +7,12 @@ import io.flow.play.controllers.FlowControllerComponents
 import io.flow.play.util.{Config, PaginatedCollection, Pagination}
 
 import scala.concurrent.{ExecutionContext, Future}
-import play.api.i18n.MessagesApi
 import play.api.data._
 import play.api.data.Forms._
 import play.api.mvc.ControllerComponents
 
 class OrganizationsController @javax.inject.Inject() (
   val config: Config,
-  messagesApi: MessagesApi,
   deltaClientProvider: DeltaClientProvider,
   controllerComponents: ControllerComponents,
   flowControllerComponents: FlowControllerComponents
@@ -30,8 +28,8 @@ class OrganizationsController @javax.inject.Inject() (
   def index(page: Int = 0) = User.async { implicit request =>
     for {
       organizations <- deltaClient(request).organizations.get(
-        limit = Pagination.DefaultLimit+1,
-        offset = page * Pagination.DefaultLimit
+        limit = (Pagination.DefaultLimit+1).toLong,
+        offset = (page * Pagination.DefaultLimit).toLong
       )
     } yield {
       Ok(
@@ -44,12 +42,14 @@ class OrganizationsController @javax.inject.Inject() (
   }
 
   def show(id: String, projectsPage: Int = 0) = User.async { implicit request =>
+    locally(id) //TODO id can be removed from routes - amend apibuilder
+    locally(projectsPage) //TODO projectsPage can be removed from routes - amend apibuilder
     withOrganization(request, id) { org =>
       for {
         projects <- deltaClient(request).projects.get(
           organization = Some(id),
-          limit = Pagination.DefaultLimit+1,
-          offset = projectsPage * Pagination.DefaultLimit
+          limit = (Pagination.DefaultLimit+1).toLong,
+          offset = (projectsPage * Pagination.DefaultLimit).toLong
         )
       } yield {
         Ok(

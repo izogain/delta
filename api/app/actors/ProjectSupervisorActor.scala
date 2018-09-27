@@ -86,10 +86,11 @@ class ProjectSupervisorActor @Inject()(
     * SupervisorResult.Error, returns that result. Otherwise will
     * return Ready at the end of all the functions.
     */
-  private[this] def run(project: Project, config: ConfigProject, functions: Seq[ProjectSupervisorFunction]) {
+  private[this] def run(project: Project, config: ConfigProject, functions: Seq[ProjectSupervisorFunction]): Unit = {
     functions.headOption match {
       case None => {
         SupervisorResult.Ready("All functions returned without modification")
+        ()
       }
       case Some(f) => {
         if (config.stages.contains(f.stage)) {
@@ -97,23 +98,27 @@ class ProjectSupervisorActor @Inject()(
           f.run(project, config).map {
             case SupervisorResult.Change(desc) => {
               eventLogProcessor.changed(format(f, desc), log = log(project.id))
+              ()
             }
             case SupervisorResult.Checkpoint(desc) => {
               eventLogProcessor.checkpoint(format(f, desc), log = log(project.id))
+              ()
             }
             case SupervisorResult.Error(desc, ex)=> {
               val err = ex.getOrElse {
                 new Exception(desc)
               }
               eventLogProcessor.completed(format(f, desc), Some(err), log = log(project.id))
+              ()
             }
             case SupervisorResult.Ready(desc)=> {
               eventLogProcessor.completed(format(f, desc), log = log(project.id))
               run(project, config, functions.drop(1))
             }
-
           }.recover {
-            case ex: Throwable => eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log(project.id))
+            case ex: Throwable =>
+              eventLogProcessor.completed(format(f, ex.getMessage), Some(ex), log = log(project.id))
+              ()
           }
         } else {
           eventLogProcessor.skipped(s"Stage ${f.stage} is disabled", log = log(project.id))

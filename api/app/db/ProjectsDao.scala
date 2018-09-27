@@ -296,7 +296,7 @@ case class ProjectsWriteDao @javax.inject.Inject() (
     }
   }
 
-  def delete(deletedBy: UserReference, project: Project) {
+  def delete(deletedBy: UserReference, project: Project): Unit = {
     Pager.create { offset =>
       shasDao.findAll(Authorization.All, projectId = Some(project.id), offset = offset)
     }.foreach { sha =>

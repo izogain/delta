@@ -8,21 +8,22 @@ scalaVersion in ThisBuild := "2.12.6"
 
 val awsVersion = "1.11.415"
 
-lazy val generated = project
-  .in(file("generated"))
-  .enablePlugins(PlayScala)
-  .enablePlugins(SbtWeb)
-  .settings(commonSettings: _*)
+lazy val apibuilder = project
+  .in(file(".apibuilder"))
   .settings(
     libraryDependencies ++= Seq(
-      ws
+      ws,
+      "com.typesafe.play" %% "play-json-joda" % "2.6.10",
+      "io.flow" %% "lib-postgresql-play-play26" % "0.2.40",
+      "org.postgresql" % "postgresql" % "42.2.5",
     )
   )
+  .disablePlugins(TpolecatPlugin)
+
 
 lazy val lib = project
   .in(file("lib"))
-  .dependsOn(generated)
-  .aggregate(generated)
+  .dependsOn(apibuilder)
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
@@ -32,8 +33,7 @@ lazy val lib = project
 
 lazy val api = project
   .in(file("api"))
-  .dependsOn(generated, lib)
-  .aggregate(generated, lib)
+  .dependsOn(apibuilder, lib)
   .enablePlugins(PlayScala)
   .enablePlugins(NewRelic)
   .enablePlugins(JavaAppPackaging, JavaAgent)
@@ -65,8 +65,7 @@ lazy val api = project
 
 lazy val www = project
   .in(file("www"))
-  .dependsOn(generated, lib)
-  .aggregate(generated, lib)
+  .dependsOn(apibuilder, lib)
   .enablePlugins(PlayScala)
   .enablePlugins(NewRelic)
   .enablePlugins(SbtWeb)

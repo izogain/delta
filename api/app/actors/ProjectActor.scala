@@ -62,8 +62,8 @@ class ProjectActor @javax.inject.Inject() (
       }
 
       system.scheduler.schedule(
-        Duration(ProjectActor.SyncIfInactiveIntervalMinutes, "minutes"),
-        Duration(ProjectActor.SyncIfInactiveIntervalMinutes, "minutes")
+        Duration(ProjectActor.SyncIfInactiveIntervalMinutes.toLong, "minutes"),
+        Duration(ProjectActor.SyncIfInactiveIntervalMinutes.toLong, "minutes")
       ) {
         self ! ProjectActor.Messages.SyncIfInactive
       }
@@ -112,7 +112,7 @@ class ProjectActor @javax.inject.Inject() (
   private[this] val HookName = "web"
   private[this] val HookEvents = Seq(HookEvent.Push)
 
-  private[this] def createHooks(project: Project, repo: Repo) {
+  private[this] def createHooks(project: Project, repo: Repo): Unit = {
     gitHubHelper.apiClientFromUser(project.user.id) match {
       case None => {
         Logger.warn(s"Could not create github client for user[${project.user.id}]")
@@ -122,7 +122,7 @@ class ProjectActor @javax.inject.Inject() (
           val targetUrl = HookBaseUrl + project.id
 
           hooks.find(_.config.url == Some(targetUrl)) match {
-            case Some(hook) => {
+            case Some(_) => {
               // No-op hook exists
             }
             case None => {
@@ -140,14 +140,15 @@ class ProjectActor @javax.inject.Inject() (
                 )
               )
             }.map { hook =>
-              Logger.info("Created githib webhook for project[${project.id}]: $hook")
+              Logger.info(s"Created githib webhook for project[${project.id}]: $hook")
             }.recover {
               case e: Throwable => {
-                Logger.error("Project[${project.id}] Error creating hook: " + e)
+                Logger.error(s"Project[${project.id}] Error creating hook: $e")
               }
             }
           }
         }
+        ()
       }
     }
   }

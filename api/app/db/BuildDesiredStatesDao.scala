@@ -22,7 +22,7 @@ class BuildDesiredStatesDao @Inject()(
   @NamedDatabase("default") db: Database
 ) {
 
-  def onChange(mainActor: ActorRef, buildId: String) {
+  def onChange(mainActor: ActorRef, buildId: String): Unit = {
     mainActor ! MainActor.Messages.BuildDesiredStateUpdated(buildId)
   }
   
@@ -67,9 +67,7 @@ class BuildDesiredStatesDao @Inject()(
 
   private[db] def validate(
     user: UserReference,
-    build: Build,
-    form: StateForm
-  ): Seq[String] = {
+    build: Build): Seq[String] = {
     buildsDao.findById(Authorization.All, build.id) match {
       case None => Seq("Build not found")
       case Some(build) => Nil
@@ -146,7 +144,7 @@ class BuildDesiredStatesDao @Inject()(
 
   private[this] def update(createdBy: UserReference, build: Build, existing: State, form: StateForm): Either[Seq[String], State] = {
 
-    validate(createdBy, build, form) match {
+    validate(createdBy, build) match {
       case Nil => {
         db.withConnection { implicit c =>
           SQL(UpdateQuery).on(
@@ -186,7 +184,7 @@ class BuildDesiredStatesDao @Inject()(
       }
   }
   
-  def delete(deletedBy: UserReference, build: Build) {
+  def delete(deletedBy: UserReference, build: Build): Unit = {
     lookupId(build.id).map { id =>
       delete.delete("build_desired_states", deletedBy.id, id)
     }

@@ -10,12 +10,11 @@ import io.flow.delta.v0.models._
 import io.flow.docker.registry.v0.Client
 import io.flow.docker.registry.v0.models.{BuildForm => DockerBuildForm, BuildTag => DockerBuildTag}
 import io.flow.play.actors.ErrorHandler
-import io.flow.play.util.Config
 import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.ws.WSClient
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object DockerHubActor {
@@ -49,10 +48,8 @@ class DockerHubActor @javax.inject.Inject() (
   override val configsDao: ConfigsDao,
   override val projectsDao: ProjectsDao,
   override val organizationsDao: OrganizationsDao,
-  config: Config,
   dockerHubToken: DockerHubToken,
   imagesDao: ImagesDao,
-  imagesWriteDao: ImagesWriteDao,
   eventLogProcessor: EventLogProcessor,
   syncDockerImages: SyncDockerImages,
   system: ActorSystem,
@@ -106,12 +103,11 @@ class DockerHubActor @javax.inject.Inject() (
 
             case None => {
               if (start.plusSeconds(TimeoutSeconds).isBefore(new DateTime)) {
-                val ex = new java.util.concurrent.TimeoutException()
                 eventLogProcessor.error(s"Timeout after $TimeoutSeconds seconds. Docker image $imageFullName was not built", log = log(projectId))
 
               } else {
                 eventLogProcessor.checkpoint(s"Docker hub image $imageFullName is not ready. Will check again in $IntervalSeconds seconds", log = log(projectId))
-                system.scheduler.scheduleOnce(Duration(IntervalSeconds, "seconds")) {
+                system.scheduler.scheduleOnce(Duration(IntervalSeconds.toLong, "seconds")) {
                   self ! DockerHubActor.Messages.Monitor(version, start)
                 }
               }
@@ -124,7 +120,7 @@ class DockerHubActor @javax.inject.Inject() (
     case msg: Any => logUnhandledMessage(msg)
   }
 
-  def postDockerHubImageBuild(version: String, org: Organization, project: Project, build: Build, buildConfig: BuildConfig) {
+  def postDockerHubImageBuild(org: Organization, project: Project, build: Build, buildConfig: BuildConfig): Future[Unit] = {
     client.DockerRepositories.postAutobuild(
       org.docker.organization,
       BuildNames.projectName(build),

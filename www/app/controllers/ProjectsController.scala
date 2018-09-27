@@ -9,14 +9,12 @@ import io.flow.play.util.{Config, PaginatedCollection, Pagination}
 import play.api.Logger
 import play.api.data.Forms._
 import play.api.data._
-import play.api.i18n.MessagesApi
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectsController @javax.inject.Inject() (
   val config: Config,
-  messagesApi: MessagesApi,
   deltaClientProvider: DeltaClientProvider,
   controllerComponents: ControllerComponents,
   flowControllerComponents: FlowControllerComponents
@@ -28,8 +26,8 @@ class ProjectsController @javax.inject.Inject() (
   def index(page: Int = 0) = User.async { implicit request =>
     for {
       projects <- deltaClient(request).projects.get(
-        limit = Pagination.DefaultLimit+1,
-        offset = page * Pagination.DefaultLimit
+        limit = (Pagination.DefaultLimit+1).toLong,
+        offset = (page * Pagination.DefaultLimit).toLong
       )
     } yield {
       Ok(
@@ -117,8 +115,8 @@ class ProjectsController @javax.inject.Inject() (
         repositories <- deltaClient(request).repositories.get(
           organizationId = Some(org.id),
           existingProject = Some(false),
-          limit = Pagination.DefaultLimit+1,
-          offset = repositoriesPage * Pagination.DefaultLimit
+          limit = (Pagination.DefaultLimit+1).toLong,
+          offset = (repositoriesPage * Pagination.DefaultLimit).toLong
         )
       } yield {
         Ok(
@@ -136,6 +134,7 @@ class ProjectsController @javax.inject.Inject() (
     name: String,  // github repo name, ex. user
     repositoriesPage: Int = 0
   ) = User.async { implicit request =>
+    locally(repositoriesPage)
     withOrganization(request, orgId) { org =>
       deltaClient(request).repositories.get(
         organizationId = Some(org.id),
